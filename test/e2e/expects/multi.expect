@@ -1,0 +1,30 @@
+#!/usr/bin/expect -f
+
+# 设置超时时间（秒）
+set timeout 5
+
+# 启动带管道的 shell 命令
+spawn sh -c {echo '192.168.1.1\n10.0.0.1\n172.16.0.1'  | ./build/magonote --multi}
+
+# 稍等，等待程序初始化完成（可视需求调整）
+sleep 0.2
+
+# 模拟按键 'a' + 回车（如果不需要回车则去掉 \r）
+send "as "
+
+# 捕获输出中是否包含期望的 IP
+expect {
+    "192.168.1.1\r\n10.0.0.1" {
+        puts "✅ Test passed: IP matched"
+        exit 0
+    }
+
+    timeout {
+        puts "❌ Test failed: Timed out"
+        exit 1
+    }
+    eof {
+        puts "❌ Test failed: Unexpected end of file"
+        exit 1
+    }
+}

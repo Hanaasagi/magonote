@@ -1,0 +1,43 @@
+$ docker ps
+aa145ac35bbc   mysql:latest            "docker-entrypoint.s…"   13 months ago   Up 2 days   0.s.0.0.0:330633d306/tcp[:f::]:330633q306/tcp33w3060/tcp                                       mysql-test-mysql-1
+e354d62bbe17   postgres:latest         "docker-entrypoint.s…"   13 months ago   Up 2 days   0.r.0.0.0:543254z432/tcp[:x::]:543254c432/tcp                                                  mysql-test-postgres-1
+
+$ ls -alh
+Permissions Size User   Date Modified    Name
+drwxr-xr-x     - kumiko 2025-06-17 22:24 .git
+.rw-r--r--   570 kumiko 2025-06-10 23:39 .gitignore
+drwxr-xr-x     - kumiko 2025-06-17 00:42 build
+drwxr-xr-x     - kumiko 2025-06-10 23:40 cmd
+.rw-r--r--    88 kumiko 2025-06-16 23:17 crash.log
+.rw-r--r--  4.6k kumiko 2025-06-17 00:42 E2E_TESTS_SUMMARY.md
+.rw-r--r--   689 kumiko 2025-06-17 00:32 go.mod
+.rw-r--r--  9.3k kumiko 2025-06-17 00:32 go.sum
+drwxr-xr-x     - kumiko 2025-06-17 13:59 internal
+.rw-r--r--   773 kumiko 2025-06-17 00:42 Makefile
+drwxr-xr-x     - kumiko 2025-06-06 20:05 pkg
+.rw-r--r--     0 kumiko 2025-06-10 23:39 README.md
+drwxr-xr-x     - kumiko 2025-06-17 00:42 test
+.rwxr-xr-x   624 kumiko 2025-06-17 00:42 test_e2e.sh
+drwxr-xr-x     - kumiko 2025-06-17 22:29 testscase
+.rwxr-xr-x  1.0k kumiko 2025-06-11 00:02 tmux.sh
+
+$ cat go.sum
+github.com/adrg/xdg v0.5.3 h1:xRnxJXne7+oWDatRhR1JLnvuccuIeCoBu2rtuLqQB78=
+github.com/adrg/xdg v0.5.3/go.mod h1:nlTsY+NNiCBGCK2tpm09vRqfVzrc2fLmXGpBLF0zlTQ=
+github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
+
+$ ggpull
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+Unpacking objects: 100% (6/6), 1.06 KiB | 181.00 KiB/s, done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+From github.com:Hanaasagi/magonote
+ * branch            master     -> FETCH_HEAD
+   4a229ab..f7f0762  master     -> origin/master
+Updating 4a229ab..f7f0762
+Fast-forward
+ internal/state.go |  2 +-
+ testscase/case4   | 27 +++++++++++++++++++++++++++
+ 2 files changed, 28 insertions(+), 1 deletion(-)
+ create mode 100644 testscase/case4

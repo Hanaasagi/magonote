@@ -1,0 +1,59 @@
+[on_tool_execution]
+Tool: getWantThing
+Outputs: {"type":"json","message":{"json_object":{"color":{"output":[{"metadata":{"_source":"knowledge","dataset_id":"4487e08e-0a7e-47ec-b5a6-a211469f66a8","dataset_name":"颜色.txt...","document_id":"ac71ad57-ff0b-4859-9890-cd59401e5812","document_name":"颜色.txt","document_data_source_type":"upload_file","segment_id":"0070eda8-9ec0-49d6-ba33-45a54bb4bd97","retriever_from":"workflow","score":0.9946568,"segment_hit_count":138,"segment_word_count":2,"segment_position":60,"segment_index_node_hash":"1026a8f4391393027222fff1337f808cbf21e2e7185d6c4c97a2ef44d70b54d5","doc_metadata":null,"position":1},"title":"颜色.txt","content":"黑色"}]},"category":{"output":[{"metadata":{"_source":"knowledge","dataset_id":"83d8a990-9d34-49f2-a5b4-311ed3c7f626","dataset_name":"类目基础数据.xlsx...","document_id":"04289324-9de4-47ac-af4c-50aedaadab1e","document_name":"品类数据.txt","document_data_source_type":"upload_file","segment_id":"fa41ccad-af0e-4e07-8097-d184ad5c88bc","retriever_from":"workflow","score":0.9995234,"segment_hit_cou
+
+2025-04-15 03:00:29.205 INFO [Thread-2145 (_generate_worker)] [_client.py:1038] - HTTP Request: POST http://sandbox:8194/v1/sandbox/run "HTTP/1.1 200 OK"
+2025-04-15 03:00:38.893 ERROR [Dummy-2152] [message_based_app_generator.py:79] - Failed to handle response, conversation_id: 5fd3c220-85ac-4391-b10c-374a78303670
+Traceback (most recent call last):
+  File "/app/api/core/app/apps/message_based_app_generator.py", line 74, in _handle_response
+    return generate_task_pipeline.process()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/core/app/task_pipeline/easy_ui_based_generate_task_pipeline.py", line 126, in process
+    return self._to_blocking_response(generator)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/core/app/task_pipeline/easy_ui_based_generate_task_pipeline.py", line 158, in _to_blocking_response
+    data=ChatbotAppBlockingResponse.Data(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/.venv/lib/python3.12/site-packages/pydantic/main.py", line 212, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for Data
+answer
+  Input should be a valid string [type=string_type, input_value=[], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.9/v/string_type
+2025-04-15 03:00:45.212 ERROR [Dummy-2156] [message_based_app_generator.py:79] - Failed to handle response, conversation_id: 17545d27-3791-463f-85e0-8db5298286d2
+Traceback (most recent call last):
+  File "/app/api/core/app/apps/message_based_app_generator.py", line 74, in _handle_response
+    return generate_task_pipeline.process()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/core/app/task_pipeline/easy_ui_based_generate_task_pipeline.py", line 126, in process
+    return self._to_blocking_response(generator)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/core/app/task_pipeline/easy_ui_based_generate_task_pipeline.py", line 158, in _to_blocking_response
+    data=ChatbotAppBlockingResponse.Data(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/.venv/lib/python3.12/site-packages/pydantic/main.py", line 212, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for Data
+answer
+  Input should be a valid string [type=string_type, input_value=[], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.9/v/string_type
+2025-04-15 03:00:47.939 ERROR [Dummy-2160] [message_based_app_generator.py:79] - Failed to handle response, conversation_id: 8b26fbd1-054d-48fc-9b76-b655233a3441
+Traceback (most recent call last):
+  File "/app/api/core/app/apps/message_based_app_generator.py", line 74, in _handle_response
+    return generate_task_pipeline.process()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/core/app/task_pipeline/easy_ui_based_generate_task_pipeline.py", line 126, in process
+    return self._to_blocking_response(generator)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/core/app/task_pipeline/easy_ui_based_generate_task_pipeline.py", line 158, in _to_blocking_response
+    data=ChatbotAppBlockingResponse.Data(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/api/.venv/lib/python3.12/site-packages/pydantic/main.py", line 212, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for Data
+answer
+  Input should be a valid string [type=string_type, input_value=[], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.9/v/string_type
