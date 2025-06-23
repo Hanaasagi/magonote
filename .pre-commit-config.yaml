@@ -1,0 +1,14 @@
+repos:
+- repo: local
+  hooks:
+    - id: format
+      name: format
+      entry: make format
+      language: golang
+      types: [go]
+
+    - id: lint
+      name: lint
+      entry: make lint
+      language: golang
+      types: [go]
