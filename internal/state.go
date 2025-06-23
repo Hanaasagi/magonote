@@ -24,17 +24,23 @@ type MatchPattern struct {
 
 var commonExt = []string{
 	// Programming languages
-	"py", "rb", "hs", "go", "rs",
-	"js", "ts", "tsx", "cpp", "c", "zig", "lua", "h", "sh",
-	"css", "html",
+	"py", "rb", "hs", "lua",
+	"go", "rs", "cpp", "zig", "c",
+	"h", "hpp", "h", "lua",
+	"sh", "bash", "sql",
+	"js", "ts", "tsx", "css", "html",
+	"vim",
 	// Configuration
-	"json", "yaml", "yml", "xml", "toml", "bzl", "ini",
+	"json", "yaml", "yml", "xml", "toml", "bzl",
+	"ini", "conf", "cfg", "lock",
 	// Text
 	"md", "rst", "txt", "log",
 	// Data
 	"csv", "parquet",
 	// Binary
 	"so", "dylib", "a",
+	// Media
+	"png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "mov", "mp4",
 	// Misc
 	"pem", "crt", "key",
 }
