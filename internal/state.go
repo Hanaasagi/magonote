@@ -63,7 +63,11 @@ var BuiltinPatterns = []MatchPattern{
 	{"color", `#[0-9a-fA-F]{6}`},
 	{"uid", `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`},
 	{"ipfs", `Qm[0-9a-zA-Z]{44}`},
-	{"sha", `[0-9a-f]{7,40}`},
+
+	// Avoid this regex: it matches substring on strings like "webapp-editor-7fdbfbf4b-k68b7".
+	// {"sha", `[0-9a-f]{7,40}`},
+	{"sha", `(?:^|[^a-zA-Z0-9_-])(?P<match>[0-9a-f]{7,40})(?:[^a-zA-Z0-9_-]|$)`},
+
 	// IPv4: 192.168.1.1:8080
 	{"ipv4_port", `\b\d{1,3}(?:\.\d{1,3}){3}:\d{1,5}\b`},
 	{"ipv4", `\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}`},
