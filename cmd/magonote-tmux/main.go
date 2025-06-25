@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Hanaasagi/magonote/internal/logger"
+	"github.com/Hanaasagi/magonote/pkg/clipboard"
 	"github.com/adrg/xdg"
 	"github.com/spf13/cobra"
 )
@@ -292,8 +292,26 @@ func (s *Swapper) DestroyContent() error {
 	return err
 }
 
-func (s *Swapper) SendOSC52() {
-	// TODO:
+// SendOSC52 sends OSC52 escape sequence to the current tmux pane's stdout
+func (s *Swapper) SendOSC52(text string) error {
+	// Get current tmux pane PID
+	pidBytes, err := exec.Command("tmux", "display-message", "-p", "#{pane_pid}").Output()
+	if err != nil {
+		return fmt.Errorf("failed to get tmux pane PID: %v", err)
+	}
+	pid := strings.TrimSpace(string(pidBytes))
+
+	// Open pane's stdout for writing OSC52 sequence
+	targetFdPath := fmt.Sprintf("/proc/%s/fd/1", pid)
+	f, err := os.OpenFile(targetFdPath, os.O_WRONLY|os.O_APPEND, 0)
+	if err != nil {
+		return fmt.Errorf("failed to open tmux pane fd: %v", err)
+	}
+	defer f.Close() // nolint: errcheck
+
+	// Create OSC52 writer that writes to the pane's stdout
+	osc52Writer := clipboard.NewOSC52Writer(f)
+	return osc52Writer.Write(text)
 }
 
 // ExecuteCommand executes the appropriate command based on the selected content
@@ -301,6 +319,7 @@ func (s *Swapper) ExecuteCommand() error {
 	items := strings.Split(s.content, "\n")
 
 	if len(items) > 1 {
+		// Handle multiple selections
 		var textParts []string
 		for _, item := range items {
 			parts := strings.SplitN(item, ":", 2)
@@ -309,11 +328,18 @@ func (s *Swapper) ExecuteCommand() error {
 			}
 		}
 		text := strings.Join(textParts, " ")
-		err := s.ExecuteFinalCommand(strings.TrimRight(text, " "), s.multiCommand)
-		return err
+
+		if s.osc52 {
+			// Send OSC52 sequence for multi-selection
+			if err := s.SendOSC52(text); err != nil {
+				slog.Warn("Failed to send OSC52 sequence", "error", err)
+			}
+		}
+
+		return s.ExecuteFinalCommand(strings.TrimRight(text, " "), s.multiCommand)
 	}
 
-	// Only one item
+	// Handle single selection
 	if len(items) == 0 || items[0] == "" {
 		return nil
 	}
@@ -329,20 +355,12 @@ func (s *Swapper) ExecuteCommand() error {
 	text := parts[1]
 
 	if s.osc52 {
-		base64Text := base64.StdEncoding.EncodeToString([]byte(text))
-		oscSeq := fmt.Sprintf("\x1b]52;0;%s\x07", base64Text)
-		tmuxSeq := fmt.Sprintf("\x1bPtmux;%s\x1b\\", strings.ReplaceAll(oscSeq, "\x1b", "\x1b\x1b"))
-
-		// Wait a bit for the redraw to finish
+		// Wait a bit for the redraw to finish before sending OSC52
 		time.Sleep(100 * time.Millisecond)
 
-		_, err := os.Stdout.Write([]byte(tmuxSeq))
-		if err != nil {
-			return err
-		}
-		err = os.Stdout.Sync()
-		if err != nil {
-			return err
+		// Send OSC52 sequence using our clipboard package
+		if err := s.SendOSC52(text); err != nil {
+			slog.Warn("Failed to send OSC52 sequence", "error", err)
 		}
 	}
 
@@ -351,11 +369,7 @@ func (s *Swapper) ExecuteCommand() error {
 		executeCommand = s.upcaseCommand
 	}
 
-	err := s.ExecuteFinalCommand(strings.TrimRight(text, " "), executeCommand)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.ExecuteFinalCommand(strings.TrimRight(text, " "), executeCommand)
 }
 
 // ExecuteFinalCommand executes the final command with the selected text
