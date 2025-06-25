@@ -1,0 +1,57 @@
+# Magonote Configuration Example
+# Copy this file to ~/.config/magonote/config.toml or specify with --config
+
+# Sets the alphabet used for generating hints
+alphabet = "abcdef"
+
+# Output format for the picked hint (%H = hint text, %U = uppercase flag)
+format = "%H"
+
+# Hint position: "left" or "right"
+position = "left"
+
+[regexp]
+# Additional regex patterns to match
+patterns = [
+    # Example patterns (uncomment to use)
+    # "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",  # Email
+    # "\\bhttps?://[\\w.-]+\\b",  # URL
+]
+
+[colors]
+# Foreground color for matches
+foreground = "green"
+
+# Background color for matches
+background = "black"
+
+# Foreground color for hints
+hint_foreground = "yellow"
+
+# Background color for hints
+hint_background = "black"
+
+# Foreground color for multi selected items
+multi_foreground = "yellow"
+
+# Background color for multi selected items
+multi_background = "black"
+
+# Foreground color for selection
+select_foreground = "blue"
+
+# Background color for selection
+select_background = "black"
+
+[flags]
+# Enable multi-selection mode
+multi = false
+
+# Reverse the order for assigned hints
+reverse = false
+
+# Unique level: 0 = none, 1 = unique hints, 2 = highlight only one duplicate
+unique_level = 0
+
+# Put square brackets around hint for visibility
+contrast = false 
