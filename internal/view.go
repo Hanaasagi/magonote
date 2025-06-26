@@ -408,6 +408,11 @@ func (v *View) handleSpaceKey() *CaptureEvent {
 
 // Present displays the UI and returns the chosen matches
 func (v *View) Present() []ChosenMatch {
+	// fast path
+	if len(v.matches) == 0 {
+		return []ChosenMatch{}
+	}
+
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		slog.Error("Failed to create tcell screen", "error", err)

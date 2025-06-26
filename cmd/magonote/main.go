@@ -228,7 +228,10 @@ func runApp(config *AppConfig) error {
 
 	selected := viewbox.Present()
 	if len(selected) == 0 {
-		return fmt.Errorf("no selection made")
+		// slient here
+		return nil
+		// return fmt.Errorf("no selection made")
+
 	}
 
 	output, err := processResults(selected, config.format)
