@@ -1,8 +1,9 @@
 # Magonote Configuration Example
 # Copy this file to ~/.config/magonote/config.toml or specify with --config
 
+[core]
 # Sets the alphabet used for generating hints
-alphabet = "abcdef"
+alphabet = "qwerty"
 
 # Output format for the picked hint (%H = hint text, %U = uppercase flag)
 format = "%H"
@@ -10,40 +11,6 @@ format = "%H"
 # Hint position: "left" or "right"
 position = "left"
 
-[regexp]
-# Additional regex patterns to match
-patterns = [
-    # Example patterns (uncomment to use)
-    # "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",  # Email
-    # "\\bhttps?://[\\w.-]+\\b",  # URL
-]
-
-[colors]
-# Foreground color for matches
-foreground = "green"
-
-# Background color for matches
-background = "black"
-
-# Foreground color for hints
-hint_foreground = "yellow"
-
-# Background color for hints
-hint_background = "black"
-
-# Foreground color for multi selected items
-multi_foreground = "yellow"
-
-# Background color for multi selected items
-multi_background = "black"
-
-# Foreground color for selection
-select_foreground = "blue"
-
-# Background color for selection
-select_background = "black"
-
-[flags]
 # Enable multi-selection mode
 multi = false
 
@@ -54,4 +21,36 @@ reverse = false
 unique_level = 0
 
 # Put square brackets around hint for visibility
-contrast = false 
+contrast = false
+
+[regexp]
+# Additional regex patterns to match
+patterns = [
+    # Example patterns (uncomment to use)
+    # "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",  # Email
+    # "\\bhttps?://[\\w.-]+\\b",  # URL
+]
+
+[colors.match]
+# Foreground color for matches
+foreground = "green"
+# Background color for matches
+background = "black"
+
+[colors.hint]
+# Foreground color for hints
+foreground = "yellow"
+# Background color for hints
+background = "black"
+
+[colors.multi]
+# Foreground color for multi selected items
+foreground = "yellow"
+# Background color for multi selected items
+background = "black"
+
+[colors.select]
+# Foreground color for selection
+foreground = "blue"
+# Background color for selection
+background = "black"

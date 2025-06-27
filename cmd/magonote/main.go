@@ -33,17 +33,28 @@ var (
 
 var appDir = filepath.Join(xdg.StateHome, appName)
 
-// Arguemnt holds application configuration
-type Arguemnt struct {
+type Arguments struct {
 	alphabet       string
 	format         string
-	colors         ColorConfig
 	position       string
 	regexpPatterns []string
-	flags          FlagConfig
+	multi          bool
+	reverse        bool
+	uniqueLevel    int // 0: none, 1: unique hints, 2: highlight only one duplicate
+	contrast       bool
 	target         string
 	inputFile      string
 	showVersion    bool
+
+	// colors
+	foregroundColor       string
+	backgroundColor       string
+	hintForegroundColor   string
+	hintBackgroundColor   string
+	multiForegroundColor  string
+	multiBackgroundColor  string
+	selectForegroundColor string
+	selectBackgroundColor string
 }
 
 func init() {
@@ -196,52 +207,59 @@ func loadConfig(configPath string) (*Config, error) {
 }
 
 // applyCliOverrides applies CLI arguments to override config values
-func applyCliOverrides(config *Config, argument *Arguemnt) {
-	if argument.alphabet != "qwerty" {
-		config.Alphabet = argument.alphabet
+func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
+	// Core settings
+	if cmd.Flags().Changed("alphabet") {
+		config.Core.Alphabet = args.alphabet
 	}
-	if argument.format != "%H" {
-		config.Format = argument.format
+	if cmd.Flags().Changed("format") {
+		config.Core.Format = args.format
 	}
-	if argument.position != "left" {
-		config.Position = argument.position
-	}
-	if len(argument.regexpPatterns) > 0 {
-		config.RegexpPatterns = argument.regexpPatterns
+	if cmd.Flags().Changed("position") {
+		config.Core.Position = args.position
 	}
 
-	// Colors - apply if different from defaults
-	if argument.colors.Foreground != "green" {
-		config.Colors.Foreground = argument.colors.Foreground
-	}
-	if argument.colors.Background != "black" {
-		config.Colors.Background = argument.colors.Background
-	}
-	if argument.colors.HintForeground != "yellow" {
-		config.Colors.HintForeground = argument.colors.HintForeground
-	}
-	if argument.colors.HintBackground != "black" {
-		config.Colors.HintBackground = argument.colors.HintBackground
-	}
-	if argument.colors.MultiForeground != "yellow" {
-		config.Colors.MultiForeground = argument.colors.MultiForeground
-	}
-	if argument.colors.MultiBackground != "black" {
-		config.Colors.MultiBackground = argument.colors.MultiBackground
-	}
-	if argument.colors.SelectForeground != "blue" {
-		config.Colors.SelectForeground = argument.colors.SelectForeground
-	}
-	if argument.colors.SelectBackground != "black" {
-		config.Colors.SelectBackground = argument.colors.SelectBackground
+	if len(args.regexpPatterns) > 0 {
+		config.Regexp.Patterns = args.regexpPatterns
 	}
 
-	// Flags - always apply from CLI since they might override config
-	config.Flags.Multi = argument.flags.Multi
-	config.Flags.Reverse = argument.flags.Reverse
-	config.Flags.UniqueLevel = argument.flags.UniqueLevel
-	config.Flags.Contrast = argument.flags.Contrast
+	if cmd.Flags().Changed("fg-color") {
+		config.Colors.Match.Foreground = args.foregroundColor
+	}
+	if cmd.Flags().Changed("bg-color") {
+		config.Colors.Match.Background = args.backgroundColor
+	}
+	if cmd.Flags().Changed("hint-fg-color") {
+		config.Colors.Hint.Foreground = args.hintForegroundColor
+	}
+	if cmd.Flags().Changed("hint-bg-color") {
+		config.Colors.Hint.Background = args.hintBackgroundColor
+	}
+	if cmd.Flags().Changed("multi-fg-color") {
+		config.Colors.Multi.Foreground = args.multiForegroundColor
+	}
+	if cmd.Flags().Changed("multi-bg-color") {
+		config.Colors.Multi.Background = args.multiBackgroundColor
+	}
+	if cmd.Flags().Changed("select-fg-color") {
+		config.Colors.Select.Foreground = args.selectForegroundColor
+	}
+	if cmd.Flags().Changed("select-bg-color") {
+		config.Colors.Select.Background = args.selectBackgroundColor
+	}
 
+	if cmd.Flags().Changed("multi") {
+		config.Core.Multi = args.multi
+	}
+	if cmd.Flags().Changed("reverse") {
+		config.Core.Reverse = args.reverse
+	}
+	if cmd.Flags().Changed("unique") {
+		config.Core.UniqueLevel = args.uniqueLevel
+	}
+	if cmd.Flags().Changed("contrast") {
+		config.Core.Contrast = args.contrast
+	}
 }
 
 // runApp runs the main application logic
@@ -252,22 +270,22 @@ func runApp(config *Config, inputFile, target string) error {
 		return err
 	}
 
-	state := internal.NewState(lines, config.Alphabet, config.RegexpPatterns)
+	state := internal.NewState(lines, config.Core.Alphabet, config.Regexp.Patterns)
 	viewbox := internal.NewView(
 		state,
-		config.Flags.Multi,
-		config.Flags.Reverse,
-		config.Flags.UniqueLevel,
-		config.Flags.Contrast,
-		config.Position,
-		internal.GetColor(config.Colors.SelectForeground),
-		internal.GetColor(config.Colors.SelectBackground),
-		internal.GetColor(config.Colors.MultiForeground),
-		internal.GetColor(config.Colors.MultiBackground),
-		internal.GetColor(config.Colors.Foreground),
-		internal.GetColor(config.Colors.Background),
-		internal.GetColor(config.Colors.HintForeground),
-		internal.GetColor(config.Colors.HintBackground),
+		config.Core.Multi,
+		config.Core.Reverse,
+		config.Core.UniqueLevel,
+		config.Core.Contrast,
+		config.Core.Position,
+		internal.GetColor(config.Colors.Select.Foreground),
+		internal.GetColor(config.Colors.Select.Background),
+		internal.GetColor(config.Colors.Multi.Foreground),
+		internal.GetColor(config.Colors.Multi.Background),
+		internal.GetColor(config.Colors.Match.Foreground),
+		internal.GetColor(config.Colors.Match.Background),
+		internal.GetColor(config.Colors.Hint.Foreground),
+		internal.GetColor(config.Colors.Hint.Background),
 	)
 
 	selected := viewbox.Present()
@@ -278,7 +296,7 @@ func runApp(config *Config, inputFile, target string) error {
 
 	}
 
-	output, err := processResults(selected, config.Format)
+	output, err := processResults(selected, config.Core.Format)
 	if err != nil {
 		return err
 	}
@@ -289,8 +307,8 @@ func runApp(config *Config, inputFile, target string) error {
 func main() {
 	debug.SetGCPercent(-1)
 
-	arg := &Arguemnt{}
 	var configPath string
+	args := &Arguments{}
 
 	rootCmd := &cobra.Command{
 		Use:   appName,
@@ -299,11 +317,11 @@ func main() {
 			"Your intelligent assistant for picking from terminal output. %s",
 			color.New(color.FgBlue).Sprintf("(%s)", FullVersion),
 		),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _args []string) error {
 			var err error
 			var config *Config
 
-			if arg.showVersion {
+			if args.showVersion {
 				fmt.Printf("%s version: %s\n", appName, FullVersion)
 				return nil
 			}
@@ -321,9 +339,9 @@ func main() {
 			}
 
 			// Apply CLI overrides
-			applyCliOverrides(config, arg)
+			applyCliOverrides(cmd, config, args)
 
-			return runApp(config, arg.inputFile, arg.target)
+			return runApp(config, args.inputFile, args.target)
 		},
 	}
 
@@ -331,31 +349,31 @@ func main() {
 	rootCmd.Flags().StringVar(&configPath, "config", "", "Config file path (default: XDG config dir, use 'NONE' to disable)")
 
 	// Core settings
-	rootCmd.Flags().StringVarP(&arg.alphabet, "alphabet", "a", "qwerty", "Sets the alphabet")
-	rootCmd.Flags().StringVarP(&arg.format, "format", "f", "%H", "Specifies the out format for the picked hint")
-	rootCmd.Flags().StringVarP(&arg.position, "position", "p", "left", "Hint position")
-	rootCmd.Flags().StringArrayVarP(&arg.regexpPatterns, "regexp", "x", nil, "Use this regexp as extra pattern to match")
+	rootCmd.Flags().StringVarP(&args.alphabet, "alphabet", "a", "qwerty", "Sets the alphabet")
+	rootCmd.Flags().StringVarP(&args.format, "format", "f", "%H", "Specifies the out format for the picked hint")
+	rootCmd.Flags().StringVarP(&args.position, "position", "p", "left", "Hint position")
+	rootCmd.Flags().StringArrayVarP(&args.regexpPatterns, "regexp", "x", nil, "Use this regexp as extra pattern to match")
 
 	// Colors
-	rootCmd.Flags().StringVar(&arg.colors.Foreground, "fg-color", "green", "Sets the foreground color for matches")
-	rootCmd.Flags().StringVar(&arg.colors.Background, "bg-color", "black", "Sets the background color for matches")
-	rootCmd.Flags().StringVar(&arg.colors.HintForeground, "hint-fg-color", "yellow", "Sets the foreground color for hints")
-	rootCmd.Flags().StringVar(&arg.colors.HintBackground, "hint-bg-color", "black", "Sets the background color for hints")
-	rootCmd.Flags().StringVar(&arg.colors.MultiForeground, "multi-fg-color", "yellow", "Sets the foreground color for multi selected items")
-	rootCmd.Flags().StringVar(&arg.colors.MultiBackground, "multi-bg-color", "black", "Sets the background color for multi selected items")
-	rootCmd.Flags().StringVar(&arg.colors.SelectForeground, "select-fg-color", "blue", "Sets the foreground color for selection")
-	rootCmd.Flags().StringVar(&arg.colors.SelectBackground, "select-bg-color", "black", "Sets the background color for selection")
+	rootCmd.Flags().StringVar(&args.foregroundColor, "fg-color", "green", "Sets the foreground color for matches")
+	rootCmd.Flags().StringVar(&args.backgroundColor, "bg-color", "black", "Sets the background color for matches")
+	rootCmd.Flags().StringVar(&args.hintForegroundColor, "hint-fg-color", "yellow", "Sets the foreground color for hints")
+	rootCmd.Flags().StringVar(&args.hintBackgroundColor, "hint-bg-color", "black", "Sets the background color for hints")
+	rootCmd.Flags().StringVar(&args.multiForegroundColor, "multi-fg-color", "yellow", "Sets the foreground color for multi selected items")
+	rootCmd.Flags().StringVar(&args.multiBackgroundColor, "multi-bg-color", "black", "Sets the background color for multi selected items")
+	rootCmd.Flags().StringVar(&args.selectForegroundColor, "select-fg-color", "blue", "Sets the foreground color for selection")
+	rootCmd.Flags().StringVar(&args.selectBackgroundColor, "select-bg-color", "black", "Sets the background color for selection")
 
 	// Flags
-	rootCmd.Flags().BoolVarP(&arg.flags.Multi, "multi", "m", false, "Enable multi-selection")
-	rootCmd.Flags().BoolVarP(&arg.flags.Reverse, "reverse", "r", false, "Reverse the order for assigned hints")
-	rootCmd.Flags().CountVarP(&arg.flags.UniqueLevel, "unique", "u", "Don't show duplicated hints for the same match (use -u for unique hints, -uu for unique match)")
-	rootCmd.Flags().BoolVarP(&arg.flags.Contrast, "contrast", "c", false, "Put square brackets around hint for visibility")
+	rootCmd.Flags().BoolVarP(&args.multi, "multi", "m", false, "Enable multi-selection")
+	rootCmd.Flags().BoolVarP(&args.reverse, "reverse", "r", false, "Reverse the order for assigned hints")
+	rootCmd.Flags().CountVarP(&args.uniqueLevel, "unique", "u", "Don't show duplicated hints for the same match (use -u for unique hints, -uu for unique match)")
+	rootCmd.Flags().BoolVarP(&args.contrast, "contrast", "c", false, "Put square brackets around hint for visibility")
 
 	// Runtime settings
-	rootCmd.Flags().StringVarP(&arg.target, "target", "t", "", "Stores the hint in the specified path")
-	rootCmd.Flags().StringVarP(&arg.inputFile, "input-file", "i", "", "Read input from file instead of stdin")
-	rootCmd.Flags().BoolVarP(&arg.showVersion, "version", "v", false, "Print version and exit")
+	rootCmd.Flags().StringVarP(&args.target, "target", "t", "", "Stores the hint in the specified path")
+	rootCmd.Flags().StringVarP(&args.inputFile, "input-file", "i", "", "Read input from file instead of stdin")
+	rootCmd.Flags().BoolVarP(&args.showVersion, "version", "v", false, "Print version and exit")
 
 	rootCmd.SetHelpTemplate(cmd.HelpTemplate)
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {

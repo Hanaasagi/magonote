@@ -6,55 +6,69 @@ import (
 	"os"
 )
 
-type ColorConfig struct {
-	Foreground       string `toml:"foreground"`
-	Background       string `toml:"background"`
-	HintForeground   string `toml:"hint_foreground"`
-	HintBackground   string `toml:"hint_background"`
-	MultiForeground  string `toml:"multi_foreground"`
-	MultiBackground  string `toml:"multi_background"`
-	SelectForeground string `toml:"select_foreground"`
-	SelectBackground string `toml:"select_background"`
-}
-
-type FlagConfig struct {
-	Multi       bool `toml:"multi"`
-	Reverse     bool `toml:"reverse"`
-	UniqueLevel int  `toml:"unique_level"`
-	Contrast    bool `toml:"contrast"`
-}
-
 type Config struct {
-	Alphabet string `toml:"alphabet"`
-	Format   string `toml:"format"`
-	Position string `toml:"position"`
+	Core   CoreConfig   `toml:"core"`
+	Regexp RegexpConfig `toml:"regexp"`
+	Colors ColorConfig  `toml:"colors"`
+}
 
-	RegexpPatterns []string    `toml:"regexp_patterns"`
-	Colors         ColorConfig `toml:"colors"`
-	Flags          FlagConfig  `toml:"flags"`
+type CoreConfig struct {
+	Alphabet    string `toml:"alphabet"`
+	Format      string `toml:"format"`
+	Position    string `toml:"position"`
+	Multi       bool   `toml:"multi"`
+	Reverse     bool   `toml:"reverse"`
+	UniqueLevel int    `toml:"unique_level"`
+	Contrast    bool   `toml:"contrast"`
+}
+
+type RegexpConfig struct {
+	Patterns []string `toml:"patterns"`
+}
+
+type ColorGroup struct {
+	Foreground string `toml:"foreground"`
+	Background string `toml:"background"`
+}
+
+type ColorConfig struct {
+	Match  ColorGroup `toml:"match"`
+	Hint   ColorGroup `toml:"hint"`
+	Multi  ColorGroup `toml:"multi"`
+	Select ColorGroup `toml:"select"`
 }
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		Alphabet:       "qwerty",
-		Format:         "%H",
-		Position:       "left",
-		RegexpPatterns: []string{},
-		Colors: ColorConfig{
-			Foreground:       "green",
-			Background:       "black",
-			HintForeground:   "yellow",
-			HintBackground:   "black",
-			MultiForeground:  "yellow",
-			MultiBackground:  "black",
-			SelectForeground: "blue",
-			SelectBackground: "black",
-		},
-		Flags: FlagConfig{
+		Core: CoreConfig{
+			Alphabet:    "qwerty",
+			Format:      "%H",
+			Position:    "left",
 			Multi:       false,
 			Reverse:     false,
 			UniqueLevel: 0,
 			Contrast:    false,
+		},
+		Regexp: RegexpConfig{
+			Patterns: []string{},
+		},
+		Colors: ColorConfig{
+			Match: ColorGroup{
+				Foreground: "green",
+				Background: "black",
+			},
+			Hint: ColorGroup{
+				Foreground: "yellow",
+				Background: "black",
+			},
+			Multi: ColorGroup{
+				Foreground: "yellow",
+				Background: "black",
+			},
+			Select: ColorGroup{
+				Foreground: "blue",
+				Background: "black",
+			},
 		},
 	}
 }
