@@ -11,7 +11,6 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/Hanaasagi/magonote/cmd"
 	"github.com/Hanaasagi/magonote/internal"
 	"github.com/Hanaasagi/magonote/internal/logger"
@@ -34,55 +33,8 @@ var (
 
 var appDir = filepath.Join(xdg.StateHome, appName)
 
-// TomlConfig represents the TOML configuration file structure
-type TomlConfig struct {
-	Alphabet string `toml:"alphabet"`
-	Format   string `toml:"format"`
-	Position string `toml:"position"`
-	Regexp   struct {
-		Patterns []string `toml:"patterns"`
-	} `toml:"regexp"`
-	Colors struct {
-		Foreground       string `toml:"foreground"`
-		Background       string `toml:"background"`
-		HintForeground   string `toml:"hint_foreground"`
-		HintBackground   string `toml:"hint_background"`
-		MultiForeground  string `toml:"multi_foreground"`
-		MultiBackground  string `toml:"multi_background"`
-		SelectForeground string `toml:"select_foreground"`
-		SelectBackground string `toml:"select_background"`
-	} `toml:"colors"`
-	Flags struct {
-		Multi       bool `toml:"multi"`
-		Reverse     bool `toml:"reverse"`
-		UniqueLevel int  `toml:"unique_level"`
-		Contrast    bool `toml:"contrast"`
-	} `toml:"flags"`
-}
-
-// Config holds the merged application configuration
-type Config struct {
-	// Core settings
-	alphabet       string
-	format         string
-	position       string
-	regexpPatterns []string
-
-	// Colors
-	colors ColorConfig
-
-	// Flags
-	flags FlagConfig
-
-	// Runtime-only settings (not in TOML)
-	target      string
-	inputFile   string
-	showVersion bool
-	configPath  string
-}
-
-// AppConfig holds application configuration
-type AppConfig struct {
+// Arguemnt holds application configuration
+type Arguemnt struct {
 	alphabet       string
 	format         string
 	colors         ColorConfig
@@ -108,26 +60,6 @@ func init() {
 	if f, err := os.Create(crashFilePath); err == nil {
 		_ = debug.SetCrashOutput(f, debug.CrashOptions{})
 	}
-}
-
-// ColorConfig groups color-related configuration
-type ColorConfig struct {
-	foreground       string
-	background       string
-	hintForeground   string
-	hintBackground   string
-	multiForeground  string
-	multiBackground  string
-	selectForeground string
-	selectBackground string
-}
-
-// FlagConfig groups boolean flags
-type FlagConfig struct {
-	multi       bool
-	reverse     bool
-	uniqueLevel int // 0: none, 1: unique hints, 2: highlight only one duplicate
-	contrast    bool
 }
 
 // readInput reads input from file or stdin with buffering
@@ -244,109 +176,10 @@ func processResults(selected []internal.ChosenMatch, format string) (string, err
 	return strings.Join(results, "\n"), nil
 }
 
-// getDefaultConfig returns the default configuration
-func getDefaultConfig() *Config {
-	return &Config{
-		alphabet: "qwerty",
-		format:   "%H",
-		position: "left",
-		colors: ColorConfig{
-			foreground:       "green",
-			background:       "black",
-			hintForeground:   "yellow",
-			hintBackground:   "black",
-			multiForeground:  "yellow",
-			multiBackground:  "black",
-			selectForeground: "blue",
-			selectBackground: "black",
-		},
-		flags: FlagConfig{
-			multi:       false,
-			reverse:     false,
-			uniqueLevel: 0,
-			contrast:    false,
-		},
-	}
-}
-
-// loadTomlConfig loads configuration from a TOML file
-func loadTomlConfig(configPath string) (*TomlConfig, error) {
-	var config TomlConfig
-
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, nil // Config file doesn't exist, return nil
-	}
-
-	if _, err := toml.DecodeFile(configPath, &config); err != nil {
-		return nil, fmt.Errorf("failed to decode TOML config: %w", err)
-	}
-
-	return &config, nil
-}
-
-// mergeConfigs merges TOML config with default config
-func mergeConfigs(base *Config, tomlConfig *TomlConfig) {
-	if tomlConfig == nil {
-		return
-	}
-
-	if tomlConfig.Alphabet != "" {
-		base.alphabet = tomlConfig.Alphabet
-	}
-	if tomlConfig.Format != "" {
-		base.format = tomlConfig.Format
-	}
-	if tomlConfig.Position != "" {
-		base.position = tomlConfig.Position
-	}
-	if len(tomlConfig.Regexp.Patterns) > 0 {
-		base.regexpPatterns = tomlConfig.Regexp.Patterns
-	}
-
-	// Colors
-	if tomlConfig.Colors.Foreground != "" {
-		base.colors.foreground = tomlConfig.Colors.Foreground
-	}
-	if tomlConfig.Colors.Background != "" {
-		base.colors.background = tomlConfig.Colors.Background
-	}
-	if tomlConfig.Colors.HintForeground != "" {
-		base.colors.hintForeground = tomlConfig.Colors.HintForeground
-	}
-	if tomlConfig.Colors.HintBackground != "" {
-		base.colors.hintBackground = tomlConfig.Colors.HintBackground
-	}
-	if tomlConfig.Colors.MultiForeground != "" {
-		base.colors.multiForeground = tomlConfig.Colors.MultiForeground
-	}
-	if tomlConfig.Colors.MultiBackground != "" {
-		base.colors.multiBackground = tomlConfig.Colors.MultiBackground
-	}
-	if tomlConfig.Colors.SelectForeground != "" {
-		base.colors.selectForeground = tomlConfig.Colors.SelectForeground
-	}
-	if tomlConfig.Colors.SelectBackground != "" {
-		base.colors.selectBackground = tomlConfig.Colors.SelectBackground
-	}
-
-	// Flags - only merge if explicitly set in TOML
-	base.flags.multi = tomlConfig.Flags.Multi
-	base.flags.reverse = tomlConfig.Flags.Reverse
-	base.flags.uniqueLevel = tomlConfig.Flags.UniqueLevel
-	base.flags.contrast = tomlConfig.Flags.Contrast
-}
-
 // loadConfig loads and merges configuration from multiple sources
 func loadConfig(configPath string) (*Config, error) {
-	config := getDefaultConfig()
-
-	// Skip config loading if configPath is "NONE"
-	if configPath == "NONE" {
-		return config, nil
-	}
-
-	// Determine config file path
 	var actualConfigPath string
+
 	if configPath != "" {
 		actualConfigPath = configPath
 	} else {
@@ -354,105 +187,87 @@ func loadConfig(configPath string) (*Config, error) {
 		actualConfigPath = filepath.Join(xdg.ConfigHome, appName, "config.toml")
 	}
 
-	config.configPath = actualConfigPath
-
-	// Load TOML config
-	tomlConfig, err := loadTomlConfig(actualConfigPath)
+	config, err := LoadConfigFromFile(actualConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("loading config from %s: %w", actualConfigPath, err)
 	}
-
-	// Merge TOML config with defaults
-	mergeConfigs(config, tomlConfig)
 
 	return config, nil
 }
 
 // applyCliOverrides applies CLI arguments to override config values
-func applyCliOverrides(config *Config, cliConfig *AppConfig) {
-	// Apply CLI overrides only if they were explicitly set
-	// Note: This is a simplified approach - in a real implementation,
-	// you might want to track which flags were actually set by the user
-
-	if cliConfig.alphabet != "qwerty" { // Default value check
-		config.alphabet = cliConfig.alphabet
+func applyCliOverrides(config *Config, argument *Arguemnt) {
+	if argument.alphabet != "qwerty" {
+		config.Alphabet = argument.alphabet
 	}
-	if cliConfig.format != "%H" { // Default value check
-		config.format = cliConfig.format
+	if argument.format != "%H" {
+		config.Format = argument.format
 	}
-	if cliConfig.position != "left" { // Default value check
-		config.position = cliConfig.position
+	if argument.position != "left" {
+		config.Position = argument.position
 	}
-	if len(cliConfig.regexpPatterns) > 0 {
-		config.regexpPatterns = cliConfig.regexpPatterns
+	if len(argument.regexpPatterns) > 0 {
+		config.RegexpPatterns = argument.regexpPatterns
 	}
 
 	// Colors - apply if different from defaults
-	if cliConfig.colors.foreground != "green" {
-		config.colors.foreground = cliConfig.colors.foreground
+	if argument.colors.Foreground != "green" {
+		config.Colors.Foreground = argument.colors.Foreground
 	}
-	if cliConfig.colors.background != "black" {
-		config.colors.background = cliConfig.colors.background
+	if argument.colors.Background != "black" {
+		config.Colors.Background = argument.colors.Background
 	}
-	if cliConfig.colors.hintForeground != "yellow" {
-		config.colors.hintForeground = cliConfig.colors.hintForeground
+	if argument.colors.HintForeground != "yellow" {
+		config.Colors.HintForeground = argument.colors.HintForeground
 	}
-	if cliConfig.colors.hintBackground != "black" {
-		config.colors.hintBackground = cliConfig.colors.hintBackground
+	if argument.colors.HintBackground != "black" {
+		config.Colors.HintBackground = argument.colors.HintBackground
 	}
-	if cliConfig.colors.multiForeground != "yellow" {
-		config.colors.multiForeground = cliConfig.colors.multiForeground
+	if argument.colors.MultiForeground != "yellow" {
+		config.Colors.MultiForeground = argument.colors.MultiForeground
 	}
-	if cliConfig.colors.multiBackground != "black" {
-		config.colors.multiBackground = cliConfig.colors.multiBackground
+	if argument.colors.MultiBackground != "black" {
+		config.Colors.MultiBackground = argument.colors.MultiBackground
 	}
-	if cliConfig.colors.selectForeground != "blue" {
-		config.colors.selectForeground = cliConfig.colors.selectForeground
+	if argument.colors.SelectForeground != "blue" {
+		config.Colors.SelectForeground = argument.colors.SelectForeground
 	}
-	if cliConfig.colors.selectBackground != "black" {
-		config.colors.selectBackground = cliConfig.colors.selectBackground
+	if argument.colors.SelectBackground != "black" {
+		config.Colors.SelectBackground = argument.colors.SelectBackground
 	}
 
 	// Flags - always apply from CLI since they might override config
-	config.flags.multi = cliConfig.flags.multi
-	config.flags.reverse = cliConfig.flags.reverse
-	config.flags.uniqueLevel = cliConfig.flags.uniqueLevel
-	config.flags.contrast = cliConfig.flags.contrast
+	config.Flags.Multi = argument.flags.Multi
+	config.Flags.Reverse = argument.flags.Reverse
+	config.Flags.UniqueLevel = argument.flags.UniqueLevel
+	config.Flags.Contrast = argument.flags.Contrast
 
-	// Runtime settings
-	config.target = cliConfig.target
-	config.inputFile = cliConfig.inputFile
-	config.showVersion = cliConfig.showVersion
 }
 
 // runApp runs the main application logic
-func runApp(config *Config) error {
-	if config.showVersion {
-		fmt.Printf("%s version: %s\n", appName, FullVersion)
-		return nil
-	}
+func runApp(config *Config, inputFile, target string) error {
 
-	lines, err := readInput(config.inputFile)
+	lines, err := readInput(inputFile)
 	if err != nil {
 		return err
 	}
 
-	state := internal.NewState(lines, config.alphabet, config.regexpPatterns)
+	state := internal.NewState(lines, config.Alphabet, config.RegexpPatterns)
 	viewbox := internal.NewView(
 		state,
-		config.flags.multi,
-		config.flags.reverse,
-		config.flags.uniqueLevel,
-		config.flags.contrast,
-		config.position,
-		internal.GetColor(config.colors.selectForeground),
-		internal.GetColor(config.colors.selectBackground),
-		internal.GetColor(config.colors.multiForeground),
-		internal.GetColor(config.colors.multiBackground),
-		internal.GetColor(config.colors.foreground),
-		internal.GetColor(config.colors.background),
-		internal.GetColor(config.colors.hintForeground),
-		internal.GetColor(config.colors.hintBackground),
+		config.Flags.Multi,
+		config.Flags.Reverse,
+		config.Flags.UniqueLevel,
+		config.Flags.Contrast,
+		config.Position,
+		internal.GetColor(config.Colors.SelectForeground),
+		internal.GetColor(config.Colors.SelectBackground),
+		internal.GetColor(config.Colors.MultiForeground),
+		internal.GetColor(config.Colors.MultiBackground),
+		internal.GetColor(config.Colors.Foreground),
+		internal.GetColor(config.Colors.Background),
+		internal.GetColor(config.Colors.HintForeground),
+		internal.GetColor(config.Colors.HintBackground),
 	)
 
 	selected := viewbox.Present()
@@ -463,18 +278,18 @@ func runApp(config *Config) error {
 
 	}
 
-	output, err := processResults(selected, config.format)
+	output, err := processResults(selected, config.Format)
 	if err != nil {
 		return err
 	}
 
-	return writeOutput(config.target, output)
+	return writeOutput(target, output)
 }
 
 func main() {
 	debug.SetGCPercent(-1)
 
-	cliConfig := &AppConfig{}
+	arg := &Arguemnt{}
 	var configPath string
 
 	rootCmd := &cobra.Command{
@@ -485,16 +300,30 @@ func main() {
 			color.New(color.FgBlue).Sprintf("(%s)", FullVersion),
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Load configuration from TOML and defaults
-			config, err := loadConfig(configPath)
-			if err != nil {
-				return fmt.Errorf("loading configuration: %w", err)
+			var err error
+			var config *Config
+
+			if arg.showVersion {
+				fmt.Printf("%s version: %s\n", appName, FullVersion)
+				return nil
+			}
+
+			// Skip config loading if configPath is "NONE"
+			if configPath == "NONE" {
+				config = NewDefaultConfig()
+			} else {
+				// Load configuration from TOML and defaults
+				config, err = loadConfig(configPath)
+				if err != nil {
+					return fmt.Errorf("loading configuration: %w", err)
+				}
+
 			}
 
 			// Apply CLI overrides
-			applyCliOverrides(config, cliConfig)
+			applyCliOverrides(config, arg)
 
-			return runApp(config)
+			return runApp(config, arg.inputFile, arg.target)
 		},
 	}
 
@@ -502,31 +331,31 @@ func main() {
 	rootCmd.Flags().StringVar(&configPath, "config", "", "Config file path (default: XDG config dir, use 'NONE' to disable)")
 
 	// Core settings
-	rootCmd.Flags().StringVarP(&cliConfig.alphabet, "alphabet", "a", "qwerty", "Sets the alphabet")
-	rootCmd.Flags().StringVarP(&cliConfig.format, "format", "f", "%H", "Specifies the out format for the picked hint")
-	rootCmd.Flags().StringVarP(&cliConfig.position, "position", "p", "left", "Hint position")
-	rootCmd.Flags().StringArrayVarP(&cliConfig.regexpPatterns, "regexp", "x", nil, "Use this regexp as extra pattern to match")
+	rootCmd.Flags().StringVarP(&arg.alphabet, "alphabet", "a", "qwerty", "Sets the alphabet")
+	rootCmd.Flags().StringVarP(&arg.format, "format", "f", "%H", "Specifies the out format for the picked hint")
+	rootCmd.Flags().StringVarP(&arg.position, "position", "p", "left", "Hint position")
+	rootCmd.Flags().StringArrayVarP(&arg.regexpPatterns, "regexp", "x", nil, "Use this regexp as extra pattern to match")
 
 	// Colors
-	rootCmd.Flags().StringVar(&cliConfig.colors.foreground, "fg-color", "green", "Sets the foreground color for matches")
-	rootCmd.Flags().StringVar(&cliConfig.colors.background, "bg-color", "black", "Sets the background color for matches")
-	rootCmd.Flags().StringVar(&cliConfig.colors.hintForeground, "hint-fg-color", "yellow", "Sets the foreground color for hints")
-	rootCmd.Flags().StringVar(&cliConfig.colors.hintBackground, "hint-bg-color", "black", "Sets the background color for hints")
-	rootCmd.Flags().StringVar(&cliConfig.colors.multiForeground, "multi-fg-color", "yellow", "Sets the foreground color for multi selected items")
-	rootCmd.Flags().StringVar(&cliConfig.colors.multiBackground, "multi-bg-color", "black", "Sets the background color for multi selected items")
-	rootCmd.Flags().StringVar(&cliConfig.colors.selectForeground, "select-fg-color", "blue", "Sets the foreground color for selection")
-	rootCmd.Flags().StringVar(&cliConfig.colors.selectBackground, "select-bg-color", "black", "Sets the background color for selection")
+	rootCmd.Flags().StringVar(&arg.colors.Foreground, "fg-color", "green", "Sets the foreground color for matches")
+	rootCmd.Flags().StringVar(&arg.colors.Background, "bg-color", "black", "Sets the background color for matches")
+	rootCmd.Flags().StringVar(&arg.colors.HintForeground, "hint-fg-color", "yellow", "Sets the foreground color for hints")
+	rootCmd.Flags().StringVar(&arg.colors.HintBackground, "hint-bg-color", "black", "Sets the background color for hints")
+	rootCmd.Flags().StringVar(&arg.colors.MultiForeground, "multi-fg-color", "yellow", "Sets the foreground color for multi selected items")
+	rootCmd.Flags().StringVar(&arg.colors.MultiBackground, "multi-bg-color", "black", "Sets the background color for multi selected items")
+	rootCmd.Flags().StringVar(&arg.colors.SelectForeground, "select-fg-color", "blue", "Sets the foreground color for selection")
+	rootCmd.Flags().StringVar(&arg.colors.SelectBackground, "select-bg-color", "black", "Sets the background color for selection")
 
 	// Flags
-	rootCmd.Flags().BoolVarP(&cliConfig.flags.multi, "multi", "m", false, "Enable multi-selection")
-	rootCmd.Flags().BoolVarP(&cliConfig.flags.reverse, "reverse", "r", false, "Reverse the order for assigned hints")
-	rootCmd.Flags().CountVarP(&cliConfig.flags.uniqueLevel, "unique", "u", "Don't show duplicated hints for the same match (use -u for unique hints, -uu for unique match)")
-	rootCmd.Flags().BoolVarP(&cliConfig.flags.contrast, "contrast", "c", false, "Put square brackets around hint for visibility")
+	rootCmd.Flags().BoolVarP(&arg.flags.Multi, "multi", "m", false, "Enable multi-selection")
+	rootCmd.Flags().BoolVarP(&arg.flags.Reverse, "reverse", "r", false, "Reverse the order for assigned hints")
+	rootCmd.Flags().CountVarP(&arg.flags.UniqueLevel, "unique", "u", "Don't show duplicated hints for the same match (use -u for unique hints, -uu for unique match)")
+	rootCmd.Flags().BoolVarP(&arg.flags.Contrast, "contrast", "c", false, "Put square brackets around hint for visibility")
 
 	// Runtime settings
-	rootCmd.Flags().StringVarP(&cliConfig.target, "target", "t", "", "Stores the hint in the specified path")
-	rootCmd.Flags().StringVarP(&cliConfig.inputFile, "input-file", "i", "", "Read input from file instead of stdin")
-	rootCmd.Flags().BoolVarP(&cliConfig.showVersion, "version", "v", false, "Print version and exit")
+	rootCmd.Flags().StringVarP(&arg.target, "target", "t", "", "Stores the hint in the specified path")
+	rootCmd.Flags().StringVarP(&arg.inputFile, "input-file", "i", "", "Read input from file instead of stdin")
+	rootCmd.Flags().BoolVarP(&arg.showVersion, "version", "v", false, "Print version and exit")
 
 	rootCmd.SetHelpTemplate(cmd.HelpTemplate)
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
