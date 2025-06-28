@@ -247,6 +247,29 @@ func (s *Swapper) SwapPanes() error {
 	return nil
 }
 
+// RestoreZoomState restores the original zoom state of the active pane
+func (s *Swapper) RestoreZoomState() error {
+	// Check current zoom state
+	currentZoomCommand := []string{"tmux", "display-message", "-p", "#{window_zoomed_flag}"}
+	currentZoomOutput, err := s.executor.Execute(currentZoomCommand)
+	if err != nil {
+		return fmt.Errorf("failed to get current zoom state: %v", err)
+	}
+
+	currentZoomed := strings.TrimSpace(currentZoomOutput) == "1"
+
+	// If current zoom state doesn't match original state, restore it
+	if currentZoomed != s.activePaneZoomed {
+		zoomCommand := []string{"tmux", "resize-pane", "-t", s.activePaneId, "-Z"}
+		_, err := s.executor.Execute(zoomCommand)
+		if err != nil {
+			return fmt.Errorf("failed to restore zoom state: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // ResizePane resizes the pane to match the active pane's zoom state
 // Note: This is now handled by SwapPanes with -Z flag for tmux 3.1+
 func (s *Swapper) ResizePane() error {
@@ -450,4 +473,6 @@ func main() {
 	mustDo("Failed to retrieve content", swapper.RetrieveContent)
 	mustDo("Failed to destroy content", swapper.DestroyContent)
 	mustDo("Failed to execute command", swapper.ExecuteCommand)
+	// Restore zoom state as the final step to ensure proper state restoration
+	mustDo("Failed to restore zoom state", swapper.RestoreZoomState)
 }
