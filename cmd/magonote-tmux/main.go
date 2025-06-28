@@ -239,6 +239,7 @@ func (m *MagonoteRunner) getMagonoteArgs() ([]string, error) {
 
 // ShowMagonote swaps panes to show magonote interface
 func (m *MagonoteRunner) ShowMagonote() error {
+	slog.Info("Showing magonote interface", "swapping", m.magonotePaneId, "with", m.activePaneId)
 	return m.tmux.SwapPanes(m.magonotePaneId, m.activePaneId)
 }
 
@@ -248,13 +249,17 @@ func (m *MagonoteRunner) WaitForCompletion() error {
 	return err
 }
 
-// HideMagonote swaps panes back to restore original view
-func (m *MagonoteRunner) HideMagonote() error {
-	return m.tmux.SwapPanes(m.magonotePaneId, m.activePaneId)
-}
-
-// CleanupMagonoteWindow kills the magonote window
+// CleanupMagonoteWindow swaps back and kills the magonote window
 func (m *MagonoteRunner) CleanupMagonoteWindow() error {
+	// First swap back to restore original pane positions
+	slog.Info("Restoring original pane layout", "swapping", m.magonotePaneId, "with", m.activePaneId)
+	if err := m.tmux.SwapPanes(m.magonotePaneId, m.activePaneId); err != nil {
+		slog.Warn("Failed to swap panes back", "error", err)
+		// Continue with cleanup even if swap fails
+	}
+
+	// Then kill the magonote pane
+	slog.Info("Cleaning up magonote pane", "paneId", m.magonotePaneId)
 	_, err := m.tmux.Execute([]string{"tmux", "kill-pane", "-t", m.magonotePaneId})
 	return err
 }
@@ -370,7 +375,7 @@ func (m *MagonoteRunner) Run() error {
 		return fmt.Errorf("failed to create magonote window: %v", err)
 	}
 
-	// Step 3: Show magonote interface
+	// Step 3: Show magonote interface (swap panes)
 	if err := m.ShowMagonote(); err != nil {
 		return fmt.Errorf("failed to show magonote: %v", err)
 	}
@@ -380,17 +385,12 @@ func (m *MagonoteRunner) Run() error {
 		return fmt.Errorf("failed to wait for completion: %v", err)
 	}
 
-	// Step 5: Hide magonote interface
-	if err := m.HideMagonote(); err != nil {
-		return fmt.Errorf("failed to hide magonote: %v", err)
-	}
-
-	// Step 6: Process the result
+	// Step 5: Process the result
 	if err := m.ProcessResult(); err != nil {
 		return fmt.Errorf("failed to process result: %v", err)
 	}
 
-	// Step 7: Cleanup
+	// Step 6: Cleanup (swap back and kill magonote pane)
 	if err := m.CleanupMagonoteWindow(); err != nil {
 		slog.Warn("Failed to cleanup magonote window", "error", err)
 	}
