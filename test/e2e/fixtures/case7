@@ -1,0 +1,12 @@
+This is a very long line that contains an IP address 192.168.1.1 and should wrap gracefully across multiple terminal lines without breaking the matching functionality
+Short line
+Another very long line with multiple matches: IP 10.0.0.1, URL https://example.com/very/long/path/with/many/segments/that/should/wrap/gracefully, and file path /very/long/path/to/some/important/file/that/might/wrap/config.yaml
+Line with Unicode: 这是一个很长的包含中文字符的行，其中包含一个IP地址 172.16.0.1 应该能够正确换行显示
+supercalifragilisticexpialidocious_very_long_filename_that_should_wrap_across_multiple_lines.txt
+Git commit hash in a very long line: commit 1234567890abcdef1234567890abcdef12345678 modified /path/to/very/long/filename/that/should/wrap/properly.go
+Log entry with timestamp 2024-01-15T10:30:45.123Z and very long message that contains URL https://api.example.com/v1/endpoints/with/very/long/paths/that/should/wrap
+Docker image: registry.example.com/namespace/very-long-image-name-that-might-wrap:latest-tag-with-long-name
+End line
+
+English Novel:
+It was a night like no other, heavy with the scent of rain on old cobblestones, as Evelyn walked alone beneath the flickering gas lamps that lined the narrow alleyways of East Alderton. She clutched her coat tighter against the wind, which howled through the passageways like a lost soul in mourning, and though the city had long since fallen asleep, she could not shake the feeling that unseen eyes were watching her from the shadows. Each step echoed against the damp walls, mingling with the distant chime of a broken clock tower that insisted it was still midnight, even as the horizon threatened to blush with dawn. Somewhere in the distance, a dog barked once, then fell silent, and the silence that followed pressed in around her like the heavy velvet of a theater curtain moments before a tragedy unfolds. Memories surged—of letters left unanswered, of promises whispered under moonlight then shattered by morning, of names she no longer dared to speak—and still she walked on, guided only by instinct and a strange certainty that whatever waited at the end of this path would change her life forever. The rain began to fall in earnest, thick, unrelenting, drumming on her umbrella like the ticking of an enormous, unseen clock, counting down to something she couldn’t yet name but somehow already feared. And still she did not stop.
