@@ -14,15 +14,16 @@ import (
 
 // View represents the terminal UI for displaying and interacting with matches
 type View struct {
-	state    *State
-	skip     int
-	multi    bool
-	contrast bool
-	position string
-	matches  []Match
-	colors   ViewColors
-	chosen   []ChosenMatch
-	screen   tcell.Screen
+	state      *State
+	skip       int
+	multi      bool
+	contrast   bool
+	position   string
+	matches    []Match
+	colors     ViewColors
+	chosen     []ChosenMatch
+	screen     tcell.Screen
+	textBuffer *TextBuffer // Buffer for handling text wrapping
 }
 
 // ViewColors groups all color-related fields
@@ -76,12 +77,13 @@ func NewView(
 	}
 
 	return &View{
-		state:    state,
-		skip:     skip,
-		multi:    multi,
-		contrast: contrast,
-		position: position,
-		matches:  matches,
+		state:      state,
+		skip:       skip,
+		multi:      multi,
+		contrast:   contrast,
+		position:   position,
+		matches:    matches,
+		textBuffer: nil, // Will be initialized when screen is available
 		colors: ViewColors{
 			selectForeground: selectForegroundColor,
 			selectBackground: selectBackgroundColor,
@@ -121,6 +123,20 @@ func (v *View) makeHintText(hint string) string {
 func (v *View) render(typedHint string) {
 	v.screen.Clear()
 
+	// Initialize text buffer if not already done
+	if v.textBuffer == nil {
+		width, height := v.screen.Size()
+		v.textBuffer = NewTextBuffer(v.state.Lines, width, height)
+	} else {
+		// Update buffer size if screen size changed
+		width, height := v.screen.Size()
+		if v.textBuffer.width != width || v.textBuffer.height != height {
+			v.textBuffer = NewTextBuffer(v.state.Lines, width, height)
+		} else {
+			v.textBuffer.Clear()
+		}
+	}
+
 	// Display the lines of text
 	v.renderTextLines()
 
@@ -133,6 +149,9 @@ func (v *View) render(typedHint string) {
 	// Display all matches with appropriate highlighting
 	v.renderMatches(selected, typedHint)
 
+	// Write buffer content to screen
+	v.textBuffer.WriteToScreen(v.screen)
+
 	v.screen.Show()
 }
 
@@ -144,10 +163,8 @@ func (v *View) renderTextLines() {
 			continue
 		}
 
-		runes := []rune(cleanLine)
-		for x, r := range runes {
-			v.screen.SetContent(x, y, r, nil, tcell.StyleDefault)
-		}
+		// Use the text buffer to handle wrapping
+		v.textBuffer.SetString(0, y, cleanLine, tcell.StyleDefault)
 	}
 }
 
@@ -194,7 +211,7 @@ func (v *View) renderSingleMatch(mat *Match, style tcell.Style, typedHint string
 	// Display the match text
 	text := v.makeHintText(mat.Text)
 	for i, r := range []rune(text) {
-		v.screen.SetContent(offset+i, mat.Y, r, nil, style)
+		v.textBuffer.SetCell(offset+i, mat.Y, r, style)
 	}
 
 	// Display the hint if available
@@ -215,7 +232,7 @@ func (v *View) renderHint(mat *Match, offset int, text string, typedHint string)
 	hintText := v.makeHintText(hint)
 	for i, r := range []rune(hintText) {
 		hintStyle := v.getHintStyle(hint, typedHint, i)
-		v.screen.SetContent(finalPosition+i, mat.Y, r, nil, hintStyle)
+		v.textBuffer.SetCell(finalPosition+i, mat.Y, r, hintStyle)
 	}
 }
 
