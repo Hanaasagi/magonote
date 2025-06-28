@@ -158,32 +158,58 @@ func (m *MagonoteRunner) CaptureActivePane() error {
 
 // CreateMagonoteWindow creates a new tmux window running magonote
 func (m *MagonoteRunner) CreateMagonoteWindow() error {
+	slog.Info("Creating magonote window - START")
+
+	// Create a persistent window with a simple command (like tmux-fingers does with 'cat')
+	output, err := m.tmux.Execute([]string{
+		"tmux", "new-window", "-P", "-F", "#{pane_id}", "-d", "-n", "[magonote]", "cat",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create magonote window: %v", err)
+	}
+
+	m.magonotePaneId = strings.TrimSpace(output)
+	slog.Info("Created persistent magonote window", "paneId", m.magonotePaneId)
+
+	// Now capture the original pane content and run magonote separately
+	captureOutput, err := m.tmux.Execute([]string{
+		"tmux", "capture-pane", "-J", "-t", m.activePaneId, "-p",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to capture pane content: %v", err)
+	}
+
+	slog.Info("Captured pane content", "lines", len(strings.Split(captureOutput, "\n")))
+
 	// Get magonote arguments from tmux options
 	args, err := m.getMagonoteArgs()
 	if err != nil {
 		return fmt.Errorf("failed to get magonote args: %v", err)
 	}
 
-	// Create the command that will run in the new window
-	paneCommand := fmt.Sprintf(
-		"tmux capture-pane -J -t %s -p | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s",
-		m.activePaneId,
-		m.dir,
-		tmpFile,
-		strings.Join(args, " "),
-		m.signal,
-	)
-
-	// Create new window
-	output, err := m.tmux.Execute([]string{
-		"tmux", "new-window", "-P", "-F", "#{pane_id}", "-d", "-n", "[magonote]", paneCommand,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create magonote window: %v", err)
+	// Write content to temp file for magonote to process
+	tempInputFile := tmpFile + ".input"
+	if err := os.WriteFile(tempInputFile, []byte(captureOutput), 0644); err != nil {
+		return fmt.Errorf("failed to write temp input file: %v", err)
 	}
 
-	m.magonotePaneId = output
-	slog.Info("Created magonote window", "paneId", m.magonotePaneId)
+	// Run magonote on the captured content
+	magonoteCmd := fmt.Sprintf("%s/build/magonote -f '%%U:%%H' -t %s %s < %s",
+		m.dir, tmpFile, strings.Join(args, " "), tempInputFile)
+
+	slog.Info("Running magonote command", "command", magonoteCmd)
+
+	// Execute magonote in the background and signal when done
+	backgroundCmd := fmt.Sprintf("(%s; tmux wait-for -S %s) &", magonoteCmd, m.signal)
+	if err := exec.Command("bash", "-c", backgroundCmd).Start(); err != nil {
+		os.Remove(tempInputFile)
+		return fmt.Errorf("failed to start magonote: %v", err)
+	}
+
+	// Clean up temp input file
+	os.Remove(tempInputFile)
+
+	slog.Info("Magonote started in background", "signal", m.signal)
 	return nil
 }
 
@@ -239,8 +265,50 @@ func (m *MagonoteRunner) getMagonoteArgs() ([]string, error) {
 
 // ShowMagonote swaps panes to show magonote interface
 func (m *MagonoteRunner) ShowMagonote() error {
-	slog.Info("Showing magonote interface", "swapping", m.magonotePaneId, "with", m.activePaneId)
-	return m.tmux.SwapPanes(m.magonotePaneId, m.activePaneId)
+	slog.Info("ShowMagonote - START", "activePaneId", m.activePaneId, "magonotePaneId", m.magonotePaneId)
+
+	// Wait for magonote to process the content first
+	slog.Info("Waiting for magonote to process content")
+	if err := m.WaitForCompletion(); err != nil {
+		return fmt.Errorf("magonote processing failed: %v", err)
+	}
+
+	// Read the processed output from magonote
+	processedContent, err := os.ReadFile(tmpFile)
+	if err != nil {
+		slog.Warn("No processed content found, using empty content", "error", err)
+		processedContent = []byte("")
+	}
+
+	slog.Info("Magonote processing completed", "contentLength", len(processedContent))
+
+	// Write the processed content to the magonote pane
+	if len(processedContent) > 0 {
+		if err := m.writeToPaneViaStdin(m.magonotePaneId, string(processedContent)); err != nil {
+			slog.Warn("Failed to write content to magonote pane", "error", err)
+		}
+	}
+
+	// Now swap the panes
+	slog.Info("Swapping panes", "magonotePaneId", m.magonotePaneId, "activePaneId", m.activePaneId)
+	if err := m.tmux.SwapPanes(m.magonotePaneId, m.activePaneId); err != nil {
+		return fmt.Errorf("failed to swap panes: %v", err)
+	}
+
+	slog.Info("ShowMagonote - COMPLETED")
+	return nil
+}
+
+// writeToPaneViaStdin writes content to a pane by sending it through tmux
+func (m *MagonoteRunner) writeToPaneViaStdin(paneId, content string) error {
+	// Send the content to the pane using tmux send-keys
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		if _, err := m.tmux.Execute([]string{"tmux", "send-keys", "-t", paneId, line, "Enter"}); err != nil {
+			return fmt.Errorf("failed to send line to pane: %v", err)
+		}
+	}
+	return nil
 }
 
 // WaitForCompletion waits for magonote to complete
@@ -251,29 +319,50 @@ func (m *MagonoteRunner) WaitForCompletion() error {
 
 // CleanupMagonoteWindow swaps back and kills the magonote window
 func (m *MagonoteRunner) CleanupMagonoteWindow() error {
+	slog.Info("CleanupMagonoteWindow - START", "activePaneId", m.activePaneId, "magonotePaneId", m.magonotePaneId)
+
 	// First swap back to restore original pane positions
 	slog.Info("Restoring original pane layout", "swapping", m.magonotePaneId, "with", m.activePaneId)
 	if err := m.tmux.SwapPanes(m.magonotePaneId, m.activePaneId); err != nil {
 		slog.Warn("Failed to swap panes back", "error", err)
 		// Continue with cleanup even if swap fails
+	} else {
+		slog.Info("Successfully swapped panes back")
 	}
 
 	// Then kill the magonote pane
 	slog.Info("Cleaning up magonote pane", "paneId", m.magonotePaneId)
 	_, err := m.tmux.Execute([]string{"tmux", "kill-pane", "-t", m.magonotePaneId})
+	if err != nil {
+		slog.Warn("Failed to kill magonote pane", "error", err)
+	} else {
+		slog.Info("Successfully killed magonote pane")
+	}
+
+	slog.Info("CleanupMagonoteWindow - COMPLETED")
 	return err
 }
 
 // ProcessResult reads and processes the magonote result
 func (m *MagonoteRunner) ProcessResult() error {
-	// Read result from temp file
+	slog.Info("ProcessResult - START")
+
+	// At this point, the user should have interacted with the magonote interface
+	// We need to wait for user input and capture the selection
+
+	// For now, let's check if there's any selection result
+	// In a real implementation, this would involve capturing user key presses
+	// and processing them like tmux-fingers does
+
+	// Read any final result from temp file
 	content, err := os.ReadFile(tmpFile)
 	if err != nil {
-		return fmt.Errorf("failed to read result: %v", err)
+		slog.Info("No selection result found", "error", err)
+		return nil
 	}
 
 	// Clean up temp file
-	os.Remove(tmpFile)
+	defer os.Remove(tmpFile)
 
 	result := strings.TrimSpace(string(content))
 	if result == "" {
@@ -281,6 +370,7 @@ func (m *MagonoteRunner) ProcessResult() error {
 		return nil
 	}
 
+	slog.Info("Processing user selection", "result", result)
 	return m.executeCommand(result)
 }
 
@@ -365,36 +455,39 @@ func (m *MagonoteRunner) executeFinalCommand(text, executeCommand string) error 
 
 // Run executes the complete magonote workflow
 func (m *MagonoteRunner) Run() error {
+	slog.Info("MagonoteRunner.Run - START")
+
 	// Step 1: Capture active pane information
+	slog.Info("Step 1: Capturing active pane information")
 	if err := m.CaptureActivePane(); err != nil {
 		return fmt.Errorf("failed to capture active pane: %v", err)
 	}
 
 	// Step 2: Create magonote window
+	slog.Info("Step 2: Creating magonote window")
 	if err := m.CreateMagonoteWindow(); err != nil {
 		return fmt.Errorf("failed to create magonote window: %v", err)
 	}
 
-	// Step 3: Show magonote interface (swap panes)
+	// Step 3: Show magonote interface (includes waiting for completion)
+	slog.Info("Step 3: Showing magonote interface")
 	if err := m.ShowMagonote(); err != nil {
 		return fmt.Errorf("failed to show magonote: %v", err)
 	}
 
-	// Step 4: Wait for user interaction
-	if err := m.WaitForCompletion(); err != nil {
-		return fmt.Errorf("failed to wait for completion: %v", err)
-	}
-
-	// Step 5: Process the result
+	// Step 4: Process the result
+	slog.Info("Step 4: Processing result")
 	if err := m.ProcessResult(); err != nil {
 		return fmt.Errorf("failed to process result: %v", err)
 	}
 
-	// Step 6: Cleanup (swap back and kill magonote pane)
+	// Step 5: Cleanup (swap back and kill magonote pane)
+	slog.Info("Step 5: Cleaning up")
 	if err := m.CleanupMagonoteWindow(); err != nil {
 		slog.Warn("Failed to cleanup magonote window", "error", err)
 	}
 
+	slog.Info("MagonoteRunner.Run - COMPLETED")
 	return nil
 }
 
