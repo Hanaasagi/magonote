@@ -195,13 +195,11 @@ func (s *Swapper) ExecuteMagonote() error {
 		scrollParams = fmt.Sprintf(" -S %d -E %d", s.activePaneScrollPosition, s.activePaneHeight-s.activePaneScrollPosition-1)
 	}
 
-	zoomCommand := ""
-	if s.activePaneZoomed {
-		zoomCommand = fmt.Sprintf("tmux resize-pane -t %s -Z;", s.activePaneId)
-	}
+	// Note: Removed zoomCommand as SwapPanes now handles zoom state preservation with -Z flag
+	// This prevents double zoom operations that could cause flickering
 
 	paneCommand := fmt.Sprintf(
-		"tmux capture-pane -J -t %s -p%s | tail -n %d | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux swap-pane -t %s; %s tmux wait-for -S %s",
+		"tmux capture-pane -J -t %s -p%s | tail -n %d | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux swap-pane -t %s; tmux wait-for -S %s",
 		s.activePaneId,
 		scrollParams,
 		s.activePaneHeight,
@@ -209,7 +207,6 @@ func (s *Swapper) ExecuteMagonote() error {
 		tmpFile,
 		strings.Join(args, " "),
 		s.activePaneId,
-		zoomCommand,
 		s.signal,
 	)
 
@@ -230,6 +227,12 @@ func (s *Swapper) SwapPanes() error {
 		"tmux", "swap-pane", "-d", "-s", s.activePaneId, "-t", s.paneId,
 	}
 
+	// Add -Z flag to preserve zoom state (requires tmux 3.1+)
+	// This prevents screen flickering when the original pane is zoomed
+	if s.activePaneZoomed {
+		swapCommand = append(swapCommand, "-Z")
+	}
+
 	var filteredCommand []string
 	for _, arg := range swapCommand {
 		if arg != "" {
@@ -245,7 +248,10 @@ func (s *Swapper) SwapPanes() error {
 }
 
 // ResizePane resizes the pane to match the active pane's zoom state
+// Note: This is now handled by SwapPanes with -Z flag for tmux 3.1+
 func (s *Swapper) ResizePane() error {
+	// Modern tmux versions (3.1+) handle zoom state preservation in swap-pane with -Z flag
+	// This method is kept for backward compatibility or edge cases
 	if !s.activePaneZoomed {
 		return nil
 	}
@@ -437,6 +443,8 @@ func main() {
 	mustDo("Failed to capture active pane", swapper.CaptureActivePane)
 	mustDo("Failed to execute magonote", swapper.ExecuteMagonote)
 	mustDo("Failed to swap panes", swapper.SwapPanes)
+	// Note: ResizePane is now mostly redundant as SwapPanes handles zoom state with -Z flag
+	// Kept for backward compatibility with older tmux versions
 	mustDo("Failed to resize pane", swapper.ResizePane)
 	mustDo("Failed to wait for magonote", swapper.Wait)
 	mustDo("Failed to retrieve content", swapper.RetrieveContent)
