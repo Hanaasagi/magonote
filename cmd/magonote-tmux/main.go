@@ -81,7 +81,7 @@ type Swapper struct {
 	paneId                   string
 	content                  string
 	signal                   string
-	isZoomed                 bool
+	originalZoomState        bool // Store the original zoom state at the very beginning
 }
 
 // NewSwapper creates a new Swapper instance
@@ -149,6 +149,8 @@ func (s *Swapper) CaptureActivePane() error {
 
 // ExecuteMagonote executes the magonote command in a new tmux window
 func (s *Swapper) ExecuteMagonote() error {
+	slog.Info("ExecuteMagonote start", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
+
 	optionsCommand := []string{"tmux", "show", "-g"}
 	options, err := s.executor.Execute(optionsCommand)
 	if err != nil {
@@ -220,6 +222,8 @@ func (s *Swapper) ExecuteMagonote() error {
 		s.signal,
 	)
 
+	slog.Info("ExecuteMagonote paneCommand", "command", paneCommand)
+
 	command := []string{
 		"tmux", "new-window", "-P", "-F", "#{pane_id}", "-d", "-n", "[magonote]", paneCommand,
 	}
@@ -228,11 +232,15 @@ func (s *Swapper) ExecuteMagonote() error {
 	if err != nil {
 		return err
 	}
+
+	slog.Info("ExecuteMagonote end", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
 	return nil
 }
 
 // SwapPanes swaps the active pane with the magonote pane
 func (s *Swapper) SwapPanes() error {
+	slog.Info("SwapPanes start", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
+
 	swapCommand := []string{
 		"tmux", "swap-pane", "-d", "-s", s.activePaneId, "-t", s.paneId,
 	}
@@ -250,10 +258,13 @@ func (s *Swapper) SwapPanes() error {
 		}
 	}
 
+	slog.Info("SwapPanes executing", "command", filteredCommand)
 	_, err := s.executor.Execute(filteredCommand)
 	if err != nil {
 		return err
 	}
+
+	slog.Info("SwapPanes end", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
 	return nil
 }
 
@@ -267,29 +278,32 @@ func (s *Swapper) StoreZoomState() error {
 	}
 
 	currentZoomed := strings.TrimSpace(currentZoomOutput) == "1"
-	s.isZoomed = currentZoomed
-	slog.Info("Storing zoom state", "isZoomed", s.isZoomed)
+	s.originalZoomState = currentZoomed
+	slog.Info("Storing zoom state", "isZoomed", s.originalZoomState)
 	return nil
-
 }
 
 // RestoreZoomState restores the original zoom state of the active pane
 func (s *Swapper) RestoreZoomState() error {
-
 	currentZoomCommand := []string{"tmux", "display-message", "-p", "#{window_zoomed_flag}"}
 	currentZoomOutput, err := s.executor.Execute(currentZoomCommand)
 	if err != nil {
 		return fmt.Errorf("failed to get current zoom state: %v", err)
 	}
 	currentZoomed := strings.TrimSpace(currentZoomOutput) == "1"
-	slog.Info("Restoring zoom state", "isZoomed", s.isZoomed, "activePaneId", s.activePaneId, "currentZoomed", currentZoomed, "activePaneZoomed", s.activePaneZoomed)
-	if currentZoomed != s.activePaneZoomed {
+	slog.Info("Restoring zoom state", "originalZoomState", s.originalZoomState, "activePaneId", s.activePaneId, "currentZoomed", currentZoomed, "activePaneZoomed", s.activePaneZoomed)
 
+	// Restore to original zoom state if it's different from current state
+	if currentZoomed != s.originalZoomState {
 		zoomCommand := []string{"tmux", "resize-pane", "-t", s.activePaneId, "-Z"}
+		slog.Info("Executing zoom toggle", "command", zoomCommand)
 		_, err := s.executor.Execute(zoomCommand)
 		if err != nil {
 			return fmt.Errorf("failed to restore zoom state: %v", err)
 		}
+		slog.Info("Zoom state restored", "from", currentZoomed, "to", s.originalZoomState)
+	} else {
+		slog.Info("Zoom state already matches original state", "state", currentZoomed)
 	}
 
 	return nil
@@ -298,9 +312,12 @@ func (s *Swapper) RestoreZoomState() error {
 // ResizePane resizes the pane to match the active pane's zoom state
 // Note: This is now handled by SwapPanes with -Z flag for tmux 3.1+
 func (s *Swapper) ResizePane() error {
+	slog.Info("ResizePane start", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
+
 	// Modern tmux versions (3.1+) handle zoom state preservation in swap-pane with -Z flag
 	// This method is kept for backward compatibility or edge cases
 	if !s.activePaneZoomed {
+		slog.Info("ResizePane skipping - not zoomed")
 		return nil
 	}
 
@@ -313,20 +330,27 @@ func (s *Swapper) ResizePane() error {
 		}
 	}
 
+	slog.Info("ResizePane executing", "command", filteredCommand)
 	_, err := s.executor.Execute(filteredCommand)
 	if err != nil {
 		return err
 	}
+
+	slog.Info("ResizePane end", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
 	return nil
 }
 
 // Wait waits for the magonote process to complete
 func (s *Swapper) Wait() error {
+	slog.Info("Wait start", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
+
 	waitCommand := []string{"tmux", "wait-for", s.signal}
 	_, err := s.executor.Execute(waitCommand)
 	if err != nil {
 		return err
 	}
+
+	slog.Info("Wait end", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
 	return nil
 }
 
