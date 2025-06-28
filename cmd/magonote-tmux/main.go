@@ -81,6 +81,7 @@ type Swapper struct {
 	paneId                   string
 	content                  string
 	signal                   string
+	isZoomed                 bool
 }
 
 // NewSwapper creates a new Swapper instance
@@ -142,6 +143,7 @@ func (s *Swapper) CaptureActivePane() error {
 	}
 
 	s.activePaneZoomed = activePaneInfo[4] == "1"
+	slog.Info("Captured active pane", "output", output, "error", err, "activePaneZoomed", s.activePaneZoomed)
 	return nil
 }
 
@@ -198,8 +200,15 @@ func (s *Swapper) ExecuteMagonote() error {
 	// Note: Removed zoomCommand as SwapPanes now handles zoom state preservation with -Z flag
 	// This prevents double zoom operations that could cause flickering
 
+	// zoomCommand := ""
+	// // Note: Removed zoomCommand as SwapPanes now handles zoom state preservation with -Z flag
+	// if s.activePaneZoomed {
+	// 	// This prevents double zoom operations that could cause flickering
+	// 	zoomCommand = fmt.Sprintf("tmux resize-pane -t %s -Z;", s.activePaneId)
+	// }
 	paneCommand := fmt.Sprintf(
 		"tmux capture-pane -J -t %s -p%s | tail -n %d | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux swap-pane -t %s; tmux wait-for -S %s",
+		// "tmux capture-pane -J -t %s -p%s | tail -n %d | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux swap-pane -t %s; %s tmux wait-for -S %s",
 		s.activePaneId,
 		scrollParams,
 		s.activePaneHeight,
@@ -207,6 +216,7 @@ func (s *Swapper) ExecuteMagonote() error {
 		tmpFile,
 		strings.Join(args, " "),
 		s.activePaneId,
+		// zoomCommand,
 		s.signal,
 	)
 
@@ -229,9 +239,9 @@ func (s *Swapper) SwapPanes() error {
 
 	// Add -Z flag to preserve zoom state (requires tmux 3.1+)
 	// This prevents screen flickering when the original pane is zoomed
-	if s.activePaneZoomed {
-		swapCommand = append(swapCommand, "-Z")
-	}
+	// if s.activePaneZoomed {
+	// 	swapCommand = append(swapCommand, "-Z")
+	// }
 
 	var filteredCommand []string
 	for _, arg := range swapCommand {
@@ -247,8 +257,8 @@ func (s *Swapper) SwapPanes() error {
 	return nil
 }
 
-// RestoreZoomState restores the original zoom state of the active pane
-func (s *Swapper) RestoreZoomState() error {
+// StoreZoomState  the original zoom state of the active pane
+func (s *Swapper) StoreZoomState() error {
 	// Check current zoom state
 	currentZoomCommand := []string{"tmux", "display-message", "-p", "#{window_zoomed_flag}"}
 	currentZoomOutput, err := s.executor.Execute(currentZoomCommand)
@@ -257,9 +267,24 @@ func (s *Swapper) RestoreZoomState() error {
 	}
 
 	currentZoomed := strings.TrimSpace(currentZoomOutput) == "1"
+	s.isZoomed = currentZoomed
+	slog.Info("Storing zoom state", "isZoomed", s.isZoomed)
+	return nil
 
-	// If current zoom state doesn't match original state, restore it
+}
+
+// RestoreZoomState restores the original zoom state of the active pane
+func (s *Swapper) RestoreZoomState() error {
+
+	currentZoomCommand := []string{"tmux", "display-message", "-p", "#{window_zoomed_flag}"}
+	currentZoomOutput, err := s.executor.Execute(currentZoomCommand)
+	if err != nil {
+		return fmt.Errorf("failed to get current zoom state: %v", err)
+	}
+	currentZoomed := strings.TrimSpace(currentZoomOutput) == "1"
+	slog.Info("Restoring zoom state", "isZoomed", s.isZoomed, "activePaneId", s.activePaneId, "currentZoomed", currentZoomed, "activePaneZoomed", s.activePaneZoomed)
 	if currentZoomed != s.activePaneZoomed {
+
 		zoomCommand := []string{"tmux", "resize-pane", "-t", s.activePaneId, "-Z"}
 		_, err := s.executor.Execute(zoomCommand)
 		if err != nil {
@@ -463,16 +488,17 @@ func main() {
 		}
 	}
 
+	mustDo("Failed to restore zoom state", swapper.StoreZoomState)
 	mustDo("Failed to capture active pane", swapper.CaptureActivePane)
 	mustDo("Failed to execute magonote", swapper.ExecuteMagonote)
 	mustDo("Failed to swap panes", swapper.SwapPanes)
 	// Note: ResizePane is now mostly redundant as SwapPanes handles zoom state with -Z flag
 	// Kept for backward compatibility with older tmux versions
 	mustDo("Failed to resize pane", swapper.ResizePane)
+	// Restore zoom state as the final step to ensure proper state restoration
 	mustDo("Failed to wait for magonote", swapper.Wait)
 	mustDo("Failed to retrieve content", swapper.RetrieveContent)
 	mustDo("Failed to destroy content", swapper.DestroyContent)
 	mustDo("Failed to execute command", swapper.ExecuteCommand)
-	// Restore zoom state as the final step to ensure proper state restoration
 	mustDo("Failed to restore zoom state", swapper.RestoreZoomState)
 }
