@@ -143,7 +143,10 @@ func (s *Swapper) CaptureActivePane() error {
 	}
 
 	s.activePaneZoomed = activePaneInfo[4] == "1"
-	slog.Info("Captured active pane", "output", output, "error", err, "activePaneZoomed", s.activePaneZoomed)
+	// Store the original zoom state immediately when we capture the pane info
+	s.originalZoomState = s.activePaneZoomed
+
+	slog.Info("Captured active pane", "output", output, "error", err, "activePaneZoomed", s.activePaneZoomed, "originalZoomState", s.originalZoomState)
 	return nil
 }
 
@@ -202,6 +205,12 @@ func (s *Swapper) ExecuteMagonote() error {
 	// Note: Removed zoomCommand as SwapPanes now handles zoom state preservation with -Z flag
 	// This prevents double zoom operations that could cause flickering
 
+	// Prepare swap command with zoom preservation if needed
+	swapBackCommand := "tmux swap-pane -t " + s.activePaneId
+	if s.activePaneZoomed {
+		swapBackCommand += " -Z"
+	}
+
 	// zoomCommand := ""
 	// // Note: Removed zoomCommand as SwapPanes now handles zoom state preservation with -Z flag
 	// if s.activePaneZoomed {
@@ -209,7 +218,7 @@ func (s *Swapper) ExecuteMagonote() error {
 	// 	zoomCommand = fmt.Sprintf("tmux resize-pane -t %s -Z;", s.activePaneId)
 	// }
 	paneCommand := fmt.Sprintf(
-		"tmux capture-pane -J -t %s -p%s | tail -n %d | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux swap-pane -t %s; tmux wait-for -S %s",
+		"tmux capture-pane -J -t %s -p%s | tail -n %d | %s/build/magonote -f '%%U:%%H' -t %s %s; %s; tmux wait-for -S %s",
 		// "tmux capture-pane -J -t %s -p%s | tail -n %d | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux swap-pane -t %s; %s tmux wait-for -S %s",
 		s.activePaneId,
 		scrollParams,
@@ -217,7 +226,7 @@ func (s *Swapper) ExecuteMagonote() error {
 		s.dir,
 		tmpFile,
 		strings.Join(args, " "),
-		s.activePaneId,
+		swapBackCommand,
 		// zoomCommand,
 		s.signal,
 	)
@@ -247,9 +256,9 @@ func (s *Swapper) SwapPanes() error {
 
 	// Add -Z flag to preserve zoom state (requires tmux 3.1+)
 	// This prevents screen flickering when the original pane is zoomed
-	// if s.activePaneZoomed {
-	// 	swapCommand = append(swapCommand, "-Z")
-	// }
+	if s.activePaneZoomed {
+		swapCommand = append(swapCommand, "-Z")
+	}
 
 	var filteredCommand []string
 	for _, arg := range swapCommand {
@@ -265,21 +274,6 @@ func (s *Swapper) SwapPanes() error {
 	}
 
 	slog.Info("SwapPanes end", "activePaneZoomed", s.activePaneZoomed, "isZoomed", s.activePaneZoomed)
-	return nil
-}
-
-// StoreZoomState  the original zoom state of the active pane
-func (s *Swapper) StoreZoomState() error {
-	// Check current zoom state
-	currentZoomCommand := []string{"tmux", "display-message", "-p", "#{window_zoomed_flag}"}
-	currentZoomOutput, err := s.executor.Execute(currentZoomCommand)
-	if err != nil {
-		return fmt.Errorf("failed to get current zoom state: %v", err)
-	}
-
-	currentZoomed := strings.TrimSpace(currentZoomOutput) == "1"
-	s.originalZoomState = currentZoomed
-	slog.Info("Storing zoom state", "isZoomed", s.originalZoomState)
 	return nil
 }
 
@@ -512,7 +506,6 @@ func main() {
 		}
 	}
 
-	mustDo("Failed to restore zoom state", swapper.StoreZoomState)
 	mustDo("Failed to capture active pane", swapper.CaptureActivePane)
 	mustDo("Failed to execute magonote", swapper.ExecuteMagonote)
 	mustDo("Failed to swap panes", swapper.SwapPanes)
