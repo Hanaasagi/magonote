@@ -167,8 +167,9 @@ func (m *MagonoteRunner) CreateMagonoteWindow() error {
 	}
 
 	// Create the interactive magonote command that will run in the new window
+	// IMPORTANT: Add "; sleep infinity" at the end to keep pane alive after magonote exits
 	paneCommand := fmt.Sprintf(
-		"tmux capture-pane -J -t %s -p | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s",
+		"tmux capture-pane -J -t %s -p | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s; sleep infinity",
 		m.activePaneId,
 		m.dir,
 		tmpFile,
