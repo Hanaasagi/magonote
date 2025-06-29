@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -19,12 +18,13 @@ import (
 
 const appName = "magonote"
 
-var appDir = filepath.Join(xdg.StateHome, appName)
-var tmpFile = filepath.Join(appDir, appName+".state")
+var (
+	appDir  = filepath.Join(xdg.StateHome, appName)
+	tmpFile = filepath.Join(appDir, appName+".state")
+)
 
 func init() {
-	err := os.MkdirAll(appDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(appDir, 0755); err != nil {
 		panic(fmt.Sprintf("Error creating log directory: %v\n", err))
 	}
 
@@ -32,414 +32,453 @@ func init() {
 	logger.InitLogger(logFilePath, "info")
 }
 
-// Executor defines an interface for executing shell commands
-type Executor interface {
-	Execute(args []string) (string, error)
-	LastExecuted() []string
+// Config holds all configuration for magonote execution
+type Config struct {
+	Dir           string
+	Command       string
+	UpcaseCommand string
+	MultiCommand  string
+	OSC52         bool
 }
 
-// RealShell implements the Executor interface for real shell commands
-type RealShell struct {
-	executed []string
+// Magonote orchestrates the complete tmux-magonote workflow
+type Magonote struct {
+	config Config
+	signal string
+
+	// Runtime state
+	activePaneID   string
+	magonotePaneID string
 }
 
-// NewRealShell creates a new RealShell instance
-func NewRealShell() *RealShell {
-	return &RealShell{}
-}
-
-// Execute runs a shell command and returns its output
-func (s *RealShell) Execute(args []string) (string, error) {
-	cmd := exec.Command(args[0], args[1:]...)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("Couldn't run command %v: %v", cmd, err) // nolint
-
-	}
-
-	s.executed = args
-	return strings.TrimRight(string(output), "\n"), nil
-}
-
-// LastExecuted returns the last executed command
-func (s *RealShell) LastExecuted() []string {
-	return s.executed
-}
-
-// Swapper manages the tmux pane swapping and command execution
-type Swapper struct {
-	executor                 Executor
-	dir                      string
-	command                  string
-	upcaseCommand            string
-	multiCommand             string
-	osc52                    bool
-	activePaneId             string
-	activePaneHeight         int
-	activePaneScrollPosition int
-	activePaneZoomed         bool
-	paneId                   string
-	content                  string
-	signal                   string
-}
-
-// NewSwapper creates a new Swapper instance
-func NewSwapper(executor Executor, dir, command, upcaseCommand, multiCommand string, osc52 bool) *Swapper {
+// New creates a new Magonote instance with the given configuration
+func New(config Config) *Magonote {
 	sinceEpoch := time.Now().Unix()
-	signal := fmt.Sprintf(appName+"-finished-%d", sinceEpoch)
+	signal := fmt.Sprintf("%s-finished-%d", appName, sinceEpoch)
 
-	return &Swapper{
-		executor:      executor,
-		dir:           dir,
-		command:       command,
-		upcaseCommand: upcaseCommand,
-		multiCommand:  multiCommand,
-		osc52:         osc52,
-		signal:        signal,
+	return &Magonote{
+		config: config,
+		signal: signal,
 	}
 }
 
-// CaptureActivePane captures information about the active tmux pane
-func (s *Swapper) CaptureActivePane() error {
-	activeCommand := []string{
-		"tmux", "list-panes", "-F",
-		"#{pane_id}:#{?pane_in_mode,1,0}:#{pane_height}:#{scroll_position}:#{window_zoomed_flag}:#{?pane_active,active,nope}",
+// Run executes the complete magonote workflow
+func (m *Magonote) Run() error {
+	slog.Debug("Starting magonote workflow")
+
+	if err := m.captureActivePane(); err != nil {
+		return fmt.Errorf("capturing active pane: %w", err)
 	}
 
-	output, err := s.executor.Execute(activeCommand)
-	if err != nil {
-		return err
-	}
-	lines := strings.Split(output, "\n")
-
-	var activePaneInfo []string
-	for _, line := range lines {
-		chunks := strings.Split(line, ":")
-		if len(chunks) > 5 && chunks[5] == "active" {
-			activePaneInfo = chunks
-			break
-		}
+	if err := m.createMagonoteWindow(); err != nil {
+		return fmt.Errorf("creating magonote window: %w", err)
 	}
 
-	if len(activePaneInfo) == 0 {
-		return fmt.Errorf("unable to find active pane")
+	if err := m.showMagonoteInterface(); err != nil {
+		return fmt.Errorf("showing magonote interface: %w", err)
 	}
 
-	s.activePaneId = activePaneInfo[0]
-
-	paneHeight, err := strconv.Atoi(activePaneInfo[2])
-	if err != nil {
-		return fmt.Errorf("unable to retrieve pane height: %v", err)
-	}
-	s.activePaneHeight = paneHeight
-
-	if activePaneInfo[1] == "1" {
-		scrollPosition, err := strconv.Atoi(activePaneInfo[3])
-		if err != nil {
-			return fmt.Errorf("unable to retrieve pane scroll: %v", err)
-		}
-		s.activePaneScrollPosition = scrollPosition
+	if err := m.waitForUserInteraction(); err != nil {
+		return fmt.Errorf("waiting for user interaction: %w", err)
 	}
 
-	s.activePaneZoomed = activePaneInfo[4] == "1"
+	if err := m.processUserSelection(); err != nil {
+		return fmt.Errorf("processing user selection: %w", err)
+	}
+
+	if err := m.cleanup(); err != nil {
+		slog.Warn("Cleanup failed", "error", err)
+	}
+
+	slog.Debug("Magonote workflow completed successfully")
 	return nil
 }
 
-// ExecuteMagonote executes the magonote command in a new tmux window
-func (s *Swapper) ExecuteMagonote() error {
-	optionsCommand := []string{"tmux", "show", "-g"}
-	options, err := s.executor.Execute(optionsCommand)
+// captureActivePane identifies and stores the currently active pane
+func (m *Magonote) captureActivePane() error {
+	output, err := m.tmuxCommand("list-panes", "-F", "#{pane_id}:#{?pane_active,active,nope}")
 	if err != nil {
-		return err
+		return fmt.Errorf("listing panes: %w", err)
 	}
-	lines := strings.Split(options, "\n")
+
+	for _, line := range strings.Split(output, "\n") {
+		if parts := strings.Split(line, ":"); len(parts) >= 2 && parts[1] == "active" {
+			m.activePaneID = parts[0]
+			slog.Debug("Captured active pane", "paneID", m.activePaneID)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("no active pane found")
+}
+
+// createMagonoteWindow creates a new tmux window running the magonote command
+func (m *Magonote) createMagonoteWindow() error {
+	slog.Debug("Creating magonote window")
+
+	args, err := m.buildMagonoteArgs()
+	if err != nil {
+		return fmt.Errorf("building magonote arguments: %w", err)
+	}
+
+	// Build the command that will keep the pane alive after magonote completes
+	command := fmt.Sprintf(
+		"tmux capture-pane -J -t %s -p | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s; sleep infinity",
+		m.activePaneID,
+		m.config.Dir,
+		tmpFile,
+		strings.Join(args, " "),
+		m.signal,
+	)
+
+	slog.Debug("Executing magonote command", "command", command)
+
+	output, err := m.tmuxCommand("new-window", "-P", "-F", "#{pane_id}", "-d", "-n", "[magonote]", command)
+	if err != nil {
+		return fmt.Errorf("creating new window: %w", err)
+	}
+
+	m.magonotePaneID = strings.TrimSpace(output)
+	slog.Debug("Created magonote window", "paneID", m.magonotePaneID)
+	return nil
+}
+
+// buildMagonoteArgs extracts and formats magonote arguments from tmux options
+func (m *Magonote) buildMagonoteArgs() ([]string, error) {
+	output, err := m.tmuxCommand("show", "-g")
+	if err != nil {
+		return nil, fmt.Errorf("showing global options: %w", err)
+	}
 
 	pattern := regexp.MustCompile(`^@magonote-([\w\-0-9]+)\s+"?([^"]+)"?$`)
-
 	var args []string
-	for _, line := range lines {
+
+	for _, line := range strings.Split(output, "\n") {
 		matches := pattern.FindStringSubmatch(line)
 		if matches == nil {
 			continue
 		}
 
-		name := matches[1]
-		value := matches[2]
+		name, value := matches[1], matches[2]
 
-		booleanParams := []string{"reverse", "unique", "contrast"}
-		for _, param := range booleanParams {
-			if param == name {
-				args = append(args, fmt.Sprintf("--%s", name))
-				break
-			}
-		}
-
-		stringParams := []string{
-			"alphabet", "position", "fg-color", "bg-color", "hint-bg-color",
-			"hint-fg-color", "select-fg-color", "select-bg-color", "multi-fg-color", "multi-bg-color",
-		}
-		for _, param := range stringParams {
-			if param == name {
-				args = append(args, fmt.Sprintf("--%s", name), fmt.Sprintf("'%s'", value))
-				break
-			}
-		}
-
-		if strings.HasPrefix(name, "regexp") {
+		switch {
+		case m.isBooleanParam(name):
+			args = append(args, fmt.Sprintf("--%s", name))
+		case m.isStringParam(name):
+			args = append(args, fmt.Sprintf("--%s", name), fmt.Sprintf("'%s'", value))
+		case strings.HasPrefix(name, "regexp"):
 			args = append(args, "--regexp", fmt.Sprintf("'%s'", strings.ReplaceAll(value, "\\\\", "\\")))
 		}
 	}
 
-	scrollParams := ""
-	if s.activePaneScrollPosition != 0 {
-		scrollParams = fmt.Sprintf(" -S %d -E %d", s.activePaneScrollPosition, s.activePaneHeight-s.activePaneScrollPosition-1)
+	return args, nil
+}
+
+// isBooleanParam checks if the parameter is a boolean type
+func (m *Magonote) isBooleanParam(name string) bool {
+	booleanParams := []string{"reverse", "unique", "contrast"}
+	for _, param := range booleanParams {
+		if param == name {
+			return true
+		}
+	}
+	return false
+}
+
+// isStringParam checks if the parameter is a string type
+func (m *Magonote) isStringParam(name string) bool {
+	stringParams := []string{
+		"alphabet", "position", "fg-color", "bg-color", "hint-bg-color",
+		"hint-fg-color", "select-fg-color", "select-bg-color", "multi-fg-color", "multi-bg-color",
+	}
+	for _, param := range stringParams {
+		if param == name {
+			return true
+		}
+	}
+	return false
+}
+
+// showMagonoteInterface swaps panes to display the magonote interface
+func (m *Magonote) showMagonoteInterface() error {
+	slog.Debug("Showing magonote interface", "from", m.magonotePaneID, "to", m.activePaneID)
+
+	if err := m.swapPanes(m.magonotePaneID, m.activePaneID); err != nil {
+		return fmt.Errorf("swapping panes: %w", err)
 	}
 
-	zoomCommand := ""
-	if s.activePaneZoomed {
-		zoomCommand = fmt.Sprintf("tmux resize-pane -t %s -Z;", s.activePaneId)
-	}
-
-	paneCommand := fmt.Sprintf(
-		"tmux capture-pane -J -t %s -p%s | tail -n %d | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux swap-pane -t %s; %s tmux wait-for -S %s",
-		s.activePaneId,
-		scrollParams,
-		s.activePaneHeight,
-		s.dir,
-		tmpFile,
-		strings.Join(args, " "),
-		s.activePaneId,
-		zoomCommand,
-		s.signal,
-	)
-
-	command := []string{
-		"tmux", "new-window", "-P", "-F", "#{pane_id}", "-d", "-n", "[magonote]", paneCommand,
-	}
-
-	s.paneId, err = s.executor.Execute(command)
-	if err != nil {
-		return err
-	}
+	slog.Debug("Magonote interface displayed successfully")
 	return nil
 }
 
-// SwapPanes swaps the active pane with the magonote pane
-func (s *Swapper) SwapPanes() error {
-	swapCommand := []string{
-		"tmux", "swap-pane", "-d", "-s", s.activePaneId, "-t", s.paneId,
+// waitForUserInteraction waits for the user to complete their interaction with magonote
+func (m *Magonote) waitForUserInteraction() error {
+	slog.Debug("Waiting for user interaction", "signal", m.signal)
+
+	if _, err := m.tmuxCommand("wait-for", m.signal); err != nil {
+		return fmt.Errorf("waiting for signal: %w", err)
 	}
 
-	var filteredCommand []string
-	for _, arg := range swapCommand {
-		if arg != "" {
-			filteredCommand = append(filteredCommand, arg)
+	slog.Debug("User interaction completed")
+	m.verifyPaneStates()
+	return nil
+}
+
+// verifyPaneStates checks the current state of both panes for debugging
+func (m *Magonote) verifyPaneStates() {
+	if err := m.checkPaneExists(m.activePaneID, "active"); err != nil {
+		slog.Warn("Active pane verification failed", "error", err)
+	}
+
+	if err := m.checkPaneExists(m.magonotePaneID, "magonote"); err != nil {
+		slog.Warn("Magonote pane verification failed", "error", err)
+	}
+}
+
+// checkPaneExists verifies that a specific pane still exists
+func (m *Magonote) checkPaneExists(paneID, description string) error {
+	output, err := m.tmuxCommand("list-panes", "-a", "-F", "#{pane_id}")
+	if err != nil {
+		return fmt.Errorf("listing all panes: %w", err)
+	}
+
+	for _, pane := range strings.Split(strings.TrimSpace(output), "\n") {
+		if strings.TrimSpace(pane) == paneID {
+			slog.Debug("Pane exists", "description", description, "paneID", paneID)
+			return nil
 		}
 	}
 
-	_, err := s.executor.Execute(filteredCommand)
-	if err != nil {
-		return err
-	}
-	return nil
+	return fmt.Errorf("pane %s (%s) not found", description, paneID)
 }
 
-// ResizePane resizes the pane to match the active pane's zoom state
-func (s *Swapper) ResizePane() error {
-	if !s.activePaneZoomed {
+// processUserSelection reads and processes the user's selection from magonote
+func (m *Magonote) processUserSelection() error {
+	slog.Debug("Processing user selection")
+
+	content, err := os.ReadFile(tmpFile)
+	if err != nil {
+		slog.Info("No selection found", "error", err)
+		return nil
+	}
+	defer os.Remove(tmpFile) // nolint: errcheck
+
+	result := strings.TrimSpace(string(content))
+	if result == "" {
+		slog.Info("No selection made by user")
 		return nil
 	}
 
-	resizeCommand := []string{"tmux", "resize-pane", "-t", s.paneId, "-Z"}
-
-	var filteredCommand []string
-	for _, arg := range resizeCommand {
-		if arg != "" {
-			filteredCommand = append(filteredCommand, arg)
-		}
-	}
-
-	_, err := s.executor.Execute(filteredCommand)
-	if err != nil {
-		return err
-	}
-	return nil
+	slog.Info("User made selection", "result", result)
+	return m.executeSelectionCommand(result)
 }
 
-// Wait waits for the magonote process to complete
-func (s *Swapper) Wait() error {
-	waitCommand := []string{"tmux", "wait-for", s.signal}
-	_, err := s.executor.Execute(waitCommand)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// RetrieveContent reads the content from the temporary file
-func (s *Swapper) RetrieveContent() error {
-	content, err := os.ReadFile(tmpFile)
-	if err != nil {
-		return err
-	}
-	s.content = string(content)
-	return nil
-}
-
-// DestroyContent removes the temporary file
-func (s *Swapper) DestroyContent() error {
-	err := os.Remove(tmpFile)
-	return err
-}
-
-// SendOSC52 sends OSC52 escape sequence to the current tmux pane's stdout
-func (s *Swapper) SendOSC52(text string) error {
-	// Get current tmux pane PID
-	pidBytes, err := exec.Command("tmux", "display-message", "-p", "#{pane_pid}").Output()
-	if err != nil {
-		return fmt.Errorf("failed to get tmux pane PID: %v", err)
-	}
-	pid := strings.TrimSpace(string(pidBytes))
-
-	// Open pane's stdout for writing OSC52 sequence
-	targetFdPath := fmt.Sprintf("/proc/%s/fd/1", pid)
-	f, err := os.OpenFile(targetFdPath, os.O_WRONLY|os.O_APPEND, 0)
-	if err != nil {
-		return fmt.Errorf("failed to open tmux pane fd: %v", err)
-	}
-	defer f.Close() // nolint: errcheck
-
-	// Create OSC52 writer that writes to the pane's stdout
-	osc52Writer := clipboard.NewOSC52Writer(f)
-	return osc52Writer.Write(text)
-}
-
-// ExecuteCommand executes the appropriate command based on the selected content
-func (s *Swapper) ExecuteCommand() error {
-	items := strings.Split(s.content, "\n")
+// executeSelectionCommand executes the appropriate command based on the user's selection
+func (m *Magonote) executeSelectionCommand(result string) error {
+	items := strings.Split(result, "\n")
 
 	if len(items) > 1 {
-		// Handle multiple selections
-		var textParts []string
-		for _, item := range items {
-			parts := strings.SplitN(item, ":", 2)
-			if len(parts) > 1 {
-				textParts = append(textParts, parts[1])
-			}
-		}
-		text := strings.Join(textParts, " ")
-
-		if s.osc52 {
-			// Send OSC52 sequence for multi-selection
-			if err := s.SendOSC52(text); err != nil {
-				slog.Warn("Failed to send OSC52 sequence", "error", err)
-			}
-		}
-
-		return s.ExecuteFinalCommand(strings.TrimRight(text, " "), s.multiCommand)
+		return m.handleMultipleSelection(items)
 	}
 
-	// Handle single selection
 	if len(items) == 0 || items[0] == "" {
 		return nil
 	}
 
-	item := items[0]
-	parts := strings.SplitN(item, ":", 2)
+	return m.handleSingleSelection(items[0])
+}
 
-	if len(parts) != 2 {
-		return nil
+// handleMultipleSelection processes multiple selected items
+func (m *Magonote) handleMultipleSelection(items []string) error {
+	var textParts []string
+	for _, item := range items {
+		if parts := strings.SplitN(item, ":", 2); len(parts) > 1 {
+			textParts = append(textParts, parts[1])
+		}
 	}
 
-	upcase := parts[0]
-	text := parts[1]
+	text := strings.Join(textParts, " ")
 
-	if s.osc52 {
-		// Wait a bit for the redraw to finish before sending OSC52
-		time.Sleep(100 * time.Millisecond)
-
-		// Send OSC52 sequence using our clipboard package
-		if err := s.SendOSC52(text); err != nil {
+	if m.config.OSC52 {
+		if err := m.sendOSC52Sequence(text); err != nil {
 			slog.Warn("Failed to send OSC52 sequence", "error", err)
 		}
 	}
 
-	executeCommand := s.command
-	if upcase == "true" {
-		executeCommand = s.upcaseCommand
-	}
-
-	return s.ExecuteFinalCommand(strings.TrimRight(text, " "), executeCommand)
+	return m.executeFinalCommand(strings.TrimRight(text, " "), m.config.MultiCommand)
 }
 
-// ExecuteFinalCommand executes the final command with the selected text
-func (s *Swapper) ExecuteFinalCommand(text, executeCommand string) error {
-	finalCommand := strings.ReplaceAll(executeCommand, "{}", "${magonote}")
-	retrieveCommand := []string{
-		"bash", "-c", "magonote=\"$1\"; eval \"$2\"", "--", text, finalCommand,
+// handleSingleSelection processes a single selected item
+func (m *Magonote) handleSingleSelection(item string) error {
+	parts := strings.SplitN(item, ":", 2)
+	if len(parts) != 2 {
+		return nil
 	}
 
-	_, err := s.executor.Execute(retrieveCommand)
+	upcase, text := parts[0], parts[1]
+
+	if m.config.OSC52 {
+		time.Sleep(100 * time.Millisecond) // Wait for redraw
+		if err := m.sendOSC52Sequence(text); err != nil {
+			slog.Warn("Failed to send OSC52 sequence", "error", err)
+		}
+	}
+
+	command := m.config.Command
+	if upcase == "true" {
+		command = m.config.UpcaseCommand
+	}
+
+	return m.executeFinalCommand(strings.TrimRight(text, " "), command)
+}
+
+// sendOSC52Sequence sends an OSC52 escape sequence for clipboard integration
+func (m *Magonote) sendOSC52Sequence(text string) error {
+	pidOutput, err := m.tmuxCommand("display-message", "-p", "#{pane_pid}")
 	if err != nil {
+		return fmt.Errorf("getting tmux pane PID: %w", err)
+	}
+
+	pid := strings.TrimSpace(pidOutput)
+	targetFdPath := fmt.Sprintf("/proc/%s/fd/1", pid)
+
+	file, err := os.OpenFile(targetFdPath, os.O_WRONLY|os.O_APPEND, 0)
+	if err != nil {
+		return fmt.Errorf("opening tmux pane fd: %w", err)
+	}
+	defer file.Close() // nolint: errcheck
+
+	osc52Writer := clipboard.NewOSC52Writer(file)
+	return osc52Writer.Write(text)
+}
+
+// executeFinalCommand executes the final command with the selected text
+func (m *Magonote) executeFinalCommand(text, command string) error {
+	finalCommand := strings.ReplaceAll(command, "{}", "${magonote}")
+	slog.Info("Executing final command", "text", text, "command", finalCommand)
+	cmd := exec.Command("bash", "-c", "magonote=\"$1\"; eval \"$2\"", "--", text, finalCommand)
+	return cmd.Run()
+}
+
+// cleanup restores the original pane layout and removes the magonote window
+func (m *Magonote) cleanup() error {
+	slog.Debug("Starting cleanup", "activePaneID", m.activePaneID, "magonotePaneID", m.magonotePaneID)
+
+	activeExists := m.checkPaneExists(m.activePaneID, "active") == nil
+	magonoteExists := m.checkPaneExists(m.magonotePaneID, "magonote") == nil
+
+	slog.Debug("Pane existence status", "activeExists", activeExists, "magonoteExists", magonoteExists)
+
+	if !activeExists {
+		return fmt.Errorf("active pane %s no longer exists", m.activePaneID)
+	}
+
+	if !magonoteExists {
+		slog.Warn("Magonote pane no longer exists, skipping restoration", "paneID", m.magonotePaneID)
+		return nil
+	}
+
+	// Restore original pane layout
+	slog.Debug("Restoring original pane layout")
+	if err := m.swapPanes(m.magonotePaneID, m.activePaneID); err != nil {
+		slog.Warn("Failed to restore pane layout", "error", err)
+	} else {
+		slog.Debug("Successfully restored pane layout")
+	}
+
+	// Remove magonote pane
+	slog.Debug("Removing magonote pane", "paneID", m.magonotePaneID)
+	if err := m.killPane(m.magonotePaneID); err != nil {
+		slog.Warn("Failed to kill magonote pane", "error", err)
 		return err
 	}
+
+	slog.Debug("Cleanup completed successfully")
 	return nil
 }
 
-func appArgs() (string, string, string, string, bool) {
-	var dir, command, upcaseCommand, multiCommand string
-	var osc52 bool
+// swapPanes swaps two tmux panes with zoom state preservation
+func (m *Magonote) swapPanes(srcPane, dstPane string) error {
+	args := []string{"swap-pane", "-d", "-s", srcPane, "-t", dstPane, "-Z"}
+	slog.Debug("Swapping panes", "src", srcPane, "dst", dstPane)
+
+	_, err := m.tmuxCommand(args...)
+	return err
+}
+
+// killPane terminates a specific tmux pane
+func (m *Magonote) killPane(paneID string) error {
+	_, err := m.tmuxCommand("kill-pane", "-t", paneID)
+	if err == nil {
+		slog.Debug("Successfully terminated pane", "paneID", paneID)
+	}
+	return err
+}
+
+// tmuxCommand executes a tmux command and returns its output
+func (m *Magonote) tmuxCommand(args ...string) (string, error) {
+	fullArgs := append([]string{"tmux"}, args...)
+	cmd := exec.Command(fullArgs[0], fullArgs[1:]...)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("tmux command failed: %w", err)
+	}
+
+	return strings.TrimRight(string(output), "\n"), nil
+}
+
+// parseCommandLineArgs parses command line arguments and returns configuration
+func parseCommandLineArgs() Config {
+	var config Config
 
 	rootCmd := &cobra.Command{
 		Use:   "magonote-tmux",
 		Short: "Tmux integration for magonote",
 		Run: func(cmd *cobra.Command, args []string) {
-			// Command execution logic will be handled in main
+			// Command execution is handled in main
 		},
 	}
 
-	rootCmd.Flags().StringVar(&dir, "dir", "", "Directory where to execute magonote")
-	rootCmd.Flags().StringVar(&command, "command", "tmux set-buffer -- \"{}\" && tmux display-message \"Copied {}\"",
+	rootCmd.Flags().StringVar(&config.Dir, "dir", "", "Directory where to execute magonote")
+	rootCmd.Flags().StringVar(&config.Command, "command",
+		"tmux set-buffer -- \"{}\" && tmux display-message \"Copied {}\"",
 		"Command to execute after choosing a hint")
-	rootCmd.Flags().StringVar(&upcaseCommand, "upcase-command", "tmux set-buffer -- \"{}\" && tmux paste-buffer && tmux display-message \"Copied {}\"",
+	rootCmd.Flags().StringVar(&config.UpcaseCommand, "upcase-command",
+		"tmux set-buffer -- \"{}\" && tmux paste-buffer && tmux display-message \"Copied {}\"",
 		"Command to execute after choosing a hint, in upcase")
-	rootCmd.Flags().StringVar(&multiCommand, "multi-command", "tmux set-buffer -- \"{}\" && tmux paste-buffer && tmux display-message \"Multi copied {}\"",
+	rootCmd.Flags().StringVar(&config.MultiCommand, "multi-command",
+		"tmux set-buffer -- \"{}\" && tmux paste-buffer && tmux display-message \"Multi copied {}\"",
 		"Command to execute after choosing multiple hints")
-	rootCmd.Flags().BoolVar(&osc52, "osc52", false, "Print OSC52 copy escape sequence in addition to running the pick command")
+	rootCmd.Flags().BoolVar(&config.OSC52, "osc52", false,
+		"Print OSC52 copy escape sequence in addition to running the pick command")
 
-	err := rootCmd.Execute()
-	if err != nil {
-		slog.Error("Failed to parse arguments", "error", err)
+	if err := rootCmd.Execute(); err != nil {
+		slog.Error("Failed to parse command line arguments", "error", err)
 		os.Exit(1)
 	}
 
-	return dir, command, upcaseCommand, multiCommand, osc52
+	return config
 }
 
 func main() {
-	dir, command, upcaseCommand, multiCommand, osc52 := appArgs()
+	config := parseCommandLineArgs()
 
-	if dir == "" {
-		panic("Invalid tmux-magonote execution. Are you trying to execute tmux-magonote directly?")
-	}
-	slog.Info("Running tmux-magonote", "dir", dir, "command", command, "upcaseCommand", upcaseCommand, "multiCommand", multiCommand, "osc52", osc52)
-
-	executor := NewRealShell()
-	swapper := NewSwapper(executor, dir, command, upcaseCommand, multiCommand, osc52)
-
-	mustDo := func(msg string, fn func() error) {
-		if err := fn(); err != nil {
-			slog.Error(msg, "error", err)
-			os.Exit(1)
-		}
+	if config.Dir == "" {
+		slog.Error("Invalid tmux-magonote execution. Are you trying to execute tmux-magonote directly?")
+		os.Exit(1)
 	}
 
-	mustDo("Failed to capture active pane", swapper.CaptureActivePane)
-	mustDo("Failed to execute magonote", swapper.ExecuteMagonote)
-	mustDo("Failed to swap panes", swapper.SwapPanes)
-	mustDo("Failed to resize pane", swapper.ResizePane)
-	mustDo("Failed to wait for magonote", swapper.Wait)
-	mustDo("Failed to retrieve content", swapper.RetrieveContent)
-	mustDo("Failed to destroy content", swapper.DestroyContent)
-	mustDo("Failed to execute command", swapper.ExecuteCommand)
+	slog.Info("Starting magonote-tmux",
+		"dir", config.Dir,
+		"command", config.Command,
+		"upcaseCommand", config.UpcaseCommand,
+		"multiCommand", config.MultiCommand,
+		"osc52", config.OSC52)
+
+	magonote := New(config)
+	if err := magonote.Run(); err != nil {
+		slog.Error("Magonote execution failed", "error", err)
+		os.Exit(1)
+	}
 }
