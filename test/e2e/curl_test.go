@@ -6,24 +6,7 @@ import (
 	"github.com/Hanaasagi/magonote/test/e2e/framework"
 )
 
-func TestSimpleCurlURL(t *testing.T) {
-	f := framework.NewFramework()
-
-	testCase := framework.TestCase{
-		Name:           "Simple Curl URL - Single Selection",
-		Input:          "curl 'https://example.com/test'",
-		Args:           []string{},
-		Keys:           "a",
-		ExpectedOutput: "https://example.com/test",
-	}
-
-	result := f.RunTest(testCase)
-	if !result.Passed {
-		t.Errorf("Test failed: %s", result.Error)
-	}
-}
-
-func TestCurlURLExtraction(t *testing.T) {
+func TestCurlCases(t *testing.T) {
 	f := framework.NewFramework()
 
 	curlInput := `curl 'https://github.com/Hanaasagi/magonote/hovercards/citation/sidebar_partial?tree_name=master' \
@@ -39,16 +22,29 @@ func TestCurlURLExtraction(t *testing.T) {
 	-H 'Priority: u=4' \
 	-H 'TE: trailers'`
 
-	testCase := framework.TestCase{
-		Name:           "Curl URL Extraction - Single Selection",
-		Input:          curlInput,
-		Args:           []string{},
-		Keys:           "a",
-		ExpectedOutput: "https://github.com/Hanaasagi/magonote/hovercards/citation/sidebar_partial?tree_name=master",
+	testCases := []framework.TestCase{
+		{
+			Name:           "Simple Curl URL - Single Selection",
+			Input:          "curl 'https://example.com/test'",
+			Args:           []string{},
+			Keys:           "a",
+			ExpectedOutput: "https://example.com/test",
+		},
+		{
+			Name:           "Curl URL Extraction - Single Selection",
+			Input:          curlInput,
+			Args:           []string{},
+			Keys:           "a",
+			ExpectedOutput: "https://github.com/Hanaasagi/magonote/hovercards/citation/sidebar_partial?tree_name=master",
+		},
 	}
 
-	result := f.RunTest(testCase)
-	if !result.Passed {
-		t.Errorf("Test failed: %s", result.Error)
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			result := f.RunTest(tc)
+			if !result.Passed {
+				t.Errorf("Test failed: %s", result.Error)
+			}
+		})
 	}
 }

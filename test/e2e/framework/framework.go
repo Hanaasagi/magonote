@@ -126,16 +126,25 @@ func (f *Framework) RunTest(testCase TestCase) TestResult {
 		return result
 	}
 
-	// Prepare command with pipe
-	var cmdStr string
-	if len(testCase.Args) > 0 {
-		cmdStr = fmt.Sprintf("echo '%s' | %s %s", testCase.Input, f.BinaryPath, strings.Join(testCase.Args, " "))
-	} else {
-		cmdStr = fmt.Sprintf("echo '%s' | %s", testCase.Input, f.BinaryPath)
+	tmpFile, err := os.CreateTemp("", "magonote-test-*.txt")
+	if err != nil {
+		result.Error = fmt.Sprintf("failed to create temp file: %v", err)
+		result.Elapsed = time.Since(start)
+		return result
 	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
 
-	// Create command
-	cmd := exec.Command("sh", "-c", cmdStr)
+	if _, err := tmpFile.WriteString(testCase.Input); err != nil {
+		result.Error = fmt.Sprintf("failed to write to temp file: %v", err)
+		result.Elapsed = time.Since(start)
+		return result
+	}
+	tmpFile.Close()
+
+	args := append([]string{"-i", tmpFile.Name()}, testCase.Args...)
+
+	cmd := exec.Command(f.BinaryPath, args...)
 
 	// Use pty to start command
 	ptmx, err := pty.Start(cmd)
