@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"sync"
@@ -198,6 +199,41 @@ func (s *State) getCompiledPatterns() []*CompiledPattern {
 	return patterns
 }
 
+// getLastNonWhitespaceChar returns the last non-whitespace character in a string
+func getLastNonWhitespaceChar(s string) rune {
+	for i := len(s) - 1; i >= 0; i-- {
+		r := rune(s[i])
+		if r != ' ' && r != '\t' && r != '\n' && r != '\r' {
+			return r
+		}
+	}
+	return 0
+}
+
+// fixURLQuotes removes trailing quote from URL if it's quote-enclosed
+func fixURLQuotes(url string, originalLine string, startPos int) string {
+	if len(url) == 0 {
+		return url
+	}
+
+	lastChar := url[len(url)-1]
+	if lastChar != '\'' && lastChar != '"' {
+		return url
+	}
+
+	// Find the position before the URL in the original line
+	if startPos > 0 {
+		beforeURL := originalLine[:startPos]
+		lastCharBefore := getLastNonWhitespaceChar(beforeURL)
+
+		if lastCharBefore == rune(lastChar) {
+			return url[:len(url)-1]
+		}
+	}
+
+	return url
+}
+
 // processLine processes a single line and returns matches
 func (s *State) processLine(y int, line string, patterns []*CompiledPattern) []Match {
 	if len(line) == 0 {
@@ -217,11 +253,19 @@ func (s *State) processLine(y int, line string, patterns []*CompiledPattern) []M
 		if bestMatch.Pattern.Name != "bash" {
 			captures := s.extractCaptures(bestMatch.Text, bestMatch.Pattern.Pattern)
 			for _, capture := range captures {
+				captureText := capture.Text
+
+				// Special handling for URL pattern to fix quote issues
+				if bestMatch.Pattern.Name == "url" {
+					absolutePos := offset + bestMatch.Index + capture.Start
+					captureText = fixURLQuotes(captureText, line, absolutePos)
+				}
+
 				matches = append(matches, Match{
 					X:       offset + bestMatch.Index + capture.Start,
 					Y:       y,
 					Pattern: bestMatch.Pattern.Name,
-					Text:    capture.Text,
+					Text:    captureText,
 					Hint:    nil,
 				})
 			}
@@ -335,6 +379,9 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 	hints := alphabet.Hints(len(matches))
 
 	s.assignHints(matches, hints, reverse, uniqueLevel)
+	for _, match := range matches {
+		slog.Info("match", "match", match)
+	}
 	return matches
 }
 

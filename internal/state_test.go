@@ -858,3 +858,96 @@ f123456789ab   redis:alpine    stopped     6379/tcp`)
 		}
 	}
 }
+
+// TestMatchURLsWithQuotes tests URL matching in quote-enclosed contexts like curl commands
+func TestMatchURLsWithQuotes(t *testing.T) {
+	// Test case from curl-case file
+	curlLine := "curl 'https://github.com/Hanaasagi/magonote/hovercards/citation/sidebar_partial?tree_name=master' \\"
+	lines := SplitLines(curlLine)
+	custom := []string{}
+	results := NewState(lines, "abcd", custom).Matches(false, 0)
+
+	// Should find the URL without trailing quote
+	foundURL := false
+	expectedURL := "https://github.com/Hanaasagi/magonote/hovercards/citation/sidebar_partial?tree_name=master"
+
+	for _, result := range results {
+		if result.Pattern == "url" {
+			foundURL = true
+			if result.Text != expectedURL {
+				t.Errorf("Expected URL '%s', got '%s'", expectedURL, result.Text)
+			}
+			// Verify it doesn't contain trailing quote
+			if strings.HasSuffix(result.Text, "'") {
+				t.Errorf("URL should not end with quote, got '%s'", result.Text)
+			}
+		}
+	}
+
+	if !foundURL {
+		t.Error("Expected to find URL pattern in curl command")
+	}
+
+	// Test with double quotes
+	doubleQuoteLine := `curl "https://example.com/api?param=value" --header`
+	lines = SplitLines(doubleQuoteLine)
+	results = NewState(lines, "abcd", custom).Matches(false, 0)
+
+	foundURL = false
+	expectedURL = "https://example.com/api?param=value"
+
+	for _, result := range results {
+		if result.Pattern == "url" {
+			foundURL = true
+			if result.Text != expectedURL {
+				t.Errorf("Expected URL '%s', got '%s'", expectedURL, result.Text)
+			}
+		}
+	}
+
+	if !foundURL {
+		t.Error("Expected to find URL pattern in double-quoted curl command")
+	}
+
+	// Test URL without quotes (should remain unchanged)
+	normalLine := "Visit https://github.com/user/repo for details"
+	lines = SplitLines(normalLine)
+	results = NewState(lines, "abcd", custom).Matches(false, 0)
+
+	foundURL = false
+	expectedURL = "https://github.com/user/repo"
+
+	for _, result := range results {
+		if result.Pattern == "url" {
+			foundURL = true
+			if result.Text != expectedURL {
+				t.Errorf("Expected URL '%s', got '%s'", expectedURL, result.Text)
+			}
+		}
+	}
+
+	if !foundURL {
+		t.Error("Expected to find URL pattern in normal text")
+	}
+
+	// Test URL ending with quote but not quote-enclosed (should keep quote)
+	trailingQuoteLine := "Check out https://example.com/page'"
+	lines = SplitLines(trailingQuoteLine)
+	results = NewState(lines, "abcd", custom).Matches(false, 0)
+
+	foundURL = false
+	expectedURL = "https://example.com/page'"
+
+	for _, result := range results {
+		if result.Pattern == "url" {
+			foundURL = true
+			if result.Text != expectedURL {
+				t.Errorf("Expected URL '%s', got '%s'", expectedURL, result.Text)
+			}
+		}
+	}
+
+	if !foundURL {
+		t.Error("Expected to find URL pattern with trailing quote")
+	}
+}
