@@ -142,7 +142,7 @@ func (f *Framework) RunTest(testCase TestCase) TestResult {
 	}
 	tmpFile.Close()
 
-	args := append([]string{"-i", tmpFile.Name()}, testCase.Args...)
+	args := append([]string{"-i", tmpFile.Name(), "--config", "NONE"}, testCase.Args...)
 
 	cmd := exec.Command(f.BinaryPath, args...)
 
