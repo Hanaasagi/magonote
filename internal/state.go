@@ -380,7 +380,7 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 
 	s.assignHints(matches, hints, reverse, uniqueLevel)
 	for _, match := range matches {
-		slog.Info("match", "match", match)
+		slog.Debug("match", "match", match)
 	}
 	return matches
 }

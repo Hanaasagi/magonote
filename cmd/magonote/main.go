@@ -64,7 +64,13 @@ func init() {
 	}
 
 	logFilePath := filepath.Join(appDir, appName+".log")
-	logger.InitLogger(logFilePath, "info")
+
+	logLevel := os.Getenv("MAGONOTE_LOG")
+	if logLevel == "" {
+		logLevel = "info"
+	}
+
+	logger.InitLogger(logFilePath, logLevel)
 
 	// Initialize crash reporting
 	crashFilePath := filepath.Join(appDir, "crash")
