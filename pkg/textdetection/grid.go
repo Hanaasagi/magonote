@@ -106,6 +106,7 @@ func (gd *GridDetector) analyzeSegment(lines []string, startIdx int) *GridSegmen
 	// Try to find consecutive lines that might form a grid
 	potentialLines := []string{}
 	lineIndices := []int{}
+	var lastValidGrid *GridSegment
 
 	for i := startIdx; i < len(lines); i++ {
 		line := lines[i]
@@ -120,31 +121,60 @@ func (gd *GridDetector) analyzeSegment(lines []string, startIdx int) *GridSegmen
 		}
 
 		// Skip lines that are clearly not part of a grid (like commands starting with $)
-		if strings.HasPrefix(trimmed, "$") {
+		if strings.HasPrefix(trimmed, "$") || strings.HasPrefix(trimmed, "(") {
 			if len(potentialLines) > 0 {
 				break // End of potential grid segment
 			}
 			continue
 		}
 
-		potentialLines = append(potentialLines, line)
-		lineIndices = append(lineIndices, i)
+		// Try adding this line to potential grid
+		testLines := append(potentialLines, line)
+		testIndices := append(lineIndices, i)
 
 		// Check if we have enough lines to analyze
-		if len(potentialLines) >= gd.minLines {
-			// Try to detect columns in this segment
-			columns := gd.detectColumns(potentialLines)
+		if len(testLines) >= gd.minLines {
+			columns := gd.detectColumns(testLines)
 			if len(columns) >= gd.minColumns {
-				confidence := gd.calculateConfidence(potentialLines, columns)
+				confidence := gd.calculateConfidence(testLines, columns)
 				if confidence >= gd.confidenceThreshold {
-					// Continue to see if we can extend this grid
-					continue
+					// Check if this line fits well with the existing grid
+					if gd.lineCompatibleWithGrid(line, testLines[:len(testLines)-1], columns) {
+						potentialLines = testLines
+						lineIndices = testIndices
+						lastValidGrid = &GridSegment{
+							Lines:      make([]string, len(potentialLines)),
+							StartLine:  lineIndices[0],
+							EndLine:    lineIndices[len(lineIndices)-1],
+							Columns:    columns,
+							Confidence: confidence,
+						}
+						copy(lastValidGrid.Lines, potentialLines)
+						continue
+					} else {
+						// This line doesn't fit well with the grid, stop expanding
+						break
+					}
 				}
 			}
 		}
+
+		// If we haven't found a valid grid yet, just add the line
+		if lastValidGrid == nil {
+			potentialLines = testLines
+			lineIndices = testIndices
+		} else {
+			// We have a valid grid, but this line doesn't fit, stop here
+			break
+		}
 	}
 
-	// Final analysis of the collected lines
+	// Return the last valid grid we found
+	if lastValidGrid != nil {
+		return lastValidGrid
+	}
+
+	// Final analysis of the collected lines if no valid grid was found during iteration
 	if len(potentialLines) >= gd.minLines {
 		columns := gd.detectColumns(potentialLines)
 		if len(columns) >= gd.minColumns {
@@ -162,6 +192,79 @@ func (gd *GridDetector) analyzeSegment(lines []string, startIdx int) *GridSegmen
 	}
 
 	return nil
+}
+
+// lineCompatibleWithGrid checks if a new line is compatible with the existing grid structure
+func (gd *GridDetector) lineCompatibleWithGrid(newLine string, existingLines []string, columns []int) bool {
+	if len(existingLines) == 0 || len(columns) < 2 {
+		return true
+	}
+
+	// Test the new line with existing lines to see if it maintains grid structure
+	testLines := append(existingLines, newLine)
+	newColumns := gd.detectColumns(testLines)
+
+	// Check if the column structure is similar
+	if len(newColumns) != len(columns) {
+		return false
+	}
+
+	// Allow some variance in column positions but not too much
+	maxVariance := gd.maxColumnVariance * 2 // Allow more variance for compatibility check
+	for i, newCol := range newColumns {
+		if i < len(columns) {
+			if absInt(newCol-columns[i]) > maxVariance {
+				return false
+			}
+		}
+	}
+
+	// Check if the new line has reasonable content at the expected column positions
+	alignedColumns := 0
+	for _, colPos := range columns {
+		if colPos < len(newLine) {
+			// Look for non-space content around this position
+			found := false
+			start := maxInt(0, colPos-gd.maxColumnVariance)
+			end := minInt(len(newLine)-1, colPos+gd.maxColumnVariance)
+			for j := start; j <= end; j++ {
+				if !unicode.IsSpace(rune(newLine[j])) {
+					found = true
+					break
+				}
+			}
+			if found {
+				alignedColumns++
+			}
+		}
+	}
+
+	// Require at least half of the columns to have content
+	return float64(alignedColumns) >= float64(len(columns))*0.5
+}
+
+// absInt returns the absolute value of an integer
+func absInt(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// minInt returns the smaller of two integers
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// maxInt returns the larger of two integers
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // detectColumns identifies potential column boundaries in the given lines
@@ -243,7 +346,7 @@ func (gd *GridDetector) calculateConfidence(lines []string, columns []int) float
 			if colPos < len(line) {
 				// Check if there's actual content starting around this position
 				found := false
-				for i := max(0, colPos-gd.maxColumnVariance); i <= min(len(line)-1, colPos+gd.maxColumnVariance); i++ {
+				for i := maxInt(0, colPos-gd.maxColumnVariance); i <= minInt(len(line)-1, colPos+gd.maxColumnVariance); i++ {
 					if !unicode.IsSpace(rune(line[i])) && (i == 0 || unicode.IsSpace(rune(line[i-1]))) {
 						found = true
 						break
@@ -267,12 +370,21 @@ func (gd *GridDetector) calculateConfidence(lines []string, columns []int) float
 	confidence := totalScore / float64(len(alignmentScores))
 
 	// Bonus for having more columns (more structured data)
-	columnBonus := min(0.2, float64(len(columns)-2)*0.05)
+	columnBonus := 0.2
+	if temp := float64(len(columns)-2) * 0.05; temp < columnBonus {
+		columnBonus = temp
+	}
 	confidence += columnBonus
 
 	// Bonus for having more lines (more data consistency)
-	lineBonus := min(0.1, float64(len(lines)-2)*0.02)
+	lineBonus := 0.1
+	if temp := float64(len(lines)-2) * 0.02; temp < lineBonus {
+		lineBonus = temp
+	}
 	confidence += lineBonus
 
-	return min(1.0, confidence)
+	if confidence > 1.0 {
+		confidence = 1.0
+	}
+	return confidence
 }
