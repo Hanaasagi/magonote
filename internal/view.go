@@ -202,16 +202,30 @@ func (v *View) getMatchStyle(mat *Match, selected *Match, chosenMap map[string]b
 
 // renderSingleMatch renders a single match with its hint
 func (v *View) renderSingleMatch(mat *Match, style tcell.Style, typedHint string) {
-	// Calculate position accounting for wide characters
+	// Calculate display position accounting for wide characters
 	line := v.state.Lines[mat.Y]
 	prefix := line[:mat.X]
-	extraWidth := runewidth.StringWidth(prefix) - len([]rune(prefix))
-	offset := mat.X - extraWidth
+
+	// Calculate the actual display position by summing up character widths
+	offset := 0
+	for _, r := range prefix {
+		width := runewidth.RuneWidth(r)
+		if width <= 0 {
+			width = 1
+		}
+		offset += width
+	}
 
 	// Display the match text
 	text := v.makeHintText(mat.Text)
-	for i, r := range []rune(text) {
-		v.textBuffer.SetCell(offset+i, mat.Y, r, style)
+	currentX := offset
+	for _, r := range text {
+		v.textBuffer.SetCell(currentX, mat.Y, r, style)
+		width := runewidth.RuneWidth(r)
+		if width <= 0 {
+			width = 1
+		}
+		currentX += width
 	}
 
 	// Display the hint if available
@@ -230,9 +244,16 @@ func (v *View) renderHint(mat *Match, offset int, text string, typedHint string)
 
 	// Display the hint
 	hintText := v.makeHintText(hint)
-	for i, r := range []rune(hintText) {
+	currentX := finalPosition
+	hintRunes := []rune(hintText)
+	for i, r := range hintRunes {
 		hintStyle := v.getHintStyle(hint, typedHint, i)
-		v.textBuffer.SetCell(finalPosition+i, mat.Y, r, hintStyle)
+		v.textBuffer.SetCell(currentX, mat.Y, r, hintStyle)
+		width := runewidth.RuneWidth(r)
+		if width <= 0 {
+			width = 1
+		}
+		currentX += width
 	}
 }
 
@@ -240,15 +261,33 @@ func (v *View) renderHint(mat *Match, offset int, text string, typedHint string)
 func (v *View) calculateHintPosition(text, hint string) int {
 	switch v.position {
 	case "right":
-		return runewidth.StringWidth(text) - len(hint)
+		// Calculate actual display width of the text
+		textWidth := 0
+		for _, r := range text {
+			width := runewidth.RuneWidth(r)
+			if width <= 0 {
+				width = 1
+			}
+			textWidth += width
+		}
+		return textWidth - len([]rune(hint))
 	case "off_left":
-		offset := -len(hint)
+		offset := -len([]rune(hint))
 		if v.contrast {
 			offset -= 2
 		}
 		return offset
 	case "off_right":
-		return runewidth.StringWidth(text)
+		// Calculate actual display width of the text
+		textWidth := 0
+		for _, r := range text {
+			width := runewidth.RuneWidth(r)
+			if width <= 0 {
+				width = 1
+			}
+			textWidth += width
+		}
+		return textWidth
 	default: // "left"
 		return 0
 	}
