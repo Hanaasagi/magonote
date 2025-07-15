@@ -45,6 +45,7 @@ type Arguments struct {
 	target         string
 	inputFile      string
 	showVersion    bool
+	listView       bool
 
 	// colors
 	foregroundColor       string
@@ -269,32 +270,52 @@ func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
 }
 
 // runApp runs the main application logic
-func runApp(config *Config, inputFile, target string) error {
+func runApp(config *Config, args *Arguments) error {
 
-	lines, err := readInput(inputFile)
+	lines, err := readInput(args.inputFile)
 	if err != nil {
 		return err
 	}
 
 	state := internal.NewState(lines, config.Core.Alphabet, config.Regexp.Patterns)
-	viewbox := internal.NewView(
-		state,
-		config.Core.Multi,
-		config.Core.Reverse,
-		config.Core.UniqueLevel,
-		config.Core.Contrast,
-		config.Core.Position,
-		internal.GetColor(config.Colors.Select.Foreground),
-		internal.GetColor(config.Colors.Select.Background),
-		internal.GetColor(config.Colors.Multi.Foreground),
-		internal.GetColor(config.Colors.Multi.Background),
-		internal.GetColor(config.Colors.Match.Foreground),
-		internal.GetColor(config.Colors.Match.Background),
-		internal.GetColor(config.Colors.Hint.Foreground),
-		internal.GetColor(config.Colors.Hint.Background),
-	)
 
-	selected := viewbox.Present()
+	var selected []internal.ChosenMatch
+
+	if args.listView {
+		listView := internal.NewListView(
+			state,
+			config.Core.Multi,
+			internal.GetColor(config.Colors.Select.Foreground),
+			internal.GetColor(config.Colors.Select.Background),
+			internal.GetColor(config.Colors.Multi.Foreground),
+			internal.GetColor(config.Colors.Multi.Background),
+			internal.GetColor(config.Colors.Match.Foreground),
+			internal.GetColor(config.Colors.Match.Background),
+			internal.GetColor(config.Colors.Hint.Foreground),
+			internal.GetColor(config.Colors.Hint.Background),
+		)
+		selected = listView.Present()
+	} else {
+		// Use full screen view
+		viewbox := internal.NewView(
+			state,
+			config.Core.Multi,
+			config.Core.Reverse,
+			config.Core.UniqueLevel,
+			config.Core.Contrast,
+			config.Core.Position,
+			internal.GetColor(config.Colors.Select.Foreground),
+			internal.GetColor(config.Colors.Select.Background),
+			internal.GetColor(config.Colors.Multi.Foreground),
+			internal.GetColor(config.Colors.Multi.Background),
+			internal.GetColor(config.Colors.Match.Foreground),
+			internal.GetColor(config.Colors.Match.Background),
+			internal.GetColor(config.Colors.Hint.Foreground),
+			internal.GetColor(config.Colors.Hint.Background),
+		)
+		selected = viewbox.Present()
+	}
+
 	if len(selected) == 0 {
 		// slient here
 		return nil
@@ -307,7 +328,7 @@ func runApp(config *Config, inputFile, target string) error {
 		return err
 	}
 
-	return writeOutput(target, output)
+	return writeOutput(args.target, output)
 }
 
 func main() {
@@ -347,7 +368,7 @@ func main() {
 			// Apply CLI overrides
 			applyCliOverrides(cmd, config, args)
 
-			return runApp(config, args.inputFile, args.target)
+			return runApp(config, args)
 		},
 	}
 
@@ -380,6 +401,8 @@ func main() {
 	rootCmd.Flags().StringVarP(&args.target, "target", "t", "", "Stores the hint in the specified path")
 	rootCmd.Flags().StringVarP(&args.inputFile, "input-file", "i", "", "Read input from file instead of stdin")
 	rootCmd.Flags().BoolVarP(&args.showVersion, "version", "v", false, "Print version and exit")
+
+	rootCmd.Flags().BoolVar(&args.listView, "list", false, "Enable list view")
 
 	rootCmd.SetHelpTemplate(cmd.HelpTemplate)
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
