@@ -82,7 +82,7 @@ func NewListView(
 	hintBackgroundColor Color,
 ) *ListView {
 	// Extract candidate texts from matches
-	matches := state.Matches(false, 0)
+	matches := state.Matches(false, 2) // list view should only show unique matches
 	candidates := make([]string, len(matches))
 	for i, match := range matches {
 		candidates[i] = match.Text
