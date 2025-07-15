@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	fz "github.com/Hanaasagi/magonote/pkg/fuzzymatch"
 	"github.com/fatih/color"
 	"golang.org/x/term"
 )
@@ -36,11 +37,11 @@ type ListView struct {
 	// Core state
 	state           *State
 	candidates      []string
-	filteredMatches []FuzzyMatch
+	filteredMatches []fz.FuzzyMatch
 	selectedIndex   int
 	scrollOffset    int
 	query           string
-	fuzzyMatcher    *FuzzyMatcher
+	fuzzyMatcher    *fz.FuzzyMatcher
 	multi           bool
 	chosen          []ChosenMatch
 
@@ -91,11 +92,11 @@ func NewListView(
 	lv := &ListView{
 		state:              state,
 		candidates:         candidates,
-		filteredMatches:    []FuzzyMatch{},
+		filteredMatches:    []fz.FuzzyMatch{},
 		selectedIndex:      0,
 		scrollOffset:       0,
 		query:              "",
-		fuzzyMatcher:       NewFuzzyMatcher(false),
+		fuzzyMatcher:       fz.NewFuzzyMatcher(false),
 		maxVisibleItems:    defaultMaxVisibleItems,
 		multi:              multi,
 		chosen:             make([]ChosenMatch, 0),
@@ -411,7 +412,7 @@ func (lv *ListView) renderMatches(visibleCount int) {
 }
 
 // renderSingleMatch renders a single match item
-func (lv *ListView) renderSingleMatch(match FuzzyMatch, selected, chosen bool) {
+func (lv *ListView) renderSingleMatch(match fz.FuzzyMatch, selected, chosen bool) {
 	// Render indicator
 	var indicator string
 	if selected {
