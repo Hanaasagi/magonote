@@ -591,6 +591,8 @@ func (lv *ListView) Present() []ChosenMatch {
 
 	// Clear our popup area
 	lv.clearPopupArea(totalLines)
+	// Reset cursor position
+	lv.moveCursor(lv.startRow, 0)
 
 	return lv.getDefaultSelection()
 }
