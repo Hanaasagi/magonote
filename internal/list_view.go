@@ -205,26 +205,29 @@ func (lv *ListView) getCurrentPosition() error {
 // cleanup restores terminal state
 func (lv *ListView) cleanup() {
 	if lv.originalState != nil {
-		term.Restore(int(lv.ttyin.Fd()), lv.originalState)
+		_ = term.Restore(int(lv.ttyin.Fd()), lv.originalState)
 	}
 	if lv.ttyin != nil && lv.ttyin != os.Stdin {
-		lv.ttyin.Close()
+		_ = lv.ttyin.Close()
 	}
 }
 
 // write sends text to terminal
 func (lv *ListView) write(text string) {
-	lv.ttyout.WriteString(text)
+	_, err := lv.ttyout.WriteString(text)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // writeColored sends colored text to terminal using fatih/color
 func (lv *ListView) writeColored(text string, selected bool, chosen bool) {
 	if selected {
-		lv.selectColor.Print(text)
+		_, _ = lv.selectColor.Print(text)
 	} else if chosen {
-		lv.chosenColor.Print(text)
+		_, _ = lv.chosenColor.Print(text)
 	} else {
-		lv.normalColor.Print(text)
+		_, _ = lv.normalColor.Print(text)
 	}
 }
 
@@ -442,7 +445,7 @@ func (lv *ListView) positionCursor() {
 func (lv *ListView) render() {
 	visibleCount, totalLines := lv.calculateDisplayMetrics()
 	lv.ensureSpace(totalLines)
-	lv.clearPopupArea(totalLines)
+	lv.clearPopupArea(lv.height)
 	lv.renderPrompt()
 	lv.renderMatches(visibleCount)
 	lv.positionCursor()
