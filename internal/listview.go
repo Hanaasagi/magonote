@@ -224,11 +224,11 @@ func (lv *ListView) write(text string) {
 // writeColored sends colored text to terminal using fatih/color
 func (lv *ListView) writeColored(text string, selected bool, chosen bool) {
 	if selected {
-		_, _ = lv.selectColor.Print(text)
+		_, _ = lv.selectColor.Fprint(lv.ttyout, text)
 	} else if chosen {
-		_, _ = lv.chosenColor.Print(text)
+		_, _ = lv.chosenColor.Fprint(lv.ttyout, text)
 	} else {
-		_, _ = lv.normalColor.Print(text)
+		_, _ = lv.normalColor.Fprint(lv.ttyout, text)
 	}
 }
 
@@ -244,13 +244,29 @@ func (lv *ListView) clearLine() {
 
 // makeSpace creates space for the popup by moving content down
 func (lv *ListView) makeSpace(lines int) {
-	lv.moveCursor(lv.startRow, lv.startCol)
+	// If cursor is not at column 0, it means there's content on current line (like a prompt)
+	// In this case, we should start rendering on the next line to preserve the prompt
+	if lv.startCol > 0 {
+		// Move to the line after the current prompt line
+		lv.moveCursor(lv.startRow+1, 0)
 
-	for i := 0; i < lines; i++ {
-		lv.write("\n")
+		// Create space by adding newlines, but don't touch the prompt line
+		for i := 0; i < lines; i++ {
+			lv.write("\n")
+		}
+
+		// Set our rendering start position to be after the prompt
+		lv.startRow = lv.startRow + 1
+	} else {
+		// Cursor is at column 0, likely direct execution - start rendering from current line
+		lv.moveCursor(lv.startRow, 0)
+
+		for i := 0; i < lines; i++ {
+			lv.write("\n")
+		}
+
+		lv.moveCursor(lv.startRow, 0)
 	}
-
-	lv.moveCursor(lv.startRow, lv.startCol)
 }
 
 // clearPopupArea clears the popup display area
