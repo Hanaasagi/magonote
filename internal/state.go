@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"unicode"
 
 	td "github.com/Hanaasagi/magonote/pkg/textdetection"
 )
@@ -583,17 +584,30 @@ func (s *State) hasSpacingConflict(lineNum int, selectedLines []int, minSpacing 
 
 // getGridMatches detects grid patterns and extracts valid words from them
 func (s *State) getGridMatches(existingMatches []Match) []Match {
-	detector := td.NewGridDetector(
-		td.WithMinLines(minLines),
-		td.WithMinColumns(minColumns),
-		td.WithConfidenceThreshold(confidenceThreshold),
+	// Use the new enhanced API with backward compatibility
+	detector := td.NewDetector(
+		td.WithMinLinesOption(minLines),
+		td.WithMinColumnsOption(minColumns),
+		td.WithConfidenceThresholdOption(confidenceThreshold),
 	)
 
-	segments := detector.DetectGrids(s.Lines)
-	if len(segments) == 0 {
-		return nil
+	tables, err := detector.DetectTables(s.Lines)
+	if err != nil || len(tables) == 0 {
+		// Fallback to legacy API if new API fails
+		legacyDetector := td.NewDualRoundDetector(
+			td.WithMinLines(minLines),
+			td.WithMinColumns(minColumns),
+			td.WithConfidenceThreshold(confidenceThreshold),
+		)
+		segments := legacyDetector.DetectGrids(s.Lines)
+		return s.processLegacySegments(segments, existingMatches)
 	}
 
+	return s.processNewTables(tables, existingMatches)
+}
+
+// processNewTables processes tables from the new API
+func (s *State) processNewTables(tables []td.Table, existingMatches []Match) []Match {
 	// Build position map for overlap detection
 	existingPositions := make(map[string]bool, len(existingMatches)*5)
 	for _, match := range existingMatches {
@@ -604,12 +618,13 @@ func (s *State) getGridMatches(existingMatches []Match) []Match {
 	}
 
 	var gridMatches []Match
-	for _, segment := range segments {
-		if segment.Confidence < confidenceThreshold {
+	for _, table := range tables {
+		if table.Confidence < confidenceThreshold {
 			continue
 		}
 
-		words := ExtractValidWords(segment)
+		// Extract words from cells
+		words := s.extractWordsFromTable(table)
 		for _, word := range words {
 			if len(word.Text) < 3 || isCommonWord(word.Text) {
 				continue
@@ -640,6 +655,131 @@ func (s *State) getGridMatches(existingMatches []Match) []Match {
 	return gridMatches
 }
 
+// processLegacySegments processes segments from the legacy API (fallback)
+func (s *State) processLegacySegments(segments []td.GridSegment, existingMatches []Match) []Match {
+	// Build position map for overlap detection
+	existingPositions := make(map[string]bool, len(existingMatches)*5)
+	for _, match := range existingMatches {
+		for i := 0; i < len(match.Text); i++ {
+			key := fmt.Sprintf("%d-%d", match.Y, match.X+i)
+			existingPositions[key] = true
+		}
+	}
+
+	var gridMatches []Match
+	for _, segment := range segments {
+		if segment.Confidence < confidenceThreshold {
+			continue
+		}
+
+		words := s.extractValidWordsLegacy(segment)
+		for _, word := range words {
+			if len(word.Text) < 3 || isCommonWord(word.Text) {
+				continue
+			}
+
+			// Check overlap
+			overlaps := false
+			for i := 0; i < len(word.Text); i++ {
+				key := fmt.Sprintf("%d-%d", word.Y, word.X+i)
+				if existingPositions[key] {
+					overlaps = true
+					break
+				}
+			}
+
+			if !overlaps {
+				gridMatches = append(gridMatches, Match{
+					X:       word.X,
+					Y:       word.Y,
+					Pattern: "grid",
+					Text:    word.Text,
+					Hint:    nil,
+				})
+			}
+		}
+	}
+
+	return gridMatches
+}
+
+// extractWordsFromTable extracts words from the new Table structure
+func (s *State) extractWordsFromTable(table td.Table) []GridWord {
+	var words []GridWord
+
+	for rowIdx, row := range table.Cells {
+		for _, cell := range row {
+			// Filter words similar to the original implementation
+			if len(cell.Text) > 1 && s.isValidWordForGrid(cell.Text) {
+				word := GridWord{
+					Text:    cell.Text,
+					X:       cell.StartPos,
+					Y:       cell.LineIndex,
+					LineIdx: rowIdx,
+				}
+				words = append(words, word)
+			}
+		}
+	}
+
+	return words
+}
+
+// extractValidWordsLegacy maintains the original implementation for fallback
+func (s *State) extractValidWordsLegacy(segment td.GridSegment) []GridWord {
+	var words []GridWord
+
+	for lineIdx, line := range segment.Lines {
+		matches := wordPattern.FindAllStringIndex(line, -1)
+		for _, match := range matches {
+			if match[1]-match[0] > 1 { // Skip single characters
+				text := line[match[0]:match[1]]
+				if s.isValidWordForGrid(text) {
+					words = append(words, GridWord{
+						Text:    text,
+						X:       match[0],
+						Y:       segment.StartLine + lineIdx,
+						LineIdx: lineIdx,
+					})
+				}
+			}
+		}
+	}
+
+	return words
+}
+
+// isValidWordForGrid checks if a word should be included in grid matching
+func (s *State) isValidWordForGrid(word string) bool {
+	// Skip very short words
+	if len(word) < 2 {
+		return false
+	}
+
+	// Skip if it's all digits (likely not interesting for grid matching)
+	allDigits := true
+	for _, char := range word {
+		if !unicode.IsDigit(char) {
+			allDigits = false
+			break
+		}
+	}
+	if allDigits && len(word) < 4 {
+		return false
+	}
+
+	// Skip if it contains only special characters
+	hasAlphanumeric := false
+	for _, char := range word {
+		if unicode.IsLetter(char) || unicode.IsDigit(char) {
+			hasAlphanumeric = true
+			break
+		}
+	}
+
+	return hasAlphanumeric
+}
+
 // GridWord represents a word extracted from a grid segment
 type GridWord struct {
 	Text    string
@@ -651,21 +791,22 @@ type GridWord struct {
 // Pre-compiled pattern for better performance
 var wordPattern = regexp.MustCompile(`\b[a-zA-Z][a-zA-Z0-9_\-:/]*\b`)
 
-// ExtractValidWords extracts valid words from the grid segment
+// ExtractValidWords extracts valid words from the grid segment (backward compatibility)
 func ExtractValidWords(gs td.GridSegment) []GridWord {
-	var words []GridWord
+	// Use the new enhanced word extractor
+	extractor := td.NewWordExtractor()
+	cells := extractor.ExtractCells(gs)
 
-	for lineIdx, line := range gs.Lines {
-		matches := wordPattern.FindAllStringIndex(line, -1)
-		for _, match := range matches {
-			if match[1]-match[0] > 1 { // Skip single characters
-				words = append(words, GridWord{
-					Text:    line[match[0]:match[1]],
-					X:       match[0],
-					Y:       gs.StartLine + lineIdx,
-					LineIdx: lineIdx,
-				})
+	var words []GridWord
+	for _, row := range cells {
+		for _, cell := range row {
+			word := GridWord{
+				Text:    cell.Text,
+				X:       cell.StartPos,
+				Y:       cell.LineIndex,
+				LineIdx: cell.Row,
 			}
+			words = append(words, word)
 		}
 	}
 
