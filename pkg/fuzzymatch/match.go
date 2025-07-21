@@ -165,36 +165,3 @@ func (fm *FuzzyMatcher) FilterMatches(matches []FuzzyMatch, minScore int) []Fuzz
 	}
 	return filtered
 }
-
-// HighlightMatch returns a highlighted version of the match
-func (fm *FuzzyMatcher) HighlightMatch(match FuzzyMatch, startTag, endTag string) string {
-	if len(match.Indices) == 0 {
-		return match.Text
-	}
-
-	runes := []rune(match.Text)
-	result := make([]rune, 0, len(runes)*2)
-
-	matchSet := make(map[int]bool)
-	for _, idx := range match.Indices {
-		matchSet[idx] = true
-	}
-
-	inHighlight := false
-	for i, r := range runes {
-		if matchSet[i] && !inHighlight {
-			result = append(result, []rune(startTag)...)
-			inHighlight = true
-		} else if !matchSet[i] && inHighlight {
-			result = append(result, []rune(endTag)...)
-			inHighlight = false
-		}
-		result = append(result, r)
-	}
-
-	if inHighlight {
-		result = append(result, []rune(endTag)...)
-	}
-
-	return string(result)
-}
