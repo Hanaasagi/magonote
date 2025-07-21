@@ -1,7 +1,6 @@
 package textdetection
 
 import (
-	"errors"
 	"math"
 	"strings"
 )
@@ -9,15 +8,6 @@ import (
 // ============================================================================
 // Enhanced Analysis Utilities
 // ============================================================================
-
-// AnalysisResult contains comprehensive analysis information for a table candidate
-type AnalysisResult struct {
-	Confidence        float64           `json:"confidence"`
-	Columns           []int             `json:"columns"`
-	QualityMetrics    *QualityMetrics   `json:"quality_metrics"`
-	AlignmentData     []ColumnAlignment `json:"alignment_data"`
-	TokenDistribution map[int]int       `json:"token_distribution"`
-}
 
 // TableAnalyzer provides enhanced analysis capabilities for table detection
 type TableAnalyzer struct {
@@ -27,49 +17,6 @@ type TableAnalyzer struct {
 // NewTableAnalyzer creates a new enhanced table analyzer
 func NewTableAnalyzer(config DetectionConfig) *TableAnalyzer {
 	return &TableAnalyzer{config: config}
-}
-
-// AnalyzeCandidate performs comprehensive analysis on a candidate table
-func (ta *TableAnalyzer) AnalyzeCandidate(lines []string, startLine, endLine int) (*AnalysisResult, error) {
-	if endLine >= len(lines) || startLine > endLine {
-		return nil, errors.New("invalid line range")
-	}
-
-	candidateLines := lines[startLine : endLine+1]
-
-	// Use existing grid detector for analysis
-	detector := NewGridDetector(
-		WithMinLines(ta.config.MinLines),
-		WithMinColumns(ta.config.MinColumns),
-		WithAlignmentThreshold(ta.config.AlignmentThreshold),
-		WithConfidenceThreshold(ta.config.ConfidenceThreshold),
-		WithMaxColumnVariance(ta.config.MaxColumnVariance),
-		WithTokenizationMode(ta.config.TokenizationMode),
-	)
-
-	segments := detector.DetectGrids(candidateLines)
-	if len(segments) == 0 {
-		return &AnalysisResult{Confidence: 0.0}, nil
-	}
-
-	// Get the best segment
-	bestSegment := segments[0]
-	for _, segment := range segments {
-		if segment.Confidence > bestSegment.Confidence {
-			bestSegment = segment
-		}
-	}
-
-	// Calculate quality metrics
-	qualityMetrics := ta.calculateQualityMetrics(bestSegment, candidateLines)
-
-	return &AnalysisResult{
-		Confidence:        bestSegment.Confidence,
-		Columns:           bestSegment.Columns,
-		QualityMetrics:    qualityMetrics,
-		AlignmentData:     bestSegment.Metadata.AlignmentData,
-		TokenDistribution: ta.analyzeTokenDistribution(bestSegment),
-	}, nil
 }
 
 // calculateQualityMetrics computes detailed quality assessment
@@ -251,20 +198,6 @@ func (ta *TableAnalyzer) calculateAvgColumnSpacing(columns []int) float64 {
 	}
 
 	return float64(totalSpacing) / float64(len(columns)-1)
-}
-
-// analyzeTokenDistribution analyzes the distribution of token counts across rows
-func (ta *TableAnalyzer) analyzeTokenDistribution(segment GridSegment) map[int]int {
-	distribution := make(map[int]int)
-
-	if segment.Metadata != nil && len(segment.Metadata.OriginalTokens) > 0 {
-		for _, rowTokens := range segment.Metadata.OriginalTokens {
-			count := len(rowTokens)
-			distribution[count]++
-		}
-	}
-
-	return distribution
 }
 
 // ============================================================================
