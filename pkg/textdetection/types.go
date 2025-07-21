@@ -60,37 +60,6 @@ type DetectionStrategy interface {
 	GetConfiguration() DetectionConfig
 }
 
-// NewTokenizationStrategy defines the interface for different tokenization approaches
-// (Named differently to avoid conflict with existing interface)
-type NewTokenizationStrategy interface {
-	// Tokenize splits a line into tokens with position information
-	Tokenize(line string, lineIndex int, context []string) ([]Token, error)
-
-	// GetMode returns the tokenization mode this strategy implements
-	GetMode() TokenizationMode
-
-	// ShouldApply determines if this strategy should be applied to the given context
-	ShouldApply(line string, lineIndex int, context []string) bool
-}
-
-// LayoutAnalyzer defines the interface for analyzing line layouts
-type LayoutAnalyzer interface {
-	// AnalyzeLayout determines the layout structure of a set of lines
-	AnalyzeLayout(lines []string) ([]LineLayout, error)
-
-	// CompareSimilarity checks if two layouts are similar enough to be part of the same table
-	CompareSimilarity(layout1, layout2 LineLayout) bool
-}
-
-// ConfidenceScorer defines the interface for calculating detection confidence
-type ConfidenceScorer interface {
-	// CalculateConfidence computes a confidence score for a detected table
-	CalculateConfidence(table Table, originalLines []string) (float64, error)
-
-	// CalculateQualityMetrics computes detailed quality metrics
-	CalculateQualityMetrics(table Table, originalLines []string) (*QualityMetrics, error)
-}
-
 // ============================================================================
 // Configuration Types
 // ============================================================================
@@ -121,24 +90,8 @@ func DefaultConfig() DetectionConfig {
 // Internal Data Types
 // ============================================================================
 
-// LineLayout represents the layout structure of a single line
-type LineLayout struct {
-	Tokens          []Token `json:"tokens"`           // Tokens found in this line
-	ColumnPositions []int   `json:"column_positions"` // Column start positions
-	LineIndex       int     `json:"line_index"`       // Index of this line in the original text
-}
-
-// CandidateTable represents a potential table during detection
-type CandidateTable struct {
-	StartLine  int          `json:"start_line"` // Starting line index
-	EndLine    int          `json:"end_line"`   // Ending line index
-	Lines      []string     `json:"lines"`      // Text lines that form this table
-	Layouts    []LineLayout `json:"layouts"`    // Layout information for each line
-	Confidence float64      `json:"confidence"` // Initial confidence score
-}
-
 // ============================================================================
-// Utility Functions
+// Conversion Functions
 // ============================================================================
 
 // ConvertGridSegmentToTable converts a legacy GridSegment to the new Table format
