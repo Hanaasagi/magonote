@@ -50,5 +50,9 @@ lint:
 	@$(GO_LINT) run
 
 e2e: $(BINARIES)
-	@echo "Running e2e tests..."
+	@echo "Running automated E2E tests..."
 	@cd test/e2e && go test -v -timeout=30s .
+
+manual-e2e:
+	@echo "Running manual E2E test fixtures..."
+	@bash ./tools/manual-run-fixtures.sh
