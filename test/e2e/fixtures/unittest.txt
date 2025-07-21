@@ -1,0 +1,16 @@
+// Rust
+running 47 tests
+test lexer::comment::test_comment_doc ... ok
+test lexer::comment::test_comment ... FAILED
+test lexer::function::test_function ... ok
+test lexer::number::test_int_chunk ... ok
+test lexer::number::test_number_00 ... ok
+
+// Go
+--- PASS: TestDockerPsOutput (0.00s)
+=== RUN   TestLsOutputWithHeader
+--- PASS: TestLsOutputWithHeader (0.00s)
+=== RUN   TestNonGridText
+--- PASS: TestNonGridText (0.00s)
+=== RUN   TestMixedContentWithTwoGridSections
+--- PASS: TestMixedContentWithTwoGridSections (0.00s)
