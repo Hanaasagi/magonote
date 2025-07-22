@@ -111,7 +111,7 @@ const (
 	MaxBoundaryRatio = 1.5
 
 	// MinBoundariesForAnalysis is the minimum number of boundaries needed for analysis
-	MinBoundariesForAnalysis = 2
+	MinBoundariesForAnalysis = 3
 
 	// MaxBoundariesForAnalysis is the maximum number of boundaries for analysis
 	MaxBoundariesForAnalysis = 10
