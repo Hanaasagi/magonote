@@ -62,8 +62,8 @@ var BuiltinPatterns = []MatchPattern{
 	{"diff_b", `\+\+\+ b/([^ ]+)`},
 	{"docker", `sha256:([0-9a-f]{64})`},
 
-	{"rust_test", `^test\s+([^\s]+)\s+\.\.\.\s+(ok|FAILED)$`},
-	{"go_test", `^--- (PASS|FAIL): ([^\s]+)`},
+	{"rust_test", `^test\s+(?P<match>[^\s]+)\s+\.\.\.\s+(ok|FAILED)$`},
+	{"go_test", `^--- (PASS|FAIL):\s+(?P<match>[^\s]+)`},
 
 	{"path", `(?P<match>([.\w\-@$~\[\]]+)?(/[.\w\-@$\[\]]+)+)`},
 	{"color", `#[0-9a-fA-F]{6}`},
