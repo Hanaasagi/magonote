@@ -1,29 +1,149 @@
 package textdetection
 
+import (
+	"fmt"
+	"strings"
+)
+
 // ============================================================================
 // New API Data Types
 // ============================================================================
 
-// Cell represents a single cell in a detected grid with position and content information
+// Cell represents a detected table cell with its content and position information
 type Cell struct {
-	Text      string `json:"text"`       // Text content of the cell
-	Row       int    `json:"row"`        // Row number (0-based) in the detected grid
-	Column    int    `json:"column"`     // Column number (0-based) in the detected grid
-	LineIndex int    `json:"line_index"` // Line number (0-based) in the original text
-	StartPos  int    `json:"start_pos"`  // Start position in the line (character index)
-	EndPos    int    `json:"end_pos"`    // End position in the line (character index)
+	Text      string `json:"text"`       // The text content of the cell
+	Row       int    `json:"row"`        // Row index within the table (0-based)
+	Column    int    `json:"column"`     // Column index within the table (0-based)
+	LineIndex int    `json:"line_index"` // Original line index in the input
+	StartPos  int    `json:"start_pos"`  // Start position of the cell in the line
+	EndPos    int    `json:"end_pos"`    // End position of the cell in the line
 }
 
-// Table represents a detected grid/table with structured cell information
+// String returns a string representation of the cell
+func (c Cell) String() string {
+	return fmt.Sprintf("Cell[%d,%d]: %q at [%d-%d] in line %d",
+		c.Row, c.Column, c.Text, c.StartPos, c.EndPos, c.LineIndex)
+}
+
+// IsEmpty returns true if the cell has no text content
+func (c Cell) IsEmpty() bool {
+	return strings.TrimSpace(c.Text) == ""
+}
+
+// Length returns the length of the cell text
+func (c Cell) Length() int {
+	return len(c.Text)
+}
+
+// Table represents a detected table with enhanced metadata and cell information
 type Table struct {
-	Cells      [][]Cell         `json:"cells"`       // 2D array of cells [row][column]
 	StartLine  int              `json:"start_line"`  // Starting line number in original text
 	EndLine    int              `json:"end_line"`    // Ending line number in original text
 	NumRows    int              `json:"num_rows"`    // Number of rows in the table
 	NumColumns int              `json:"num_columns"` // Number of columns in the table
-	Confidence float64          `json:"confidence"`  // Detection confidence (0.0-1.0)
+	Confidence float64          `json:"confidence"`  // Detection confidence score (0.0-1.0)
 	Mode       TokenizationMode `json:"mode"`        // Tokenization mode used for detection
-	Metadata   *TableMetadata   `json:"metadata"`    // Additional detection information
+	Cells      [][]Cell         `json:"cells"`       // 2D array of cells [row][column]
+	Metadata   *TableMetadata   `json:"metadata"`    // Additional metadata about the table
+}
+
+// IsValid returns true if the table has valid structure
+func (t Table) IsValid() bool {
+	return t.NumRows > 0 && t.NumColumns > 0 && len(t.Cells) == t.NumRows
+}
+
+// GetColumnPositions returns the column start positions from metadata, if available
+func (t Table) GetColumnPositions() []int {
+	if t.Metadata != nil {
+		return t.Metadata.ColumnPositions
+	}
+	return nil
+}
+
+// GetCell safely returns a cell at the given row and column indices
+func (t Table) GetCell(row, col int) (*Cell, error) {
+	if row < 0 || row >= t.NumRows {
+		return nil, fmt.Errorf("row index %d out of range [0-%d]", row, t.NumRows-1)
+	}
+	if col < 0 || col >= len(t.Cells[row]) {
+		return nil, fmt.Errorf("column index %d out of range [0-%d] for row %d", col, len(t.Cells[row])-1, row)
+	}
+	return &t.Cells[row][col], nil
+}
+
+// GetRow returns all cells in the specified row
+func (t Table) GetRow(row int) ([]Cell, error) {
+	if row < 0 || row >= t.NumRows {
+		return nil, fmt.Errorf("row index %d out of range [0-%d]", row, t.NumRows-1)
+	}
+	return t.Cells[row], nil
+}
+
+// GetColumn returns all cells in the specified column
+func (t Table) GetColumn(col int) ([]Cell, error) {
+	if col < 0 || col >= t.NumColumns {
+		return nil, fmt.Errorf("column index %d out of range [0-%d]", col, t.NumColumns-1)
+	}
+
+	var columnCells []Cell
+	for row := 0; row < t.NumRows; row++ {
+		if col < len(t.Cells[row]) {
+			columnCells = append(columnCells, t.Cells[row][col])
+		}
+	}
+	return columnCells, nil
+}
+
+// GetHeaderRow returns the first row as header cells, if the table has rows
+func (t Table) GetHeaderRow() ([]Cell, error) {
+	if t.NumRows == 0 {
+		return nil, fmt.Errorf("table has no rows")
+	}
+	return t.GetRow(0)
+}
+
+// GetRowTexts returns the text content of all cells in a row as a slice of strings
+func (t Table) GetRowTexts(row int) ([]string, error) {
+	cells, err := t.GetRow(row)
+	if err != nil {
+		return nil, err
+	}
+
+	texts := make([]string, len(cells))
+	for i, cell := range cells {
+		texts[i] = cell.Text
+	}
+	return texts, nil
+}
+
+// GetColumnTexts returns the text content of all cells in a column as a slice of strings
+func (t Table) GetColumnTexts(col int) ([]string, error) {
+	cells, err := t.GetColumn(col)
+	if err != nil {
+		return nil, err
+	}
+
+	texts := make([]string, len(cells))
+	for i, cell := range cells {
+		texts[i] = cell.Text
+	}
+	return texts, nil
+}
+
+// LineCount returns the number of lines this table spans
+func (t Table) LineCount() int {
+	return t.EndLine - t.StartLine + 1
+}
+
+// String returns a string representation of the table
+func (t Table) String() string {
+	mode := map[TokenizationMode]string{
+		SingleSpaceMode: "SingleSpace",
+		MultiSpaceMode:  "MultiSpace",
+	}[t.Mode]
+
+	return fmt.Sprintf("Table[%d-%d]: %d×%d, mode=%s, confidence=%.3f",
+		t.StartLine, t.EndLine, t.NumRows, t.NumColumns, mode, t.Confidence)
 }
 
 // TableMetadata contains detailed information about how a table was detected
