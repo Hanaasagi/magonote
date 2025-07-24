@@ -1049,7 +1049,8 @@ type ExpectedToken struct {
 // TestTokenizeBasicDebug specifically tests the basic tokenization method
 func TestTokenizeBasicDebug(t *testing.T) {
 	detector := NewGridDetector()
-	tokenizer := newAdaptiveTokenizer(detector)
+	_ = detector
+	tokenizer := NewAdaptiveTokenizer(DetectionConfig{})
 
 	testLine := "hello world d     e"
 	t.Logf("Test string: %q (length: %d)", testLine, len(testLine))
@@ -1109,7 +1110,16 @@ func TestLeftAlignmentMergingDebug(t *testing.T) {
 	`), "\n")
 
 	detector := NewGridDetector()
-	tokenizer := newAdaptiveTokenizer(detector)
+	_ = detector
+	tokenizer := NewAdaptiveTokenizer(
+		DetectionConfig{
+			MinLines:            detector.minLines,
+			MinColumns:          detector.minColumns,
+			AlignmentThreshold:  detector.alignmentThreshold,
+			ConfidenceThreshold: detector.confidenceThreshold,
+			MaxColumnVariance:   detector.maxColumnVariance,
+		},
+	)
 
 	// Test line 1 ("hello world d     e")
 	lineIndex := 1
