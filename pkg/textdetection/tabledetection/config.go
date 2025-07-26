@@ -1,4 +1,4 @@
-package textdetection
+package tabledetection
 
 // Detection Configuration Constants
 // These constants define the behavior of the table detection algorithm

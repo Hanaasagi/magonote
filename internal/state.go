@@ -8,7 +8,7 @@ import (
 	"sync"
 	"unicode"
 
-	td "github.com/Hanaasagi/magonote/pkg/textdetection"
+	td "github.com/Hanaasagi/magonote/pkg/textdetection/tabledetection"
 )
 
 const (

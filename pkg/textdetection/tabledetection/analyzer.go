@@ -1,4 +1,4 @@
-package textdetection
+package tabledetection
 
 import (
 	"errors"
