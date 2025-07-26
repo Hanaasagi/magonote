@@ -205,13 +205,9 @@ func (drs *DualRoundStrategy) DetectTables(lines []string) ([]Table, error) {
 	for _, segment := range segments {
 		table := ConvertGridSegmentToTable(segment)
 
-		// Extract cells
 		cells := extractor.ExtractCells(segment)
 		table.Cells = cells
 		table.NumRows = len(cells)
-		if len(cells) > 0 {
-			table.NumColumns = len(cells[0])
-		}
 
 		tables = append(tables, table)
 	}
@@ -278,9 +274,6 @@ func (srs *SingleRoundStrategy) DetectTables(lines []string) ([]Table, error) {
 		cells := extractor.ExtractCells(segment)
 		table.Cells = cells
 		table.NumRows = len(cells)
-		if len(cells) > 0 {
-			table.NumColumns = len(cells[0])
-		}
 
 		tables = append(tables, table)
 	}
@@ -303,22 +296,18 @@ func (srs *SingleRoundStrategy) GetConfiguration() DetectionConfig {
 }
 
 // ============================================================================
-// Backward Compatibility Types
+// Legacy Support and Utility Functions
 // ============================================================================
 
-// GridWord represents a word extracted from a grid segment (for backward compatibility)
+// GridWord represents a word extracted from a grid segment for backward compatibility
 type GridWord struct {
-	Text    string `json:"text"`
-	X       int    `json:"x"`
-	Y       int    `json:"y"`
-	LineIdx int    `json:"line_idx"`
+	Text    string
+	X       int
+	Y       int
+	LineIdx int
 }
 
-// ============================================================================
-// Backward Compatibility Functions
-// ============================================================================
-
-// ExtractValidWords maintains backward compatibility with the original API
+// ExtractValidWords extracts valid words from a GridSegment (backward compatibility)
 func ExtractValidWords(segment GridSegment) []GridWord {
 	extractor := NewWordExtractor()
 	cells := extractor.ExtractCells(segment)
@@ -339,65 +328,8 @@ func ExtractValidWords(segment GridSegment) []GridWord {
 	return words
 }
 
-// ============================================================================
-// Enhanced API Functions
-// ============================================================================
-
-// DetectTablesWithCells provides enhanced API that returns cell-level information
-func DetectTablesWithCells(lines []string, opts ...DetectorOption) ([]Table, error) {
-	detector := NewDetector(opts...)
-	return detector.DetectTables(lines)
-}
-
 // DetectGridsLegacy provides backward compatibility with the original DetectGrids function
 func DetectGridsLegacy(lines []string, opts ...GridOption) []GridSegment {
-	// Convert new options to old GridDetector options
 	detector := NewGridDetector(opts...)
 	return detector.DetectGrids(lines)
-}
-
-// ExtractTableCells extracts structured cell data from detected tables
-func ExtractTableCells(tables []Table) [][][]Cell {
-	var allCells [][][]Cell
-	for _, table := range tables {
-		allCells = append(allCells, table.Cells)
-	}
-	return allCells
-}
-
-// GetTableQualityMetrics returns quality metrics for all detected tables
-func GetTableQualityMetrics(tables []Table) []*QualityMetrics {
-	var metrics []*QualityMetrics
-	for _, table := range tables {
-		if table.Metadata != nil {
-			metrics = append(metrics, table.Metadata.QualityMetrics)
-		} else {
-			metrics = append(metrics, nil)
-		}
-	}
-	return metrics
-}
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-// ValidateDetectionConfig validates a detection configuration
-func ValidateDetectionConfig(config DetectionConfig) error {
-	if config.MinLines < 1 {
-		return fmt.Errorf("MinLines must be at least 1, got %d", config.MinLines)
-	}
-	if config.MinColumns < 1 {
-		return fmt.Errorf("MinColumns must be at least 1, got %d", config.MinColumns)
-	}
-	if config.AlignmentThreshold < 0.0 || config.AlignmentThreshold > 1.0 {
-		return fmt.Errorf("AlignmentThreshold must be between 0.0 and 1.0, got %f", config.AlignmentThreshold)
-	}
-	if config.ConfidenceThreshold < 0.0 || config.ConfidenceThreshold > 1.0 {
-		return fmt.Errorf("ConfidenceThreshold must be between 0.0 and 1.0, got %f", config.ConfidenceThreshold)
-	}
-	if config.MaxColumnVariance < 0 {
-		return fmt.Errorf("MaxColumnVariance must be non-negative, got %d", config.MaxColumnVariance)
-	}
-	return nil
 }

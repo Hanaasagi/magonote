@@ -319,45 +319,113 @@ func (we *WordExtractor) extractCellsFromTokens(segment GridSegment) [][]Cell {
 // extractCellsFromLines extracts cells when only lines are available (fallback)
 func (we *WordExtractor) extractCellsFromLines(segment GridSegment) [][]Cell {
 	// This is a fallback method for when detailed token information is not available
-	// It uses simple word extraction as in the original ExtractValidWords function
+	// CRITICAL: Must respect the original tokenization mode used during detection
 
 	var allCells [][]Cell
 
 	for lineIdx, line := range segment.Lines {
-		// Simple word extraction using regex (similar to original)
-		words := strings.Fields(line) // Basic split on whitespace
+		var words []string
+		var wordPositions []int
+
+		// FIXED: Use tokenization mode-aware splitting instead of simple strings.Fields
+		switch segment.Mode {
+		case MultiSpaceMode:
+			// Multi-space mode: split on 2+ consecutive spaces to preserve compound tokens
+			words, wordPositions = we.splitByMultipleSpaces(line)
+		case SingleSpaceMode:
+			// Single-space mode: split on any whitespace
+			words, wordPositions = we.splitBySingleSpace(line)
+		default:
+			words, wordPositions = we.splitBySingleSpace(line)
+		}
 
 		var rowCells []Cell
-		currentPos := 0
 
 		for colIdx, word := range words {
 			if len(word) >= we.minWordLength && !we.shouldSkipWord(word) {
-				// Find actual position in line
-				wordPos := strings.Index(line[currentPos:], word)
-				if wordPos >= 0 {
-					actualPos := currentPos + wordPos
+				startPos := wordPositions[colIdx]
 
-					cell := Cell{
-						Text:      word,
-						Row:       lineIdx,
-						Column:    colIdx,
-						LineIndex: segment.StartLine + lineIdx,
-						StartPos:  actualPos,
-						EndPos:    actualPos + len(word) - 1,
-					}
-
-					rowCells = append(rowCells, cell)
-					currentPos = actualPos + len(word)
+				cell := Cell{
+					Text:      word,
+					Row:       lineIdx,
+					Column:    colIdx,
+					LineIndex: segment.StartLine + lineIdx,
+					StartPos:  startPos,
+					EndPos:    startPos + len(word) - 1,
 				}
+
+				rowCells = append(rowCells, cell)
 			}
 		}
 
-		if len(rowCells) > 0 {
-			allCells = append(allCells, rowCells)
-		}
+		allCells = append(allCells, rowCells)
 	}
 
 	return allCells
+}
+
+// splitByMultipleSpaces splits a line by 2+ consecutive spaces, preserving compound tokens
+func (we *WordExtractor) splitByMultipleSpaces(line string) ([]string, []int) {
+	var words []string
+	var positions []int
+
+	// Find boundaries based on 2+ consecutive spaces
+	inToken := false
+	tokenStart := 0
+
+	for i, char := range line {
+		isSpace := char == ' ' || char == '\t'
+
+		if !inToken && !isSpace {
+			inToken = true
+			tokenStart = i
+		} else if inToken && isSpace {
+			// Check if this is a multi-space boundary
+			spaceCount := 0
+			for j := i; j < len(line) && (line[j] == ' ' || line[j] == '\t'); j++ {
+				spaceCount++
+			}
+
+			if spaceCount >= 2 {
+				// Multi-space boundary: end current token
+				word := strings.TrimSpace(line[tokenStart:i])
+				if len(word) > 0 {
+					words = append(words, word)
+					positions = append(positions, tokenStart)
+				}
+				inToken = false
+			}
+			// If single space, continue building the token (preserving compound tokens)
+		}
+	}
+
+	if inToken {
+		word := strings.TrimSpace(line[tokenStart:])
+		if len(word) > 0 {
+			words = append(words, word)
+			positions = append(positions, tokenStart)
+		}
+	}
+
+	return words, positions
+}
+
+// splitBySingleSpace splits a line by any whitespace (original behavior)
+func (we *WordExtractor) splitBySingleSpace(line string) ([]string, []int) {
+	words := strings.Fields(line)
+	positions := make([]int, len(words))
+
+	// Find actual positions of each word
+	currentPos := 0
+	for i, word := range words {
+		wordPos := strings.Index(line[currentPos:], word)
+		if wordPos >= 0 {
+			positions[i] = currentPos + wordPos
+			currentPos = positions[i] + len(word)
+		}
+	}
+
+	return words, positions
 }
 
 // shouldSkipWord determines if a word should be skipped during extraction
