@@ -164,18 +164,37 @@ type State struct {
 	Lines            []string
 	Alphabet         string
 	CustomPatterns   []string
+	processor        TextProcessor
+	styleMatches     []Match
 	compiledPatterns []*CompiledPattern
 	cacheValid       bool
 }
 
-// NewState creates a new state
-func NewState(lines []string, alphabet string, patterns []string) *State {
+// NewState creates a new state from input text
+func NewState(text string, alphabet string, patterns []string) *State {
+	processor := CreateTextProcessor(text)
+	lines, styleMatches, err := processor.Process(text)
+	if err != nil {
+		// Fallback to plain text processing on error
+		lines = strings.Split(text, "\n")
+		styleMatches = nil
+		processor = NewPlainTextProcessor()
+	}
+
 	return &State{
 		Lines:          lines,
 		Alphabet:       alphabet,
 		CustomPatterns: patterns,
+		processor:      processor,
+		styleMatches:   styleMatches,
 		cacheValid:     false,
 	}
+}
+
+// NewStateFromLines creates a new state from lines (backward compatibility)
+func NewStateFromLines(lines []string, alphabet string, patterns []string) *State {
+	text := strings.Join(lines, "\n")
+	return NewState(text, alphabet, patterns)
 }
 
 // getCompiledPatterns returns cached compiled patterns or compiles them
@@ -364,12 +383,19 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 
 	matches := make([]Match, 0, len(s.Lines)*2)
 
+	// 1. Add regex-based matches from plain text (highest priority)
 	for y, line := range s.Lines {
 		lineMatches := s.processLine(y, line, patterns)
 		matches = append(matches, lineMatches...)
 	}
 
-	// Add grid-based matches
+	// 2. Add style-based matches, excluding overlaps with regex matches
+	if s.styleMatches != nil {
+		styledMatches := s.filterOverlappingMatches(s.styleMatches, matches)
+		matches = append(matches, styledMatches...)
+	}
+
+	// 3. Add grid-based matches, excluding overlaps with all previous matches
 	gridMatches := s.getGridMatches(matches)
 	matches = append(matches, gridMatches...)
 
@@ -388,6 +414,37 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 		slog.Debug("match", "match", match)
 	}
 	return matches
+}
+
+// filterOverlappingMatches removes matches that overlap with existing matches
+func (s *State) filterOverlappingMatches(candidateMatches []Match, existingMatches []Match) []Match {
+	// Build position map for overlap detection
+	existingPositions := make(map[string]bool, len(existingMatches)*5)
+	for _, match := range existingMatches {
+		for i := 0; i < len(match.Text); i++ {
+			key := fmt.Sprintf("%d-%d", match.Y, match.X+i)
+			existingPositions[key] = true
+		}
+	}
+
+	var filteredMatches []Match
+	for _, candidate := range candidateMatches {
+		// Check overlap
+		overlaps := false
+		for i := 0; i < len(candidate.Text); i++ {
+			key := fmt.Sprintf("%d-%d", candidate.Y, candidate.X+i)
+			if existingPositions[key] {
+				overlaps = true
+				break
+			}
+		}
+
+		if !overlaps {
+			filteredMatches = append(filteredMatches, candidate)
+		}
+	}
+
+	return filteredMatches
 }
 
 // assignHints assigns hints to matches based on options
@@ -652,19 +709,13 @@ func (s *State) processNewTables(tables []td.Table, existingMatches []Match) []M
 		}
 	}
 
+	gridMatches = s.filterOverlappingMatches(gridMatches, existingMatches)
+
 	return gridMatches
 }
 
 // processLegacySegments processes segments from the legacy API (fallback)
 func (s *State) processLegacySegments(segments []td.GridSegment, existingMatches []Match) []Match {
-	// Build position map for overlap detection
-	existingPositions := make(map[string]bool, len(existingMatches)*5)
-	for _, match := range existingMatches {
-		for i := 0; i < len(match.Text); i++ {
-			key := fmt.Sprintf("%d-%d", match.Y, match.X+i)
-			existingPositions[key] = true
-		}
-	}
 
 	var gridMatches []Match
 	for _, segment := range segments {
@@ -678,27 +729,17 @@ func (s *State) processLegacySegments(segments []td.GridSegment, existingMatches
 				continue
 			}
 
-			// Check overlap
-			overlaps := false
-			for i := 0; i < len(word.Text); i++ {
-				key := fmt.Sprintf("%d-%d", word.Y, word.X+i)
-				if existingPositions[key] {
-					overlaps = true
-					break
-				}
-			}
-
-			if !overlaps {
-				gridMatches = append(gridMatches, Match{
-					X:       word.X,
-					Y:       word.Y,
-					Pattern: "grid",
-					Text:    word.Text,
-					Hint:    nil,
-				})
-			}
+			gridMatches = append(gridMatches, Match{
+				X:       word.X,
+				Y:       word.Y,
+				Pattern: "grid",
+				Text:    word.Text,
+				Hint:    nil,
+			})
 		}
 	}
+
+	gridMatches = s.filterOverlappingMatches(gridMatches, existingMatches)
 
 	return gridMatches
 }

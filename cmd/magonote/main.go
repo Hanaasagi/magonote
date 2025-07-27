@@ -81,14 +81,14 @@ func init() {
 }
 
 // readInput reads input from file or stdin with buffering
-func readInput(inputFile string) ([]string, error) {
+func readInput(inputFile string) (string, error) {
 	var reader io.Reader
 	var closer io.Closer
 
 	if inputFile != "" {
 		file, err := os.Open(inputFile)
 		if err != nil {
-			return nil, fmt.Errorf("opening input file: %w", err)
+			return "", fmt.Errorf("opening input file: %w", err)
 		}
 		reader = file
 		closer = file
@@ -103,16 +103,16 @@ func readInput(inputFile string) ([]string, error) {
 	}()
 
 	bufferedReader := bufio.NewReaderSize(reader, defaultSize)
-	var lines []string
+	var content strings.Builder
 
 	for {
 		line, err := bufferedReader.ReadString('\n')
 		if err != nil && err != io.EOF {
-			return nil, fmt.Errorf("reading input: %w", err)
+			return "", fmt.Errorf("reading input: %w", err)
 		}
 
 		if line != "" {
-			lines = append(lines, strings.TrimSuffix(line, "\n"))
+			content.WriteString(line)
 		}
 
 		if err == io.EOF {
@@ -120,7 +120,7 @@ func readInput(inputFile string) ([]string, error) {
 		}
 	}
 
-	return lines, nil
+	return strings.TrimSuffix(content.String(), "\n"), nil
 }
 
 // writeOutput writes output to target file or stdout with buffering
@@ -272,12 +272,12 @@ func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
 // runApp runs the main application logic
 func runApp(config *Config, args *Arguments) error {
 
-	lines, err := readInput(args.inputFile)
+	text, err := readInput(args.inputFile)
 	if err != nil {
 		return err
 	}
 
-	state := internal.NewState(lines, config.Core.Alphabet, config.Regexp.Patterns)
+	state := internal.NewState(text, config.Core.Alphabet, config.Regexp.Patterns)
 
 	var selected []internal.ChosenMatch
 
