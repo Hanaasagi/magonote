@@ -129,7 +129,8 @@ func (m *Magonote) createMagonoteWindow() error {
 
 	// Build the command that will keep the pane alive after magonote completes
 	command := fmt.Sprintf(
-		"tmux capture-pane -J -t %s -p | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s; sleep infinity",
+		// -e with ansi escape sequences
+		"tmux capture-pane -J -t %s -p -e | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s; sleep infinity",
 		m.activePaneID,
 		m.config.Dir,
 		tmpFile,
