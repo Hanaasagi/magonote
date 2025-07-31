@@ -68,7 +68,11 @@ func init() {
 
 	logLevel := os.Getenv("MAGONOTE_LOG")
 	if logLevel == "" {
-		logLevel = "info"
+		if internal.IsDebugMode() {
+			logLevel = "debug"
+		} else {
+			logLevel = "info"
+		}
 	}
 
 	logger.InitLogger(logFilePath, logLevel)
