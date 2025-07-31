@@ -1,8 +1,14 @@
 package internal
 
 import (
+	"fmt"
+	"github.com/adrg/xdg"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
 const extraCapacity = 16
@@ -18,6 +24,18 @@ type TextBuffer struct {
 	width   int          // Terminal width
 	height  int          // Terminal height
 	maxX    int          // Maximum X coordinate for each line
+}
+
+func (tb *TextBuffer) String() string {
+	var sb strings.Builder
+	for _, row := range tb.content {
+		for _, cell := range row {
+			if cell.Rune != 0 {
+				sb.WriteRune(cell.Rune)
+			}
+		}
+	}
+	return sb.String()
 }
 
 func NewTextBuffer(lines []string, width, height int) *TextBuffer {
@@ -86,10 +104,30 @@ func (tb *TextBuffer) SetString(x, y int, text string, style tcell.Style) {
 	}
 }
 
+func (tb *TextBuffer) dumpSnapshot() error {
+	unixMilli := time.Now().UnixMilli()
+
+	appDir := filepath.Join(xdg.StateHome, "magonote")
+	filePath := filepath.Join(appDir, fmt.Sprintf("snapshot-%d.txt", unixMilli))
+
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(tb.String())
+	return err
+}
+
 // WriteToScreen writes the buffer content to a tcell screen with automatic wrapping
 func (tb *TextBuffer) WriteToScreen(screen tcell.Screen) {
 	if tb.width <= 0 {
 		return
+	}
+
+	if IsDebugMode() {
+		tb.dumpSnapshot() // nolint
 	}
 
 	screenY := 0
