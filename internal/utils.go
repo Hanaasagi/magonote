@@ -3,6 +3,8 @@ package internal
 import (
 	"os"
 	"strings"
+
+	"github.com/mattn/go-runewidth"
 )
 
 func IsDebugMode() bool {
@@ -28,17 +30,32 @@ func abs[T int | int8 | int16 | int32 | int64 | float32 | float64](x T) T {
 // }
 
 // isCommonWord checks if a word is too common to be useful as a match
-func isCommonWord(word string) bool {
-	// return commonWordsMap[word]
-	if len(word) < 3 {
-		return true
-	}
-	return false
-}
+// func isCommonWord(word string) bool {
+// 	// return commonWordsMap[word]
+// 	if len(word) < 3 {
+// 		return true
+// 	}
+// 	return false
+// }
 
 func isTextNoise(text string) bool {
-	if len(text) < 3 || isCommonWord(text) {
+	if len(text) == 0 {
 		return true
 	}
-	return false
+
+	width := runewidth.StringWidth(text)
+	if width < 3 {
+		return true
+	}
+
+	isAllSame := true
+
+	first := text[0]
+	for i := 1; i < len(text); i++ {
+		if text[i] != first {
+			isAllSame = false
+			break
+		}
+	}
+	return isAllSame
 }
