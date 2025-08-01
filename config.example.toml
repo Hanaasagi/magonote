@@ -54,3 +54,12 @@ background = "black"
 foreground = "blue"
 # Background color for selection
 background = "black"
+
+[plugins.tabledetection]
+enabled = true
+min_lines = 3
+min_columns = 3
+confidence_threshold = 0.8
+
+[plugins.colordetection]
+enabled = true

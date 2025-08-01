@@ -18,6 +18,32 @@ const (
 	confidenceThreshold = 0.8
 )
 
+type TableDetectionConfig struct {
+	MinLines            int
+	MinColumns          int
+	ConfidenceThreshold float64
+}
+
+func NewTableDetectionConfig(
+	minLines int,
+	minColumns int,
+	confidenceThreshold float64,
+
+) *TableDetectionConfig {
+	return &TableDetectionConfig{
+		MinLines:            minLines,
+		MinColumns:          minColumns,
+		ConfidenceThreshold: confidenceThreshold,
+	}
+}
+
+type ColorDetectionConfig struct {
+}
+
+func NewColorDetectionConfig() *ColorDetectionConfig {
+	return &ColorDetectionConfig{}
+}
+
 // MatchPattern represents a pattern that should be matched
 type MatchPattern struct {
 	Name    string
@@ -161,17 +187,21 @@ func (pc *PatternCache) GetCompiledPattern(name, pattern string) *CompiledPatter
 
 // State represents the current state of the application
 type State struct {
-	Lines            []string
-	Alphabet         string
-	CustomPatterns   []string
-	processor        TextProcessor
-	styleMatches     []Match
-	compiledPatterns []*CompiledPattern
-	cacheValid       bool
+	Lines                []string
+	Alphabet             string
+	CustomPatterns       []string
+	processor            TextProcessor
+	styleMatches         []Match
+	compiledPatterns     []*CompiledPattern
+	cacheValid           bool
+	TableDetectionConfig *TableDetectionConfig
+	ColorDetectionConfig *ColorDetectionConfig
 }
 
 // NewState creates a new state from input text
-func NewState(text string, alphabet string, patterns []string) *State {
+func NewState(
+	text string, alphabet string, patterns []string,
+) *State {
 	processor := CreateTextProcessor(text)
 	lines, styleMatches, err := processor.Process(text)
 	if err != nil {
@@ -182,12 +212,14 @@ func NewState(text string, alphabet string, patterns []string) *State {
 	}
 
 	return &State{
-		Lines:          lines,
-		Alphabet:       alphabet,
-		CustomPatterns: patterns,
-		processor:      processor,
-		styleMatches:   styleMatches,
-		cacheValid:     false,
+		Lines:                lines,
+		Alphabet:             alphabet,
+		CustomPatterns:       patterns,
+		processor:            processor,
+		styleMatches:         styleMatches,
+		cacheValid:           false,
+		TableDetectionConfig: nil,
+		ColorDetectionConfig: nil,
 	}
 }
 
@@ -389,15 +421,21 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 		matches = append(matches, lineMatches...)
 	}
 
-	// 2. Add style-based matches, excluding overlaps with regex matches
-	if s.styleMatches != nil {
-		styledMatches := s.filterOverlappingMatches(s.styleMatches, matches)
-		matches = append(matches, styledMatches...)
+	if s.ColorDetectionConfig != nil {
+		// 2. Add style-based matches, excluding overlaps with regex matches
+		if s.styleMatches != nil {
+			styledMatches := s.filterOverlappingMatches(s.styleMatches, matches)
+			matches = append(matches, styledMatches...)
+		}
 	}
 
-	// 3. Add grid-based matches, excluding overlaps with all previous matches
-	gridMatches := s.getGridMatches(matches)
-	matches = append(matches, gridMatches...)
+	if s.TableDetectionConfig != nil {
+		// 3. Add grid-based matches, excluding overlaps with all previous matches
+		gridMatches := s.getGridMatches(matches)
+		gridMatches = s.filterOverlappingMatches(gridMatches, matches)
+
+		matches = append(matches, gridMatches...)
+	}
 
 	if uniqueLevel >= 2 {
 		matches = s.filterSuperUniqueMatches(matches)
@@ -641,6 +679,10 @@ func (s *State) hasSpacingConflict(lineNum int, selectedLines []int, minSpacing 
 
 // getGridMatches detects grid patterns and extracts valid words from them
 func (s *State) getGridMatches(existingMatches []Match) []Match {
+	minLines := s.TableDetectionConfig.MinLines
+	minColumns := s.TableDetectionConfig.MinColumns
+	confidenceThreshold := s.TableDetectionConfig.ConfidenceThreshold
+
 	// Use the new enhanced API with backward compatibility
 	detector := td.NewDetector(
 		td.WithMinLinesOption(minLines),
@@ -709,8 +751,6 @@ func (s *State) processNewTables(tables []td.Table, existingMatches []Match) []M
 		}
 	}
 
-	gridMatches = s.filterOverlappingMatches(gridMatches, existingMatches)
-
 	return gridMatches
 }
 
@@ -738,8 +778,6 @@ func (s *State) processLegacySegments(segments []td.GridSegment, existingMatches
 			})
 		}
 	}
-
-	gridMatches = s.filterOverlappingMatches(gridMatches, existingMatches)
 
 	return gridMatches
 }

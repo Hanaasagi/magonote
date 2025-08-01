@@ -283,6 +283,19 @@ func runApp(config *Config, args *Arguments) error {
 
 	state := internal.NewState(text, config.Core.Alphabet, config.Regexp.Patterns)
 
+	plugins := config.Plugins
+	if plugins.Tabledetection != nil && plugins.Tabledetection.Enabled {
+		state.TableDetectionConfig = internal.NewTableDetectionConfig(
+			plugins.Tabledetection.MinLines,
+			plugins.Tabledetection.MinColumns,
+			plugins.Tabledetection.ConfidenceThreshold,
+		)
+
+	}
+	if plugins.Colordetection != nil && plugins.Colordetection.Enabled {
+		state.ColorDetectionConfig = internal.NewColorDetectionConfig()
+	}
+
 	var selected []internal.ChosenMatch
 
 	if args.listView {
