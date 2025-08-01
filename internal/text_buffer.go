@@ -114,7 +114,7 @@ func (tb *TextBuffer) dumpSnapshot() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() // nolint
 
 	_, err = f.WriteString(tb.String())
 	return err
