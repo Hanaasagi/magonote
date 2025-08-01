@@ -2,8 +2,10 @@
 __magonote_select() {
   setopt localoptions pipefail no_aliases 2> /dev/null
   local item
+  local cur=$(tmux display-message -p '#{cursor_y}')
   local lines=$(($(tput lines) * 2))
-  item=$(tmux capture-pane -e -p -S -$lines -E -1 | magonote  --list)
+
+  item=$(tmux capture-pane -e -p -S $((cur - lines)) -E $cur | magonote --list)
   [[ -n "$item" ]] && echo -n "${(q)item}"
 }
 
