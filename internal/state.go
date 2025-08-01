@@ -424,8 +424,16 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 	if s.ColorDetectionConfig != nil {
 		// 2. Add style-based matches, excluding overlaps with regex matches
 		if s.styleMatches != nil {
-			styledMatches := s.filterOverlappingMatches(s.styleMatches, matches)
-			matches = append(matches, styledMatches...)
+			styleMatches := make([]Match, 0, len(s.styleMatches))
+			for _, match := range s.styleMatches {
+				if isTextNoise(match.Text) {
+					continue
+				}
+				styleMatches = append(styleMatches, match)
+			}
+
+			styleMatches = s.filterOverlappingMatches(styleMatches, matches)
+			matches = append(matches, styleMatches...)
 		}
 	}
 
@@ -725,7 +733,7 @@ func (s *State) processNewTables(tables []td.Table, existingMatches []Match) []M
 		// Extract words from cells
 		words := s.extractWordsFromTable(table)
 		for _, word := range words {
-			if len(word.Text) < 3 || isCommonWord(word.Text) {
+			if isTextNoise(word.Text) {
 				continue
 			}
 
@@ -765,7 +773,7 @@ func (s *State) processLegacySegments(segments []td.GridSegment, existingMatches
 
 		words := s.extractValidWordsLegacy(segment)
 		for _, word := range words {
-			if len(word.Text) < 3 || isCommonWord(word.Text) {
+			if isTextNoise(word.Text) {
 				continue
 			}
 

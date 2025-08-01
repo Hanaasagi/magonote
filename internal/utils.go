@@ -35,3 +35,10 @@ func isCommonWord(word string) bool {
 	}
 	return false
 }
+
+func isTextNoise(text string) bool {
+	if len(text) < 3 || isCommonWord(text) {
+		return true
+	}
+	return false
+}
