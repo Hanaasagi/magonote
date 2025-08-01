@@ -16,6 +16,7 @@ func TestStyledTextMatching(t *testing.T) {
 	custom := []string{}
 
 	state := NewState(styledText, "abcd", custom)
+	state.ColorDetectionConfig = NewColorDetectionConfig()
 	results := state.Matches(false, 0)
 
 	// Should have matches for styled text plus any regex matches

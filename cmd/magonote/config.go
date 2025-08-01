@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"os"
+
+	"github.com/BurntSushi/toml"
 )
 
 type Config struct {
-	Core   CoreConfig   `toml:"core"`
-	Regexp RegexpConfig `toml:"regexp"`
-	Colors ColorConfig  `toml:"colors"`
+	Core    CoreConfig    `toml:"core"`
+	Regexp  RegexpConfig  `toml:"regexp"`
+	Colors  ColorConfig   `toml:"colors"`
+	Plugins PluginsConfig `toml:"plugins"`
 }
 
 type CoreConfig struct {
@@ -36,6 +38,22 @@ type ColorConfig struct {
 	Hint   ColorGroup `toml:"hint"`
 	Multi  ColorGroup `toml:"multi"`
 	Select ColorGroup `toml:"select"`
+}
+
+type TableDetectionPluginConfig struct {
+	Enabled             bool    `toml:"enabled"`
+	MinLines            int     `toml:"min_lines"`
+	MinColumns          int     `toml:"min_columns"`
+	ConfidenceThreshold float64 `toml:"confidence_threshold"`
+}
+
+type ColorDetectionPluginConfig struct {
+	Enabled bool `toml:"enabled"`
+}
+
+type PluginsConfig struct {
+	Tabledetection *TableDetectionPluginConfig `toml:"tabledetection"`
+	Colordetection *ColorDetectionPluginConfig `toml:"colordetection"`
 }
 
 func NewDefaultConfig() *Config {
@@ -69,6 +87,10 @@ func NewDefaultConfig() *Config {
 				Foreground: "blue",
 				Background: "black",
 			},
+		},
+		Plugins: PluginsConfig{
+			Tabledetection: nil,
+			Colordetection: nil,
 		},
 	}
 }
