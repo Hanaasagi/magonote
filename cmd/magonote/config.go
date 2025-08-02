@@ -51,9 +51,20 @@ type ColorDetectionPluginConfig struct {
 	Enabled bool `toml:"enabled"`
 }
 
+type ExclusionRule struct {
+	Type    string `toml:"type"`    // "regex" or "text"
+	Pattern string `toml:"pattern"` // The pattern or text to exclude
+}
+
+type ExclusionConfig struct {
+	Enabled bool            `toml:"enabled"`
+	Rules   []ExclusionRule `toml:"rules"`
+}
+
 type PluginsConfig struct {
 	Tabledetection *TableDetectionPluginConfig `toml:"tabledetection"`
 	Colordetection *ColorDetectionPluginConfig `toml:"colordetection"`
+	Exclusion      *ExclusionConfig            `toml:"exclusion"`
 }
 
 func NewDefaultConfig() *Config {
@@ -91,6 +102,7 @@ func NewDefaultConfig() *Config {
 		Plugins: PluginsConfig{
 			Tabledetection: nil,
 			Colordetection: nil,
+			Exclusion:      nil,
 		},
 	}
 }
