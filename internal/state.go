@@ -45,6 +45,23 @@ func NewColorDetectionConfig() *ColorDetectionConfig {
 	return &ColorDetectionConfig{}
 }
 
+// ExclusionRule represents a rule for excluding matches
+type ExclusionRule struct {
+	Type    string // "regex" or "text"
+	Pattern string // The pattern or text to exclude
+}
+
+// ExclusionConfig holds configuration for match exclusion
+type ExclusionConfig struct {
+	Rules []ExclusionRule
+}
+
+func NewExclusionConfig(rules []ExclusionRule) *ExclusionConfig {
+	return &ExclusionConfig{
+		Rules: rules,
+	}
+}
+
 // MatchPattern represents a pattern that should be matched
 type MatchPattern struct {
 	Name    string
@@ -197,6 +214,7 @@ type State struct {
 	cacheValid           bool
 	TableDetectionConfig *TableDetectionConfig
 	ColorDetectionConfig *ColorDetectionConfig
+	ExclusionConfig      *ExclusionConfig
 }
 
 // NewState creates a new state from input text
@@ -221,6 +239,7 @@ func NewState(
 		cacheValid:           false,
 		TableDetectionConfig: nil,
 		ColorDetectionConfig: nil,
+		ExclusionConfig:      nil,
 	}
 }
 
@@ -451,6 +470,11 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 
 	if uniqueLevel >= 2 {
 		matches = s.filterSuperUniqueMatches(matches)
+	}
+
+	// Apply exclusion filters if configured
+	if s.ExclusionConfig != nil {
+		matches = s.applyExclusionFilters(matches)
 	}
 
 	alphabet, err := NewBuiltinAlphabet(s.Alphabet)
@@ -888,6 +912,43 @@ type GridWord struct {
 
 // Pre-compiled pattern for better performance
 var wordPattern = regexp.MustCompile(`\b[a-zA-Z][a-zA-Z0-9_\-:/]*\b`)
+
+// applyExclusionFilters applies exclusion rules to filter out unwanted matches
+func (s *State) applyExclusionFilters(matches []Match) []Match {
+	if s.ExclusionConfig == nil || len(s.ExclusionConfig.Rules) == 0 {
+		return matches
+	}
+
+	var filtered []Match
+	for _, match := range matches {
+		if !s.shouldExcludeMatch(match) {
+			filtered = append(filtered, match)
+		} else {
+			slog.Debug("Excluding match", "text", match.Text, "pattern", match.Pattern, "x", match.X, "y", match.Y)
+		}
+	}
+
+	return filtered
+}
+
+// shouldExcludeMatch checks if a match should be excluded based on exclusion rules
+func (s *State) shouldExcludeMatch(match Match) bool {
+	for _, rule := range s.ExclusionConfig.Rules {
+		switch rule.Type {
+		case "text":
+			if strings.Contains(match.Text, rule.Pattern) {
+				return true
+			}
+		case "regex":
+			// Get compiled pattern from cache
+			compiled := globalPatternCache.GetCompiledPattern("exclusion:"+rule.Pattern, rule.Pattern)
+			if compiled.Pattern.MatchString(match.Text) {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // ExtractValidWords extracts valid words from the grid segment (backward compatibility)
 func ExtractValidWords(gs td.GridSegment) []GridWord {
