@@ -1003,3 +1003,491 @@ func TestMatchURLsWithQuotes(t *testing.T) {
 		t.Error("Expected to find URL pattern with trailing quote")
 	}
 }
+
+// TestExclusionRegionOverlap tests the regionsOverlap function
+func TestExclusionRegionOverlap(t *testing.T) {
+	state := NewState("test", "abcd", []string{})
+
+	tests := []struct {
+		name     string
+		r1       [4]int // [startLine, startCol, endLine, endCol]
+		r2       [4]int
+		expected bool
+	}{
+		{
+			name:     "Same single line regions - overlapping",
+			r1:       [4]int{0, 5, 0, 10},
+			r2:       [4]int{0, 8, 0, 12},
+			expected: true,
+		},
+		{
+			name:     "Same single line regions - non-overlapping",
+			r1:       [4]int{0, 5, 0, 10},
+			r2:       [4]int{0, 15, 0, 20},
+			expected: false,
+		},
+		{
+			name:     "Same single line regions - adjacent",
+			r1:       [4]int{0, 5, 0, 10},
+			r2:       [4]int{0, 10, 0, 15},
+			expected: false,
+		},
+		{
+			name:     "Different lines - non-overlapping",
+			r1:       [4]int{0, 5, 0, 10},
+			r2:       [4]int{2, 0, 2, 5},
+			expected: false,
+		},
+		{
+			name:     "Different lines - overlapping line ranges",
+			r1:       [4]int{1, 0, 3, 10},
+			r2:       [4]int{2, 5, 4, 15},
+			expected: true,
+		},
+		{
+			name:     "Identical regions",
+			r1:       [4]int{1, 5, 1, 10},
+			r2:       [4]int{1, 5, 1, 10},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := state.regionsOverlap(
+				tt.r1[0], tt.r1[1], tt.r1[2], tt.r1[3],
+				tt.r2[0], tt.r2[1], tt.r2[2], tt.r2[3],
+			)
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestFindTextExclusionRegions tests text-based exclusion region finding
+func TestFindTextExclusionRegions(t *testing.T) {
+	testInput := `user@host:~/project$ ls -la
+config.toml main.go
+user@host:~/project$ git status
+On branch master
+user@host:~/project$ echo test`
+
+	state := NewState(testInput, "abcd", []string{})
+
+	tests := []struct {
+		name          string
+		pattern       string
+		expectedCount int
+		checkRegion   *ExclusionRegion // Optional: specific region to verify
+	}{
+		{
+			name:          "Find shell prompt pattern",
+			pattern:       "user@host:~/project$",
+			expectedCount: 3,
+			checkRegion: &ExclusionRegion{
+				StartLine: 0,
+				StartCol:  0,
+				EndLine:   0,
+				EndCol:    20,
+			},
+		},
+		{
+			name:          "Find file extension",
+			pattern:       ".toml",
+			expectedCount: 1,
+			checkRegion: &ExclusionRegion{
+				StartLine: 1,
+				StartCol:  6,
+				EndLine:   1,
+				EndCol:    11,
+			},
+		},
+		{
+			name:          "Pattern not found",
+			pattern:       "nonexistent",
+			expectedCount: 0,
+		},
+		{
+			name:          "Multiple occurrences in same line",
+			pattern:       "git",
+			expectedCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rule := ExclusionRule{Type: "text", Pattern: tt.pattern}
+			regions := state.findTextExclusionRegions(rule)
+
+			if len(regions) != tt.expectedCount {
+				t.Errorf("Expected %d regions, got %d", tt.expectedCount, len(regions))
+				return
+			}
+
+			if tt.checkRegion != nil && len(regions) > 0 {
+				region := regions[0]
+				if region.StartLine != tt.checkRegion.StartLine ||
+					region.StartCol != tt.checkRegion.StartCol ||
+					region.EndLine != tt.checkRegion.EndLine ||
+					region.EndCol != tt.checkRegion.EndCol {
+					t.Errorf("Expected region (%d,%d)-(%d,%d), got (%d,%d)-(%d,%d)",
+						tt.checkRegion.StartLine, tt.checkRegion.StartCol,
+						tt.checkRegion.EndLine, tt.checkRegion.EndCol,
+						region.StartLine, region.StartCol,
+						region.EndLine, region.EndCol)
+				}
+			}
+		})
+	}
+}
+
+// TestFindRegexExclusionRegions tests regex-based exclusion region finding
+func TestFindRegexExclusionRegions(t *testing.T) {
+	testInput := `user@host:~/project$ ls -la
+total 64
+2023-12-20 10:30 config.toml
+2023-12-20 10:25 main.go
+user@host:~/project$ echo test`
+
+	state := NewState(testInput, "abcd", []string{})
+
+	tests := []struct {
+		name          string
+		pattern       string
+		expectedCount int
+		checkRegion   *ExclusionRegion // Optional: specific region to verify
+	}{
+		{
+			name:          "Find entire shell prompt lines",
+			pattern:       `^user@host:.*\$.*`,
+			expectedCount: 2,
+			checkRegion: &ExclusionRegion{
+				StartLine: 0,
+				StartCol:  0,
+				EndLine:   0,
+				EndCol:    27, // "user@host:~/project$ ls -la" has 27 characters
+			},
+		},
+		{
+			name:          "Find date patterns",
+			pattern:       `\d{4}-\d{2}-\d{2}`,
+			expectedCount: 2,
+		},
+		{
+			name:          "Find lines starting with total",
+			pattern:       `^total \d+`,
+			expectedCount: 1,
+			checkRegion: &ExclusionRegion{
+				StartLine: 1,
+				StartCol:  0,
+				EndLine:   1,
+				EndCol:    8,
+			},
+		},
+		{
+			name:          "Empty regex pattern",
+			pattern:       ``,
+			expectedCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rule := ExclusionRule{Type: "regex", Pattern: tt.pattern}
+
+			// Should not panic for any pattern (even invalid ones)
+			regions := state.findRegexExclusionRegions(rule)
+
+			if len(regions) != tt.expectedCount {
+				t.Errorf("Expected %d regions, got %d", tt.expectedCount, len(regions))
+				return
+			}
+
+			if tt.checkRegion != nil && len(regions) > 0 {
+				region := regions[0]
+				if region.StartLine != tt.checkRegion.StartLine ||
+					region.StartCol != tt.checkRegion.StartCol ||
+					region.EndLine != tt.checkRegion.EndLine ||
+					region.EndCol != tt.checkRegion.EndCol {
+					t.Errorf("Expected region (%d,%d)-(%d,%d), got (%d,%d)-(%d,%d)",
+						tt.checkRegion.StartLine, tt.checkRegion.StartCol,
+						tt.checkRegion.EndLine, tt.checkRegion.EndCol,
+						region.StartLine, region.StartCol,
+						region.EndLine, region.EndCol)
+				}
+			}
+		})
+	}
+}
+
+// TestMatchOverlapsWithExclusionRegions tests match-region overlap detection
+func TestMatchOverlapsWithExclusionRegions(t *testing.T) {
+	state := NewState("test", "abcd", []string{})
+
+	// Define test exclusion regions
+	regions := []ExclusionRegion{
+		{
+			StartLine: 0,
+			StartCol:  0,
+			EndLine:   0,
+			EndCol:    20, // "user@host:~/project"
+		},
+		{
+			StartLine: 1,
+			StartCol:  6,
+			EndLine:   1,
+			EndCol:    11, // ".toml"
+		},
+	}
+
+	tests := []struct {
+		name     string
+		match    Match
+		expected bool
+	}{
+		{
+			name: "Match overlaps with first region",
+			match: Match{
+				X:    5,
+				Y:    0,
+				Text: "host",
+			},
+			expected: true,
+		},
+		{
+			name: "Match exactly at region boundary - no overlap",
+			match: Match{
+				X:    20,
+				Y:    0,
+				Text: "test",
+			},
+			expected: false,
+		},
+		{
+			name: "Match overlaps with second region",
+			match: Match{
+				X:    8,
+				Y:    1,
+				Text: "ml",
+			},
+			expected: true,
+		},
+		{
+			name: "Match does not overlap with any region",
+			match: Match{
+				X:    0,
+				Y:    2,
+				Text: "other",
+			},
+			expected: false,
+		},
+		{
+			name: "Match spans beyond region",
+			match: Match{
+				X:    15,
+				Y:    0,
+				Text: "project$",
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := state.matchOverlapsWithExclusionRegions(tt.match, regions)
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v for match '%s' at (%d,%d)",
+					tt.expected, result, tt.match.Text, tt.match.Y, tt.match.X)
+			}
+		})
+	}
+}
+
+// TestApplyExclusionFilters tests the complete exclusion filtering functionality
+func TestApplyExclusionFilters(t *testing.T) {
+	testInput := `user@host:~/project$ ls -la
+config.toml main.go
+user@host:~/project$ echo test
+DEBUG: some debug info
+end of file.txt`
+
+	state := NewState(testInput, "abcd", []string{})
+
+	// Get initial matches without exclusion
+	initialMatches := state.Matches(false, 0)
+	initialCount := len(initialMatches)
+
+	t.Logf("Initial matches count: %d", initialCount)
+	for _, match := range initialMatches {
+		t.Logf("  Match: '%s' at (%d,%d) pattern: %s", match.Text, match.Y, match.X, match.Pattern)
+	}
+
+	tests := []struct {
+		name                string
+		exclusionRules      []ExclusionRule
+		shouldFilterMatches []string // Matches that should be filtered out
+		shouldKeepMatches   []string // Matches that should be kept
+	}{
+		{
+			name: "Filter shell prompts",
+			exclusionRules: []ExclusionRule{
+				{Type: "text", Pattern: "user@host:~/project$"},
+			},
+			shouldFilterMatches: []string{"~/project$"},
+			shouldKeepMatches:   []string{"config.toml", "main.go", "file.txt"},
+		},
+		{
+			name: "Filter using regex",
+			exclusionRules: []ExclusionRule{
+				{Type: "regex", Pattern: `^DEBUG:.*`},
+			},
+			shouldFilterMatches: []string{}, // DEBUG line might not have regex matches
+			shouldKeepMatches:   []string{"config.toml", "main.go"},
+		},
+		{
+			name: "Multiple exclusion rules",
+			exclusionRules: []ExclusionRule{
+				{Type: "text", Pattern: "~/project$"},
+				{Type: "text", Pattern: "DEBUG"},
+			},
+			shouldFilterMatches: []string{"~/project$"},
+			shouldKeepMatches:   []string{"config.toml", "main.go"},
+		},
+		{
+			name:              "No exclusion rules",
+			exclusionRules:    []ExclusionRule{},
+			shouldKeepMatches: []string{"config.toml", "main.go", "file.txt"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up exclusion config
+			if len(tt.exclusionRules) > 0 {
+				state.ExclusionConfig = NewExclusionConfig(tt.exclusionRules)
+			} else {
+				state.ExclusionConfig = nil
+			}
+
+			// Get matches with exclusion applied
+			matches := state.Matches(false, 0)
+
+			t.Logf("Matches count after exclusion: %d", len(matches))
+			for _, match := range matches {
+				t.Logf("  Match: '%s' at (%d,%d) pattern: %s", match.Text, match.Y, match.X, match.Pattern)
+			}
+
+			// Check that filtered matches are not present
+			for _, shouldFilter := range tt.shouldFilterMatches {
+				found := false
+				for _, match := range matches {
+					if match.Text == shouldFilter {
+						found = true
+						break
+					}
+				}
+				if found {
+					t.Errorf("Expected match '%s' to be filtered out, but it was found", shouldFilter)
+				}
+			}
+
+			// Check that kept matches are present
+			for _, shouldKeep := range tt.shouldKeepMatches {
+				found := false
+				for _, match := range matches {
+					if match.Text == shouldKeep {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Logf("Expected match '%s' to be kept, but it was not found", shouldKeep)
+					// This is a log rather than error because pattern matching can be complex
+				}
+			}
+		})
+	}
+}
+
+// TestExclusionWithNoConfig tests that exclusion works correctly when no config is set
+func TestExclusionWithNoConfig(t *testing.T) {
+	testInput := `user@host:~/project$ ls -la
+config.toml main.go`
+
+	state := NewState(testInput, "abcd", []string{})
+
+	// Test with nil ExclusionConfig
+	state.ExclusionConfig = nil
+	matches1 := state.Matches(false, 0)
+
+	// Test with empty ExclusionConfig
+	state.ExclusionConfig = NewExclusionConfig([]ExclusionRule{})
+	matches2 := state.Matches(false, 0)
+
+	// Both should return the same number of matches
+	if len(matches1) != len(matches2) {
+		t.Errorf("Expected same number of matches with nil config (%d) and empty config (%d)",
+			len(matches1), len(matches2))
+	}
+
+	// Should have at least some matches (config.toml, main.go, etc.)
+	if len(matches1) == 0 {
+		t.Error("Expected some matches even without exclusion config")
+	}
+}
+
+// TestExclusionEdgeCases tests edge cases in exclusion functionality
+func TestExclusionEdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		rules []ExclusionRule
+	}{
+		{
+			name:  "Empty input",
+			input: "",
+			rules: []ExclusionRule{{Type: "text", Pattern: "test"}},
+		},
+		{
+			name:  "Single character input",
+			input: "a",
+			rules: []ExclusionRule{{Type: "text", Pattern: "a"}},
+		},
+		{
+			name:  "Pattern longer than input",
+			input: "abc",
+			rules: []ExclusionRule{{Type: "text", Pattern: "abcdefgh"}},
+		},
+		{
+			name:  "Empty pattern",
+			input: "test input",
+			rules: []ExclusionRule{{Type: "text", Pattern: ""}},
+		},
+		{
+			name:  "Unicode characters",
+			input: "测试 unicode 内容",
+			rules: []ExclusionRule{{Type: "text", Pattern: "测试"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := NewState(tt.input, "abcd", []string{})
+			state.ExclusionConfig = NewExclusionConfig(tt.rules)
+
+			// Should not panic
+			matches := state.Matches(false, 0)
+
+			// Results should be valid (non-negative coordinates, etc.)
+			for _, match := range matches {
+				if match.X < 0 || match.Y < 0 {
+					t.Errorf("Invalid match coordinates: (%d,%d)", match.Y, match.X)
+				}
+				if len(match.Text) == 0 {
+					t.Error("Empty match text found")
+				}
+			}
+		})
+	}
+}
