@@ -63,3 +63,17 @@ confidence_threshold = 0.8
 
 [plugins.colordetection]
 enabled = true
+
+[plugins.exclusion]
+enabled = false
+# Exclusion rules to filter out unwanted matches
+rules = [
+    # Example: Exclude shell prompts (will be automatically configured by tmux integration)
+    # { type = "text", pattern = "user@hostname:~/path$ " },
+    # { type = "regex", pattern = "^\\[.*\\]\\$ " },
+    
+    # Additional examples:
+    # { type = "text", pattern = "DEBUG" },           # Exclude any match containing "DEBUG"
+    # { type = "regex", pattern = "^\\d{4}-\\d{2}-\\d{2}$" }, # Exclude date patterns like "2023-12-20"
+    # { type = "regex", pattern = "^[a-f0-9]{8}-[a-f0-9]{4}-" }, # Exclude UUID prefixes
+]
