@@ -25,7 +25,7 @@ get_opt_arg() {
   fi
 }
 
-PARAMS=(--dir "${CURRENT_DIR}")
+PARAMS=(--dir "${CURRENT_DIR}/build/")
 
 add_param() {
   local opt="$1"

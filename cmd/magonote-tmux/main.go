@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log/slog"
 	"os"
@@ -242,7 +243,7 @@ func (m *Magonote) createMagonoteWindow() error {
 	// Build the command that will keep the pane alive after magonote completes
 	captureCmd := m.buildCaptureCommand()
 	command := fmt.Sprintf(
-		"%s | %s/build/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s; sleep infinity",
+		"%s | %s/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s; sleep infinity",
 		captureCmd,
 		m.config.Dir,
 		tmpFile,
@@ -476,7 +477,17 @@ func (m *Magonote) executeFinalCommand(text, command string) error {
 	finalCommand := strings.ReplaceAll(command, "{}", "${magonote}")
 	slog.Info("Executing final command", "text", text, "command", finalCommand)
 	cmd := exec.Command("bash", "-c", "magonote=\"$1\"; eval \"$2\"", "--", text, finalCommand)
-	return cmd.Run()
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		slog.Error("Final command execution failed", "error", err, "stderr", stderr.String(), "stdout", stdout.String())
+	}
+
+	return err
 }
 
 // cleanup restores the original pane layout and removes the magonote window
@@ -580,12 +591,28 @@ func parseCommandLineArgs() Config {
 	return config
 }
 
+func searchMagonoteBinaryDirectory() (string, error) {
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	execDir := filepath.Dir(execPath)
+
+	return execDir, nil
+}
+
 func main() {
 	config := parseCommandLineArgs()
 
 	if config.Dir == "" {
-		slog.Error("Invalid tmux-magonote execution. Are you trying to execute tmux-magonote directly?")
-		os.Exit(1)
+		slog.Error("Missing --dir flag, trying to determine magonote binary directory")
+		execDir, err := searchMagonoteBinaryDirectory()
+		if err != nil {
+			slog.Error("Failed to determine magonote binary directory", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("Determined magonote binary directory", "dir", execDir)
+		config.Dir = execDir
 	}
 
 	slog.Info("Starting magonote-tmux",
