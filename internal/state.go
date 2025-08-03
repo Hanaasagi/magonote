@@ -45,6 +45,23 @@ func NewColorDetectionConfig() *ColorDetectionConfig {
 	return &ColorDetectionConfig{}
 }
 
+// ExclusionRule represents a rule for excluding matches
+type ExclusionRule struct {
+	Type    string // "regex" or "text"
+	Pattern string // The pattern or text to exclude
+}
+
+// ExclusionConfig holds configuration for match exclusion
+type ExclusionConfig struct {
+	Rules []ExclusionRule
+}
+
+func NewExclusionConfig(rules []ExclusionRule) *ExclusionConfig {
+	return &ExclusionConfig{
+		Rules: rules,
+	}
+}
+
 // MatchPattern represents a pattern that should be matched
 type MatchPattern struct {
 	Name    string
@@ -197,6 +214,7 @@ type State struct {
 	cacheValid           bool
 	TableDetectionConfig *TableDetectionConfig
 	ColorDetectionConfig *ColorDetectionConfig
+	ExclusionConfig      *ExclusionConfig
 }
 
 // NewState creates a new state from input text
@@ -221,6 +239,7 @@ func NewState(
 		cacheValid:           false,
 		TableDetectionConfig: nil,
 		ColorDetectionConfig: nil,
+		ExclusionConfig:      nil,
 	}
 }
 
@@ -451,6 +470,11 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 
 	if uniqueLevel >= 2 {
 		matches = s.filterSuperUniqueMatches(matches)
+	}
+
+	// Apply exclusion filters if configured
+	if s.ExclusionConfig != nil {
+		matches = s.applyExclusionFilters(matches)
 	}
 
 	alphabet, err := NewBuiltinAlphabet(s.Alphabet)
@@ -888,6 +912,168 @@ type GridWord struct {
 
 // Pre-compiled pattern for better performance
 var wordPattern = regexp.MustCompile(`\b[a-zA-Z][a-zA-Z0-9_\-:/]*\b`)
+
+// ExclusionRegion represents a region in the text that should be excluded
+type ExclusionRegion struct {
+	StartLine int
+	StartCol  int
+	EndLine   int
+	EndCol    int
+	Rule      ExclusionRule
+}
+
+// applyExclusionFilters applies exclusion rules to filter out unwanted matches
+func (s *State) applyExclusionFilters(matches []Match) []Match {
+	if s.ExclusionConfig == nil || len(s.ExclusionConfig.Rules) == 0 {
+		return matches
+	}
+
+	// First, find all exclusion regions in the original text
+	exclusionRegions := s.findExclusionRegions()
+	if len(exclusionRegions) == 0 {
+		return matches
+	}
+
+	// Filter matches that overlap with exclusion regions
+	var filtered []Match
+	for _, match := range matches {
+		if !s.matchOverlapsWithExclusionRegions(match, exclusionRegions) {
+			filtered = append(filtered, match)
+		} else {
+			slog.Debug("Excluding match", "text", match.Text, "pattern", match.Pattern, "x", match.X, "y", match.Y)
+		}
+	}
+
+	return filtered
+}
+
+// findExclusionRegions finds all regions in the input text that match exclusion rules
+func (s *State) findExclusionRegions() []ExclusionRegion {
+	var regions []ExclusionRegion
+
+	for _, rule := range s.ExclusionConfig.Rules {
+		switch rule.Type {
+		case "text":
+			textRegions := s.findTextExclusionRegions(rule)
+			regions = append(regions, textRegions...)
+		case "regex":
+			regexRegions := s.findRegexExclusionRegions(rule)
+			regions = append(regions, regexRegions...)
+		}
+	}
+
+	return regions
+}
+
+// findTextExclusionRegions finds regions that contain the specified text
+func (s *State) findTextExclusionRegions(rule ExclusionRule) []ExclusionRegion {
+	var regions []ExclusionRegion
+
+	// Skip empty patterns to avoid infinite loops
+	if rule.Pattern == "" {
+		return regions
+	}
+
+	for lineIdx, line := range s.Lines {
+		startIdx := 0
+		for {
+			idx := strings.Index(line[startIdx:], rule.Pattern)
+			if idx == -1 {
+				break
+			}
+
+			actualIdx := startIdx + idx
+			regions = append(regions, ExclusionRegion{
+				StartLine: lineIdx,
+				StartCol:  actualIdx,
+				EndLine:   lineIdx,
+				EndCol:    actualIdx + len(rule.Pattern),
+				Rule:      rule,
+			})
+
+			startIdx = actualIdx + len(rule.Pattern)
+		}
+	}
+
+	return regions
+}
+
+// findRegexExclusionRegions finds regions that match the specified regex
+func (s *State) findRegexExclusionRegions(rule ExclusionRule) []ExclusionRegion {
+	var regions []ExclusionRegion
+
+	// Skip empty patterns
+	if rule.Pattern == "" {
+		return regions
+	}
+
+	compiled := globalPatternCache.GetCompiledPattern("exclusion:"+rule.Pattern, rule.Pattern)
+	if compiled == nil || compiled.Pattern == nil {
+		return regions
+	}
+
+	for lineIdx, line := range s.Lines {
+		matches := compiled.Pattern.FindAllStringIndex(line, -1)
+		for _, match := range matches {
+			regions = append(regions, ExclusionRegion{
+				StartLine: lineIdx,
+				StartCol:  match[0],
+				EndLine:   lineIdx,
+				EndCol:    match[1],
+				Rule:      rule,
+			})
+		}
+	}
+
+	return regions
+}
+
+// matchOverlapsWithExclusionRegions checks if a match overlaps with any exclusion region
+func (s *State) matchOverlapsWithExclusionRegions(match Match, regions []ExclusionRegion) bool {
+	matchStartLine := match.Y
+	matchStartCol := match.X
+	matchEndLine := match.Y
+	matchEndCol := match.X + len(match.Text)
+
+	for _, region := range regions {
+		// Check if there's any overlap between the match and the region
+		if s.regionsOverlap(
+			matchStartLine, matchStartCol, matchEndLine, matchEndCol,
+			region.StartLine, region.StartCol, region.EndLine, region.EndCol,
+		) {
+			slog.Debug("Match overlaps with exclusion region",
+				"matchText", match.Text,
+				"matchPos", fmt.Sprintf("(%d,%d)-(%d,%d)", matchStartLine, matchStartCol, matchEndLine, matchEndCol),
+				"regionPos", fmt.Sprintf("(%d,%d)-(%d,%d)", region.StartLine, region.StartCol, region.EndLine, region.EndCol),
+				"ruleType", region.Rule.Type,
+				"rulePattern", region.Rule.Pattern)
+			return true
+		}
+	}
+
+	return false
+}
+
+// regionsOverlap checks if two rectangular regions overlap
+func (s *State) regionsOverlap(
+	r1StartLine, r1StartCol, r1EndLine, r1EndCol int,
+	r2StartLine, r2StartCol, r2EndLine, r2EndCol int,
+) bool {
+	// Check if regions are on different lines with no overlap
+	if r1EndLine < r2StartLine || r2EndLine < r1StartLine {
+		return false
+	}
+
+	// If they're on the same line or overlapping lines, check column overlap
+	if r1StartLine == r2StartLine && r1EndLine == r2EndLine {
+		// Both on the same single line
+		return r1EndCol > r2StartCol && r2EndCol > r1StartCol
+	}
+
+	// For multi-line or different line scenarios, we consider them overlapping
+	// if the line ranges overlap at all
+	return true
+}
 
 // ExtractValidWords extracts valid words from the grid segment (backward compatibility)
 func ExtractValidWords(gs td.GridSegment) []GridWord {

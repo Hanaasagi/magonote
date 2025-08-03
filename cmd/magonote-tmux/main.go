@@ -291,7 +291,35 @@ func (m *Magonote) buildMagonoteArgs() ([]string, error) {
 		}
 	}
 
+	// Add shell prompt exclusion if available
+	if err := m.addShellPromptExclusion(&args); err != nil {
+		slog.Warn("Failed to add shell prompt exclusion", "error", err)
+	}
+
 	return args, nil
+}
+
+// addShellPromptExclusion adds shell prompt as exclusion pattern
+func (m *Magonote) addShellPromptExclusion(args *[]string) error {
+	// Get current working directory
+	workingDir, err := m.getCurrentWorkingDirectory()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
+	// Get shell prompt for the current directory
+	prompt, err := m.getShellPrompt(workingDir)
+	if err != nil {
+		return fmt.Errorf("getting shell prompt: %w", err)
+	}
+
+	// Only add exclusion if we successfully got a prompt
+	if prompt != "" {
+		slog.Info("Adding shell prompt exclusion", "prompt", prompt, "workingDir", workingDir)
+		*args = append(*args, "--extra-exclusion", fmt.Sprintf("'%s'", prompt))
+	}
+
+	return nil
 }
 
 // isBooleanParam checks if the parameter is a boolean type
@@ -543,6 +571,53 @@ func (m *Magonote) killPane(paneID string) error {
 		slog.Debug("Successfully terminated pane", "paneID", paneID)
 	}
 	return err
+}
+
+// getCurrentWorkingDirectory gets the current working directory of the active pane
+func (m *Magonote) getCurrentWorkingDirectory() (string, error) {
+	output, err := m.tmuxCommand("display-message", "-p", "#{pane_current_path}")
+	if err != nil {
+		return "", fmt.Errorf("getting current working directory: %w", err)
+	}
+	return strings.TrimSpace(output), nil
+}
+
+// getShellPrompt gets the shell prompt for the given directory
+func (m *Magonote) getShellPrompt(workingDir string) (string, error) {
+	// Detect shell from SHELL environment variable
+	shellPath := os.Getenv("SHELL")
+	if shellPath == "" {
+		shellPath = "bash" // Default to bash
+	} else {
+		shellPath = filepath.Base(shellPath)
+	}
+
+	var cmd *exec.Cmd
+	switch shellPath {
+	case "bash":
+		// Use bash -i -c to get expanded PS1 in the specified directory
+		cmd = exec.Command("bash", "-i", "-c", fmt.Sprintf(`cd "%s" && echo "${PS1@P}"`, workingDir))
+	case "zsh":
+		// Use zsh -i -c with print -P for prompt expansion in the specified directory
+		cmd = exec.Command("zsh", "-i", "-c", fmt.Sprintf(`cd "%s" && print -P "$PS1"`, workingDir))
+	default:
+		// Default to bash approach
+		cmd = exec.Command("bash", "-i", "-c", fmt.Sprintf(`cd "%s" && echo "${PS1@P}"`, workingDir))
+	}
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	err := cmd.Run()
+	if err != nil {
+		slog.Warn("Failed to get shell prompt", "error", err, "shell", shellPath, "workingDir", workingDir)
+		return "", nil // Return empty string instead of error to avoid breaking the workflow
+	}
+
+	prompt := strings.TrimSpace(out.String())
+	slog.Debug("Retrieved shell prompt", "prompt", prompt, "shell", shellPath, "workingDir", workingDir)
+	return prompt, nil
 }
 
 // tmuxCommand executes a tmux command and returns its output
