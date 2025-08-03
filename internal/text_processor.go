@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/Hanaasagi/magonote/pkg/textdetection/colordetection"
 )
@@ -45,6 +47,8 @@ func NewStyledTextProcessor() *StyledTextProcessor {
 
 // Process analyzes styled text and extracts both plain text and style-based matches
 func (s *StyledTextProcessor) Process(text string) ([]string, []Match, error) {
+	colorStart := time.Now()
+	inputLength := len(text)
 	result, err := colordetection.ParseText(text)
 	if err != nil {
 		return nil, nil, err
@@ -68,6 +72,8 @@ func (s *StyledTextProcessor) Process(text string) ([]string, []Match, error) {
 		}
 	}
 
+	colorDuration := time.Since(colorStart)
+	slog.Info("colordetection completed", "input_length", inputLength, "duration_ms", colorDuration.Milliseconds(), "matches_count", len(styleMatches))
 	return lines, styleMatches, nil
 }
 

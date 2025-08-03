@@ -319,7 +319,10 @@ func (v *View) listen() CaptureEvent {
 	hasUppercase := false
 	longestHint := v.findLongestHint()
 
+	renderStart := time.Now()
 	v.render(typedHint)
+	firstRenderDuration := time.Since(renderStart)
+	slog.Info("first render completed", "duration_ms", firstRenderDuration.Milliseconds())
 
 	for {
 		ev := v.screen.PollEvent()

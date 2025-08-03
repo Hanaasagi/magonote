@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 	"unicode"
 
 	td "github.com/Hanaasagi/magonote/pkg/textdetection/tabledetection"
@@ -416,10 +417,13 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 	matches := make([]Match, 0, len(s.Lines)*2)
 
 	// 1. Add regex-based matches from plain text (highest priority)
+	regexStart := time.Now()
 	for y, line := range s.Lines {
 		lineMatches := s.processLine(y, line, patterns)
 		matches = append(matches, lineMatches...)
 	}
+	regexDuration := time.Since(regexStart)
+	slog.Info("regex extraction completed", "duration_ms", regexDuration.Milliseconds(), "matches_count", len(matches))
 
 	if s.ColorDetectionConfig != nil {
 		// 2. Add style-based matches, excluding overlaps with regex matches
@@ -687,6 +691,8 @@ func (s *State) hasSpacingConflict(lineNum int, selectedLines []int, minSpacing 
 
 // getGridMatches detects grid patterns and extracts valid words from them
 func (s *State) getGridMatches(existingMatches []Match) []Match {
+	tableStart := time.Now()
+	inputLineCount := len(s.Lines)
 	minLines := s.TableDetectionConfig.MinLines
 	minColumns := s.TableDetectionConfig.MinColumns
 	confidenceThreshold := s.TableDetectionConfig.ConfidenceThreshold
@@ -699,6 +705,7 @@ func (s *State) getGridMatches(existingMatches []Match) []Match {
 	)
 
 	tables, err := detector.DetectTables(s.Lines)
+	var gridMatches []Match
 	if err != nil || len(tables) == 0 {
 		// Fallback to legacy API if new API fails
 		legacyDetector := td.NewDualRoundDetector(
@@ -707,10 +714,14 @@ func (s *State) getGridMatches(existingMatches []Match) []Match {
 			td.WithConfidenceThreshold(confidenceThreshold),
 		)
 		segments := legacyDetector.DetectGrids(s.Lines)
-		return s.processLegacySegments(segments, existingMatches)
+		gridMatches = s.processLegacySegments(segments, existingMatches)
+	} else {
+		gridMatches = s.processNewTables(tables, existingMatches)
 	}
 
-	return s.processNewTables(tables, existingMatches)
+	tableDuration := time.Since(tableStart)
+	slog.Info("tabledetection completed", "input_lines", inputLineCount, "duration_ms", tableDuration.Milliseconds(), "matches_count", len(gridMatches))
+	return gridMatches
 }
 
 // processNewTables processes tables from the new API
