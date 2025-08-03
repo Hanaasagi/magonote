@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
@@ -594,14 +595,14 @@ func (lv *ListView) Present() []ChosenMatch {
 	_, totalLines := lv.calculateDisplayMetrics()
 	lv.makeSpace(totalLines)
 
+	firstRenderStart := time.Now()
+	lv.render()
+	firstRenderDuration := time.Since(firstRenderStart)
+	slog.Info("listview first render completed", "duration_ms", firstRenderDuration.Milliseconds())
+
 	// Main event loop
-	for {
+	for !lv.handleInput() {
 		lv.render()
-
-		if lv.handleInput() {
-			break
-		}
-
 		time.Sleep(time.Millisecond * 10)
 	}
 
