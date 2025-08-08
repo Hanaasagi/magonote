@@ -46,6 +46,7 @@ type Arguments struct {
 	inputFile      string
 	showVersion    bool
 	listView       bool
+	extraExclusion []string // Extra exclusion patterns from CLI
 
 	// colors
 	foregroundColor       string
@@ -271,6 +272,21 @@ func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
 	if cmd.Flags().Changed("contrast") {
 		config.Core.Contrast = args.contrast
 	}
+
+	// Handle extra exclusion patterns from CLI
+	if len(args.extraExclusion) > 0 {
+		if config.Plugins.Exclusion == nil {
+			config.Plugins.Exclusion = &ExclusionConfig{Enabled: true, Rules: []ExclusionRule{}}
+		}
+		// Add CLI exclusion patterns as text rules
+		for _, pattern := range args.extraExclusion {
+			config.Plugins.Exclusion.Rules = append(config.Plugins.Exclusion.Rules, ExclusionRule{
+				Type:    "text",
+				Pattern: pattern,
+			})
+		}
+		config.Plugins.Exclusion.Enabled = true
+	}
 }
 
 // runApp runs the main application logic
@@ -294,6 +310,18 @@ func runApp(config *Config, args *Arguments) error {
 	}
 	if plugins.Colordetection != nil && plugins.Colordetection.Enabled {
 		state.ColorDetectionConfig = internal.NewColorDetectionConfig()
+	}
+
+	if plugins.Exclusion != nil && plugins.Exclusion.Enabled {
+		// Convert config exclusion rules to internal exclusion rules
+		var rules []internal.ExclusionRule
+		for _, rule := range plugins.Exclusion.Rules {
+			rules = append(rules, internal.ExclusionRule{
+				Type:    rule.Type,
+				Pattern: rule.Pattern,
+			})
+		}
+		state.ExclusionConfig = internal.NewExclusionConfig(rules)
 	}
 
 	var selected []internal.ChosenMatch
@@ -418,6 +446,7 @@ func main() {
 	rootCmd.Flags().StringVarP(&args.target, "target", "t", "", "Stores the hint in the specified path")
 	rootCmd.Flags().StringVarP(&args.inputFile, "input-file", "i", "", "Read input from file instead of stdin")
 	rootCmd.Flags().BoolVarP(&args.showVersion, "version", "v", false, "Print version and exit")
+	rootCmd.Flags().StringArrayVar(&args.extraExclusion, "extra-exclusion", nil, "Additional text patterns to exclude from matching")
 
 	rootCmd.Flags().BoolVar(&args.listView, "list", false, "Enable list view")
 

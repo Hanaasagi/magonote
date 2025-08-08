@@ -63,3 +63,24 @@ confidence_threshold = 0.8
 
 [plugins.colordetection]
 enabled = true
+
+[plugins.exclusion]
+enabled = false
+# Exclusion rules to filter out unwanted matches by defining regions in the original text
+# The rules first identify exclusion regions in the input text, then filter out any matches
+# whose coordinates overlap with these regions
+rules = [
+    # Example: Exclude entire shell prompt lines (automatically configured by tmux integration)
+    # { type = "regex", pattern = "^user@hostname:.*\\$ " },  # Exclude entire lines starting with prompt
+    # { type = "text", pattern = "~/project$ " },             # Exclude specific prompt text
+
+    # Additional examples:
+    # { type = "text", pattern = "DEBUG" },                   # Exclude matches in regions containing "DEBUG"
+    # { type = "regex", pattern = "^\\[.*\\]\\$ " },         # Exclude bracketed prompts like "[user@host]$ "
+    # { type = "regex", pattern = "^\\d{4}-\\d{2}-\\d{2}" }, # Exclude regions starting with dates
+    # { type = "regex", pattern = "Error:.*" },              # Exclude entire error message lines
+
+    # Exclude log timestamps and noise:
+    # { type = "regex", pattern = "^\\d{2}:\\d{2}:\\d{2}" }, # Lines starting with timestamps
+    # { type = "text", pattern = "INFO" },                   # Any region containing INFO logs
+]
