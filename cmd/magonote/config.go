@@ -65,9 +65,26 @@ type Rule struct {
 	Pattern string `toml:"pattern"` // The pattern or text to exclude
 }
 
+// ExclusionRule represents a single exclusion rule in config
+type ExclusionRule struct {
+	Type    string `toml:"type"`    // "regex" or "text"
+	Pattern string `toml:"pattern"` // The pattern or text to exclude
+}
+
+type ExclusionConfig struct {
+	Enabled bool            `toml:"enabled"`
+	Rules   []ExclusionRule `toml:"rules"`
+}
+
+type PS1FilterConfig struct {
+	Enabled    bool   `toml:"enabled"`
+	PS1Pattern string `toml:"ps1_pattern"`
+}
 type PluginsConfig struct {
 	Tabledetection *TableDetectionPluginConfig `toml:"tabledetection"`
 	Colordetection *ColorDetectionPluginConfig `toml:"colordetection"`
+	Exclusion      *ExclusionConfig            `toml:"exclusion"`
+	PS1Filter      *PS1FilterConfig            `toml:"ps1filter"`
 }
 
 func NewDefaultConfig() *Config {
@@ -103,6 +120,8 @@ func NewDefaultConfig() *Config {
 		Plugins: PluginsConfig{
 			Tabledetection: nil,
 			Colordetection: nil,
+			Exclusion:      nil,
+			PS1Filter:      nil,
 		},
 	}
 }

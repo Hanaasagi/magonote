@@ -1,0 +1,859 @@
+[
+{
+  "theme": "3den",
+  "ps1": "%{$fg[white]%}$(ruby_prompt_info) %{$fg_bold[cyan]%}%~%{$reset_color%}$(git_prompt_info) %{$fg[cyan]%}%D{[%I:%M:%S]}\n%{$fg_bold[green]%}%n$%{$reset_color%} ",
+  "text": "\u001b[37m \u001b[01;36m~/Project/magonote/pkg/ps1parser\u001b[00m \u001b[36m[10:33:26]\n\u001b[01;32mkumiko$\u001b[00m "
+}
+,
+{
+  "theme": "adben",
+  "ps1": "%b%{\u001b[30m%}<%b%{\u001b[31m%}<%B%{\u001b[31m%}<%{\u001b[00m%} %b%{\u001b[33m%}$(prompt_header)%{\u001b[00m%}\n%b%{\u001b[30m%}<%b%{\u001b[31m%}<%B%{\u001b[31m%}<%{\u001b[00m%} $(prompt_context)%B%{\u001b[33m%}%~%{\u001b[00m%}\n%b%{\u001b[30m%}>%b%{\u001b[32m%}>%B%{\u001b[32m%}>%{\u001b[00m%} ",
+  "text": "\u001b[0m\u001b[30m<\u001b[0m\u001b[31m<\u001b[1m\u001b[31m<\u001b[00m \u001b[0m\u001b[33m\u001b[00m\n\u001b[0m\u001b[30m<\u001b[0m\u001b[31m<\u001b[1m\u001b[31m<\u001b[00m \u001b[00m\u001b[0m\u001b[31mkumiko@kumikodeMacBook-Air\u001b[1m\u001b[33m~/Project/magonote/pkg/ps1parser\u001b[00m\n\u001b[0m\u001b[30m>\u001b[0m\u001b[32m>\u001b[1m\u001b[32m>\u001b[00m "
+}
+,
+{
+  "theme": "af-magic",
+  "ps1": "%{\u001b[38;5;237m%}${(l.$(afmagic_dashes)..-.)}%{\u001b[00m%}\n%{\u001b[38;5;032m%}%~$(git_prompt_info)$(hg_prompt_info) %{\u001b[38;5;105m%}%(!.#.»)%{\u001b[00m%} ",
+  "text": "\u001b[38;5;237m---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\u001b[00m\n\u001b[38;5;032m~/Project/magonote/pkg/ps1parser \u001b[38;5;105m»\u001b[00m "
+}
+,
+{
+  "theme": "afowler",
+  "ps1": "%m %B%F{blue}:: %b%F{green}%3~ $(hg_prompt_info)$(git_prompt_info)%B%(!.%F{red}.%F{blue})»%f%b ",
+  "text": "kumikodeMacBook-Air \u001b[1m\u001b[34m:: \u001b[0m\u001b[34m\u001b[32mmagonote/pkg/ps1parser \u001b[1m\u001b[32m\u001b[34m»\u001b[39m\u001b[0m "
+}
+,
+{
+  "theme": "agnoster",
+  "ps1": "%{%f%b%k%}$(build_prompt) ",
+  "text": "\u001b[39m\u001b[0m\u001b[49m\u001b[40m\u001b[39m kumiko@kumikodeMacBook-Air \u001b[44m\u001b[30m\u001b[30m ~/Project/magonote/pkg/ps1parser \u001b[43m\u001b[34m\u001b[30m  feat-ps1-parser ± \u001b[49m\u001b[33m\u001b[39m "
+}
+,
+{
+  "theme": "alanpeabody",
+  "ps1": "%{$fg[magenta]%}%n@%{$fg[magenta]%}%m%{$reset_color%} %{$fg[blue]%}%~%{$reset_color%}$ ",
+  "text": "\u001b[35mkumiko@\u001b[35mkumikodeMacBook-Air\u001b[00m \u001b[34m~/Project/magonote/pkg/ps1parser\u001b[00m$ "
+}
+,
+{
+  "theme": "amuse",
+  "ps1": "\n%{$fg_bold[green]%}%~%{$reset_color%}$(git_prompt_info)$(virtualenv_prompt_info) ⌚ %{$fg_bold[red]%}%*%{$reset_color%}\n$ ",
+  "text": "\n\u001b[01;32m~/Project/magonote/pkg/ps1parser\u001b[00m ⌚ \u001b[01;31m22:33:27\u001b[00m\n$ "
+}
+,
+{
+  "theme": "apple",
+  "ps1": "%{$fg[magenta]%}$(toon)%{$reset_color%} %~/ %{$reset_color%}${vcs_info_msg_0_}%{$reset_color%}",
+  "text": "\u001b[35m\u001b[00m ~/Project/magonote/pkg/ps1parser/ \u001b[00m\u001b[00m"
+}
+,
+{
+  "theme": "arrow",
+  "ps1": "%{$fg[$NCOLOR]%}%c ➤ %{$reset_color%}",
+  "text": "\u001b[33mps1parser ➤ \u001b[00m"
+}
+,
+{
+  "theme": "aussiegeek",
+  "ps1": "%{\u001b[01;34m%}[ %{\u001b[31m%}%t %{\u001b[01;34m%}] %{\u001b[01;34m%} [ %{\u001b[31m%}%n@%m:%~$(git_prompt_info)%{\u001b[33m%}$(ruby_prompt_info)%{\u001b[01;34m%} ]%{\u001b[00m%}\n $ ",
+  "text": "\u001b[01;34m[ \u001b[31m10:33PM \u001b[01;34m] \u001b[01;34m [ \u001b[31mkumiko@kumikodeMacBook-Air:~/Project/magonote/pkg/ps1parser\u001b[33m\u001b[01;34m ]\u001b[00m\n $ "
+}
+,
+{
+  "theme": "avit",
+  "ps1": "\n$(_user_host)${_current_dir} $(git_prompt_info) $(ruby_prompt_info)\n%{%(!.${fg[red]}.${fg[white]})%}▶%{$reset_color%} ",
+  "text": "\n\u001b[01;34mmagonote/pkg/ps1parser\u001b[00m   \n\u001b[37m▶\u001b[00m "
+}
+,
+{
+  "theme": "awesomepanda",
+  "ps1": "${ret_status}%{$fg_bold[green]%} %{$fg[cyan]%}%c %{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%}$(svn_prompt_info)%{$reset_color%}",
+  "text": "\u001b[01;32m➜ \u001b[01;32m \u001b[36mps1parser \u001b[01;34m\u001b[01;34m\u001b[00m"
+}
+,
+{
+  "theme": "bira",
+  "ps1": "╭─$(conda_prompt_info)%B%(!.%{\u001b[31m%}.%{\u001b[32m%})%n@%m%{\u001b[00m%} %B%{\u001b[34m%}%~ %{\u001b[00m%}$(ruby_prompt_info)$(git_prompt_info)$(hg_prompt_info)$(virtualenv_prompt_info)\n╰─%B%(!.#.$)%b ",
+  "text": "╭─\u001b[1m\u001b[32mkumiko@kumikodeMacBook-Air\u001b[00m \u001b[1m\u001b[34m~/Project/magonote/pkg/ps1parser \u001b[00m\n╰─\u001b[1m$\u001b[0m "
+}
+,
+{
+  "theme": "blinks",
+  "ps1": "%{%f%k%b%}\n%{%K{${bkg}}%B%F{green}%}%n%{%B%F{blue}%}@%{%B%F{cyan}%}%m%{%B%F{green}%} %{%b%F{yellow}%K{${bkg}}%}%~%{%B%F{green}%}$(git_prompt_info)%E%{%f%k%b%}\n%{%K{${bkg}}%}$(_prompt_char)%{%K{${bkg}}%} %#%{%f%k%b%} ",
+  "text": "\u001b[39m\u001b[49m\u001b[0m\n\u001b[49m\u001b[1m\u001b[32mkumiko\u001b[1m\u001b[32m\u001b[34m@\u001b[1m\u001b[34m\u001b[36mkumikodeMacBook-Air\u001b[1m\u001b[36m\u001b[32m \u001b[0m\u001b[32m\u001b[33m\u001b[49m~/Project/magonote/pkg/ps1parser\u001b[1m\u001b[33m\u001b[32m\u001b[K\u001b[39m\u001b[49m\u001b[0m\n\u001b[49m\u001b[34m±\u001b[39m\u001b[49m\u001b[0m\u001b[49m %\u001b[39m\u001b[49m\u001b[0m "
+}
+,
+{
+  "theme": "bureau",
+  "ps1": "> $_LIBERTY ",
+  "text": "> \u001b[32m$\u001b[00m "
+}
+,
+{
+  "theme": "candy-kingdom",
+  "ps1": "\n%{$fg[magenta]%}%n%{$reset_color%}@%{$fg[yellow]%}$(box_name)%{$reset_color%}:%{$fg_bold[green]%}%~%{$reset_color%}$(hg_prompt_info)$(git_prompt_info)\n%(?,,%{${fg_bold[white]}%}[%?]%{$reset_color%} )$ ",
+  "text": "\n\u001b[35mkumiko\u001b[00m@\u001b[33mkumikodeMacBook-Air\u001b[00m:\u001b[01;32m~/Project/magonote/pkg/ps1parser\u001b[00m\n$ "
+}
+,
+{
+  "theme": "candy",
+  "ps1": "%{$fg_bold[green]%}%n@%m %{$fg[blue]%}%D{[%X]} %{$reset_color%}%{$fg[white]%}[%~]%{$reset_color%} $(git_prompt_info)\n%{$fg[blue]%}->%{$fg_bold[blue]%} %#%{$reset_color%} ",
+  "text": "\u001b[01;32mkumiko@kumikodeMacBook-Air \u001b[34m[22:33:30] \u001b[00m\u001b[37m[~/Project/magonote/pkg/ps1parser]\u001b[00m \n\u001b[34m->\u001b[01;34m %\u001b[00m "
+}
+,
+{
+  "theme": "clean",
+  "ps1": "%{$fg[$NCOLOR]%}%B%n%b%{$reset_color%}:%{$fg[blue]%}%B%c/%b%{$reset_color%} $(git_prompt_info)%(!.#.$) ",
+  "text": "\u001b[37m\u001b[1mkumiko\u001b[0m\u001b[00m:\u001b[34m\u001b[1mps1parser/\u001b[0m\u001b[00m $ "
+}
+,
+{
+  "theme": "cloud",
+  "ps1": "%{$fg_bold[cyan]%}$ZSH_THEME_CLOUD_PREFIX %{$fg_bold[green]%} %{$fg[green]%}%c %{$fg_bold[cyan]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}",
+  "text": "\u001b[01;36m☁ \u001b[01;32m \u001b[32mps1parser \u001b[01;36m\u001b[01;34m \u001b[00m"
+}
+,
+{
+  "theme": "crcandy",
+  "ps1": "\n%{$fg_bold[green]%}%n@%m %{$fg[blue]%}%D{[%H:%M:%S]} %{$reset_color%}%{$fg[white]%}[%~]%{$reset_color%} $(git_prompt_info)\n%{$fg[blue]%}->%{$fg_bold[blue]%} %#%{$reset_color%} ",
+  "text": "\n\u001b[01;32mkumiko@kumikodeMacBook-Air \u001b[34m[22:33:31] \u001b[00m\u001b[37m[~/Project/magonote/pkg/ps1parser]\u001b[00m \n\u001b[34m->\u001b[01;34m %\u001b[00m "
+}
+,
+{
+  "theme": "crunch",
+  "ps1": "%{\u001b[37m%}{%{\u001b[33m%}%T%{\u001b[37m%}}%{\u001b[00m%}$(ruby_prompt_info)%{\u001b[36m%}%~$(git_prompt_info) %{\u001b[37m%}➭ %{\u001b[00m%}",
+  "text": "\u001b[37m{\u001b[33m22:33\u001b[37m}\u001b[00m\u001b[36m~/Project/magonote/pkg/ps1parser \u001b[37m➭ \u001b[00m"
+}
+,
+{
+  "theme": "cypher",
+  "ps1": "%m %{\u001b[01;31m%}:: %{\u001b[32m%}%3~%(0?. . %{\u001b[31m%}%? )%{\u001b[34m%}»%{\u001b[00m%} ",
+  "text": "kumikodeMacBook-Air \u001b[01;31m:: \u001b[32mmagonote/pkg/ps1parser \u001b[34m»\u001b[00m "
+}
+,
+{
+  "theme": "dallas",
+  "ps1": "%{\u001b[37m%}{%{\u001b[33m%}%D %T%{\u001b[37m%}}%{\u001b[00m%}$(ruby_prompt_info)%{\u001b[32m%}%m%{\u001b[37m%}:%{\u001b[00m%}%{\u001b[36m%}%~$(git_prompt_info)%{\u001b[00m%}$(parse_git_dirty) %{\u001b[31m%}%n%{\u001b[00m%}%{\u001b[37m%}%(!.#.%%)%{\u001b[00m%} ",
+  "text": "\u001b[37m{\u001b[33m25-08-09 22:33\u001b[37m}\u001b[00m\u001b[32mkumikodeMacBook-Air\u001b[37m:\u001b[00m\u001b[36m~/Project/magonote/pkg/ps1parser\u001b[00m\u001b[36m✗✗✗ \u001b[31mkumiko\u001b[00m\u001b[37m%\u001b[00m "
+}
+,
+{
+  "theme": "darkblood",
+  "ps1": "%{$fg[red]%}┌[%{$fg_bold[white]%}%n%{$reset_color%}%{$fg[red]%}@%{$fg_bold[white]%}%m%{$reset_color%}%{$fg[red]%}] [%{$fg_bold[white]%}/dev/%y%{$reset_color%}%{$fg[red]%}] %{$(git_prompt_info)%}%(?,,%{$fg[red]%}[%{$fg_bold[white]%}%?%{$reset_color%}%{$fg[red]%}])\n%{$fg[red]%}└[%{$fg_bold[white]%}%~%{$reset_color%}%{$fg[red]%}]>%{$reset_color%} ",
+  "text": "\u001b[31m┌[\u001b[01;37mkumiko\u001b[00m\u001b[31m@\u001b[01;37mkumikodeMacBook-Air\u001b[00m\u001b[31m] [\u001b[01;37m/dev/ttys001\u001b[00m\u001b[31m] \n\u001b[31m└[\u001b[01;37m~/Project/magonote/pkg/ps1parser\u001b[00m\u001b[31m]>\u001b[00m "
+}
+,
+{
+  "theme": "daveverwer",
+  "ps1": "%{$fg[red]%}%m%{$reset_color%}:%{$fg[green]%}%c%{$reset_color%}$(git_prompt_info) %(!.#.$) ",
+  "text": "\u001b[31mkumikodeMacBook-Air\u001b[00m:\u001b[32mps1parser\u001b[00m $ "
+}
+,
+{
+  "theme": "dieter",
+  "ps1": "${time} ${user}${host} ${pwd} $(git_prompt_info)",
+  "text": "\u001b[32m22:33:33\u001b[00m \u001b[34mkumiko\u001b[00m@kumikodeMacBook-Air.local\u001b[00m \u001b[34mps1parser\u001b[00m "
+}
+,
+{
+  "theme": "dogenpunk",
+  "ps1": "%{$fg[blue]%}%m%{$reset_color%}%{$fg_bold[white]%} ॐ  %{$reset_color%}%{$fg[cyan]%}%~:%{$reset_color%}$(git_time_since_commit)$(git_prompt_info)\n%{$fg[red]%}%!%{$reset_color%} $(prompt_char) ",
+  "text": "\u001b[34mkumikodeMacBook-Air\u001b[00m\u001b[01;37m ॐ  \u001b[00m\u001b[36m~/Project/magonote/pkg/ps1parser:\u001b[00m(\u001b[33m11m\u001b[00m|\n\u001b[31m5370\u001b[00m \u001b[32m±\u001b[00m "
+}
+,
+{
+  "theme": "dpoggi",
+  "ps1": "%{$fg[$NCOLOR]%}%n%{$reset_color%}@%{$fg[cyan]%}%m\\\n%{$reset_color%}:%{$fg[magenta]%}%~\\\n$(git_prompt_info) \\\n%{$fg[red]%}%(!.#.»)%{$reset_color%} ",
+  "text": "\u001b[32mkumiko\u001b[00m@\u001b[36mkumikodeMacBook-Air\n\u001b[00m:\u001b[35m~/Project/magonote/pkg/ps1parser\n \n\u001b[31m»\u001b[00m "
+}
+,
+{
+  "theme": "dst",
+  "ps1": "%(?, ,%{$fg[red]%}FAIL%{$reset_color%}\n)\n%{$fg[magenta]%}%n%{$reset_color%}@%{$fg[yellow]%}%m%{$reset_color%}: %{$fg_bold[blue]%}%~%{$reset_color%}$(git_prompt_info)\n$(prompt_char) ",
+  "text": " \n\u001b[35mkumiko\u001b[00m@\u001b[33mkumikodeMacBook-Air\u001b[00m: \u001b[01;34m~/Project/magonote/pkg/ps1parser\u001b[00m\n$ "
+}
+,
+{
+  "theme": "dstufft",
+  "ps1": "\n%{$fg[magenta]%}%n%{$reset_color%} at %{$fg[yellow]%}%m%{$reset_color%} in %{$fg_bold[green]%}%~%{$reset_color%}$(git_prompt_info)\n$(virtualenv_info)$(prompt_char) ",
+  "text": "\n\u001b[35mkumiko\u001b[00m at \u001b[33mkumikodeMacBook-Air\u001b[00m in \u001b[01;32m~/Project/magonote/pkg/ps1parser\u001b[00m\n± "
+}
+,
+{
+  "theme": "duellj",
+  "ps1": "%{\u001b[0;34m%}%B┌─[%b%{\u001b[0m%}%{\u001b[1;32m%}%n%{\u001b[1;34m%}@%{\u001b[0m%}%{\u001b[0;36m%}%m%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %b%{\u001b[0;34m%}%B[%b%{\u001b[1;37m%}%~%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %{\u001b[0;34m%}%B[%b%{\u001b[0;33m%}%!%{\u001b[0;34m%}%B]%b%{\u001b[0m%}\n%{\u001b[0;34m%}%B└─%B[%{\u001b[1;35m%}$%{\u001b[0;34m%}%B]%{\u001b[0m%}%b ",
+  "text": "\u001b[0;34m\u001b[1m┌─[\u001b[0m\u001b[0m\u001b[1;32mkumiko\u001b[1;34m@\u001b[0m\u001b[0;36mkumikodeMacBook-Air\u001b[0;34m\u001b[1m]\u001b[0m\u001b[0m - \u001b[0m\u001b[0;34m\u001b[1m[\u001b[0m\u001b[1;37m~/Project/magonote/pkg/ps1parser\u001b[0;34m\u001b[1m]\u001b[0m\u001b[0m - \u001b[0;34m\u001b[1m[\u001b[0m\u001b[0;33m5370\u001b[0;34m\u001b[1m]\u001b[0m\u001b[0m\n\u001b[0;34m\u001b[1m└─\u001b[1m[\u001b[1;35m$\u001b[0;34m\u001b[1m]\u001b[0m\u001b[0m "
+}
+,
+{
+  "theme": "eastwood",
+  "ps1": "$(git_custom_status)%{$fg[cyan]%}[%~% ]%{$reset_color%}%B$%b ",
+  "text": "\u001b[31m*\u001b[00m\u001b[00m\u001b[32m[feat-ps1-parser]\u001b[00m\u001b[36m[~/Project/magonote/pkg/ps1parser]\u001b[00m\u001b[1m$\u001b[0m "
+}
+,
+{
+  "theme": "edvardm",
+  "ps1": "%{$fg_bold[red]%}➜ %{$fg_bold[green]%} %{$fg_bold[white]%}%c %{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}",
+  "text": "\u001b[01;31m➜ \u001b[01;32m \u001b[01;37mps1parser \u001b[01;34m\u001b[01;34m \u001b[00m"
+}
+,
+{
+  "theme": "emotty",
+  "ps1": "%{$fg_bold[red]%}➜ %{$fg_bold[green]%} %{$fg_bold[white]%}%c %{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}",
+  "text": "\u001b[01;31m➜ \u001b[01;32m \u001b[01;37mps1parser \u001b[01;34m\u001b[01;34m \u001b[00m"
+}
+,
+{
+  "theme": "essembeh",
+  "ps1": "${ZSH_ESSEMBEH_PREFIX}%{$fg[$ZSH_ESSEMBEH_COLOR]%}%n@%M%{$reset_color%}:%{%B$fg[yellow]%}%~%{$reset_color%b%} $(git_prompt_info)%(!.#.$) ",
+  "text": "\u001b[32mkumiko@kumikodeMacBook-Air.local\u001b[00m:\u001b[1m\u001b[33m~/Project/magonote/pkg/ps1parser\u001b[00m\u001b[0m $ "
+}
+,
+{
+  "theme": "evan",
+  "ps1": "%m :: %2~ %B»%b ",
+  "text": "kumikodeMacBook-Air :: pkg/ps1parser \u001b[1m»\u001b[0m "
+}
+,
+{
+  "theme": "fino-time",
+  "ps1": "╭─%{%{\u001b[38;5;040m%}%}%n%{\u001b[00m%} %{%{\u001b[38;5;239m%}%}at%{\u001b[00m%} %{%{\u001b[38;5;033m%}%}kumikodeMacBook-Air%{\u001b[00m%} %{%{\u001b[38;5;239m%}%}in%{\u001b[00m%} %{\u001b[1m%{\u001b[38;5;226m%}%}%~%{\u001b[00m%}$(git_prompt_info)$(ruby_prompt_info) %D - %*\n╰─$(virtualenv_info)$(prompt_char) ",
+  "text": "╭─\u001b[38;5;040mkumiko\u001b[00m \u001b[38;5;239mat\u001b[00m \u001b[38;5;033mkumikodeMacBook-Air\u001b[00m \u001b[38;5;239min\u001b[00m \u001b[1m\u001b[38;5;226m~/Project/magonote/pkg/ps1parser\u001b[00m 25-08-09 - 22:33:37\n╰─⠠⠵ "
+}
+,
+{
+  "theme": "fino",
+  "ps1": "╭─%{\u001b[38;5;040m%}%n %{\u001b[38;5;239m%}at %{\u001b[38;5;033m%}kumikodeMacBook-Air %{\u001b[38;5;239m%}in %B%{\u001b[38;5;226m%}%~%b$(git_prompt_info)$(ruby_prompt_info)$(virtualenv_prompt_info)\n╰─$(prompt_char)%{\u001b[00m%} ",
+  "text": "╭─\u001b[38;5;040mkumiko \u001b[38;5;239mat \u001b[38;5;033mkumikodeMacBook-Air \u001b[38;5;239min \u001b[1m\u001b[38;5;226m~/Project/magonote/pkg/ps1parser\u001b[0m\n╰─±\u001b[00m "
+}
+,
+{
+  "theme": "fishy",
+  "ps1": "%{$fg[$user_color]%}%n%{$reset_color%}@%{$fg[$host_color]%}%m %{$fg[$user_color]%}$(_fishy_collapsed_wd)%{$reset_color%}%(!.#.>) ",
+  "text": "\u001b[32mkumiko\u001b[00m@\u001b[37mkumikodeMacBook-Air \u001b[32m~/P/m/p/ps1parser\u001b[00m> "
+}
+,
+{
+  "theme": "flazz",
+  "ps1": "%m%{${fg_bold[magenta]}%} :: %{$reset_color%}%{${fg[green]}%}%3~ $(git_prompt_info)%{${fg_bold[$CARETCOLOR]}%}%#%{${reset_color}%} ",
+  "text": "kumikodeMacBook-Air\u001b[01;35m :: \u001b[00m\u001b[32mmagonote/pkg/ps1parser \u001b[01;34m%\u001b[00m "
+}
+,
+{
+  "theme": "fletcherm",
+  "ps1": "%{$fg_no_bold[cyan]%}%n%{$fg_no_bold[magenta]%}•%{$fg_no_bold[green]%}%3~$(git_prompt_info)%{$reset_color%}» ",
+  "text": "\u001b[22;36mkumiko\u001b[22;35m•\u001b[22;32mmagonote/pkg/ps1parser\u001b[00m» "
+}
+,
+{
+  "theme": "fox",
+  "ps1": "%{$fg[cyan]%}┌[%{$fg_bold[white]%}%n%{$reset_color%}%{$fg[cyan]%}☮%{$fg_bold[white]%}%M%{$reset_color%}%{$fg[cyan]%}]%{$fg[white]%}-%{$fg[cyan]%}(%{$fg_bold[white]%}%~%{$reset_color%}%{$fg[cyan]%})$(git_prompt_info)\n└> % %{$reset_color%}",
+  "text": "\u001b[36m┌[\u001b[01;37mkumiko\u001b[00m\u001b[36m☮\u001b[01;37mkumikodeMacBook-Air.local\u001b[00m\u001b[36m]\u001b[37m-\u001b[36m(\u001b[01;37m~/Project/magonote/pkg/ps1parser\u001b[00m\u001b[36m)\n└> \u001b[00m"
+}
+,
+{
+  "theme": "frisk",
+  "ps1": "\n%{$fg[blue]%}%/%{$reset_color%} $(git_prompt_info)$(bzr_prompt_info)%{$fg[white]%}[%n@%m]%{$reset_color%} %{$fg[white]%}[%T]%{$reset_color%}\n%{$fg_bold[black]%}>%{$reset_color%} ",
+  "text": "\n\u001b[34m/Users/kumiko/Project/magonote/pkg/ps1parser\u001b[00m \u001b[37m[kumiko@kumikodeMacBook-Air]\u001b[00m \u001b[37m[22:33]\u001b[00m\n\u001b[01;30m>\u001b[00m "
+}
+,
+{
+  "theme": "frontcube",
+  "ps1": "\n%{$fg_bold[gray]%}%~%{$fg_bold[blue]%}%{$fg_bold[blue]%} % %{$reset_color%}\n%{$fg[green]%}➞  %{$reset_color%}",
+  "text": "\n\u001b[01;30m~/Project/magonote/pkg/ps1parser\u001b[01;34m\u001b[01;34m \u001b[00m\n\u001b[32m➞  \u001b[00m"
+}
+,
+{
+  "theme": "funky",
+  "ps1": "╭─%{\u001b[34m%}[%{\u001b[00m%}%~%{\u001b[34m%}]%{\u001b[00m%}─%{\u001b[34m%}[%{\u001b[00m%}%n@%m%{\u001b[34m%}]%{\u001b[00m%}─%{\u001b[34m%}[%{\u001b[00m%}%?%{\u001b[34m%}]%{\u001b[00m%}─%{\u001b[34m%}[%{\u001b[00m%}%h%{\u001b[34m%}]%{\u001b[00m%}\n╰─%{\u001b[34m%}[%{\u001b[00m%}%(?,%{\u001b[32m%}:%)%{\u001b[00m%},%{\u001b[31m%}:(%{\u001b[00m%})%{\u001b[34m%}]%{\u001b[00m%} %# ",
+  "text": "╭─\u001b[34m[\u001b[00m~/Project/magonote/pkg/ps1parser\u001b[34m]\u001b[00m─\u001b[34m[\u001b[00mkumiko@kumikodeMacBook-Air\u001b[34m]\u001b[00m─\u001b[34m[\u001b[00m0\u001b[34m]\u001b[00m─\u001b[34m[\u001b[00m5370\u001b[34m]\u001b[00m\n╰─\u001b[34m[\u001b[00m\u001b[32m:)\u001b[00m\u001b[34m]\u001b[00m % "
+}
+,
+{
+  "theme": "fwalch",
+  "ps1": "%{$fg_bold[green]%} %{$fg[cyan]%}%c%{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}",
+  "text": "\u001b[01;32m \u001b[36mps1parser\u001b[01;34m\u001b[01;34m \u001b[00m"
+}
+,
+{
+  "theme": "gallifrey",
+  "ps1": "%(!.%{\u001b[31m%}.%{\u001b[32m%})%m%{\u001b[00m%} %2~ $(git_prompt_info)%{\u001b[00m%}%B»%b ",
+  "text": "\u001b[32mkumikodeMacBook-Air\u001b[00m pkg/ps1parser \u001b[00m\u001b[1m»\u001b[0m "
+}
+,
+{
+  "theme": "gallois",
+  "ps1": "$custom_prompt",
+  "text": ""
+}
+,
+{
+  "theme": "garyblessington",
+  "ps1": "%{$fg[cyan]%}%c%{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%}% %{$reset_color%}: ",
+  "text": "\u001b[36mps1parser\u001b[01;34m\u001b[01;34m\u001b[00m: "
+}
+,
+{
+  "theme": "gentoo",
+  "ps1": "%(!.%B%F{red}.%B%F{green}%n@)%m %F{blue}%(!.%1~.%~) ${vcs_info_msg_0_}%F{blue}%(!.#.$)%k%b%f ",
+  "text": "\u001b[1m\u001b[32mkumiko@kumikodeMacBook-Air \u001b[34m~/Project/magonote/pkg/ps1parser \u001b[34m$\u001b[49m\u001b[0m\u001b[34m\u001b[39m "
+}
+,
+{
+  "theme": "geoffgarside",
+  "ps1": "[%*] %{$fg[cyan]%}%n%{$reset_color%}:%{$fg[green]%}%c%{$reset_color%}$(git_prompt_info) %(!.#.$) ",
+  "text": "[22:33:44] \u001b[36mkumiko\u001b[00m:\u001b[32mps1parser\u001b[00m $ "
+}
+,
+{
+  "theme": "gianu",
+  "ps1": "[%{$fg_bold[white]%}%n%{$reset_color%}@%{$fg_bold[red]%}%m%{$reset_color%} %{$fg[cyan]%}%c%{$reset_color%} $(git_prompt_info)%{$reset_color%}]$ ",
+  "text": "[\u001b[01;37mkumiko\u001b[00m@\u001b[01;31mkumikodeMacBook-Air\u001b[00m \u001b[36mps1parser\u001b[00m \u001b[00m]$ "
+}
+,
+{
+  "theme": "gnzh",
+  "ps1": "╭─$(virtualenv_prompt_info)%F{green}%n%f%F{cyan}@%F{green}%m%f %B%F{blue}%~%f%b $(ruby_prompt_info) $(git_prompt_info)\n╰─%f➤ %f ",
+  "text": "╭─\u001b[32mkumiko\u001b[39m\u001b[36m@\u001b[32mkumikodeMacBook-Air\u001b[39m \u001b[1m\u001b[34m~/Project/magonote/pkg/ps1parser\u001b[39m\u001b[0m  \n╰─\u001b[39m➤ \u001b[39m "
+}
+,
+{
+  "theme": "gozilla",
+  "ps1": "%{$fg_bold[red]%}➜ %{$fg_bold[green]%} %{$fg[cyan]%}%c %{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}",
+  "text": "\u001b[01;31m➜ \u001b[01;32m \u001b[36mps1parser \u001b[01;34m\u001b[01;34m \u001b[00m"
+}
+,
+{
+  "theme": "half-life",
+  "ps1": "%{\u001b[35m%}%n%{\u001b[00m%} in %{\u001b[32m%}%~%{\u001b[00m%}$(virtualenv_prompt_info)$(ruby_prompt_info)$vcs_info_msg_0_%{\u001b[33m%} λ%{\u001b[00m%} ",
+  "text": "\u001b[35mkumiko\u001b[00m in \u001b[32m~/Project/magonote/pkg/ps1parser\u001b[00m\u001b[33m λ\u001b[00m "
+}
+,
+{
+  "theme": "humza",
+  "ps1": "%{$reset_color%}%n %{$fg[green]%}{%{$reset_color%}%~%{$fg[green]%}}%{$reset_color%}$(git_prompt_info) greetings, earthling %{$fg[green]%}[%{$reset_color%}%{$TotalSize%}%{$suffix%}%{$fg[green]%}]%{$fg[red]%}$%{$reset_color%} ☞ ",
+  "text": "\u001b[00mkumiko \u001b[32m{\u001b[00m~/Project/magonote/pkg/ps1parser\u001b[32m}\u001b[00m greetings, earthling \u001b[32m[\u001b[00m82.292kb\u001b[32m]\u001b[31m$\u001b[00m ☞ "
+}
+,
+{
+  "theme": "imajes",
+  "ps1": "%{\u001b[31m%}%%%{\u001b[00m%} ",
+  "text": "\u001b[31m%\u001b[00m "
+}
+,
+{
+  "theme": "intheloop",
+  "ps1": "\n%{$fg_bold[grey]%}[%{$reset_color%}%{$fg_bold[${host_color}]%}%n@%m%{$reset_color%}%{$fg_bold[grey]%}]%{$reset_color%} %{$fg_bold[blue]%}%10c%{$reset_color%} $(git_prompt_info) $(git_remote_status)\n%{$fg_bold[cyan]%}❯%{$reset_color%} ",
+  "text": "\n\u001b[01;30m[\u001b[00m\u001b[01;32mkumiko@kumikodeMacBook-Air\u001b[00m\u001b[01;30m]\u001b[00m \u001b[01;34m~/Project/magonote/pkg/ps1parser\u001b[00m  \n\u001b[01;36m❯\u001b[00m "
+}
+,
+{
+  "theme": "itchy",
+  "ps1": "${user}${host} ${pwd}\n${smiley}  ",
+  "text": "\u001b[36mkumiko\u001b[00m\u001b[36m@kumikodeMacBook-Air\u001b[00m \u001b[33m~/Project/magonote/pkg/ps1parser\u001b[00m\n\u001b[32m☺\u001b[00m  "
+}
+,
+{
+  "theme": "jaischeema",
+  "ps1": "%{$fg_bold[magenta]%}%m%{$reset_color%} at %{$fg_bold[green]%}%~%{$reset_color%} %{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%}% %{$reset_color%}%{$fg[red]%}❯%{$reset_color%} ",
+  "text": "\u001b[01;35mkumikodeMacBook-Air\u001b[00m at \u001b[01;32m~/Project/magonote/pkg/ps1parser\u001b[00m \u001b[01;34m\u001b[01;34m\u001b[00m\u001b[31m❯\u001b[00m "
+}
+,
+{
+  "theme": "jbergantine",
+  "ps1": "%{$fg_bold[red]%}➜ %{$fg_bold[green]%} %{$fg[cyan]%}%c %{$fg_bold[white]%}$(git_prompt_info)%{$fg_bold[white]%} % %{$reset_color%}",
+  "text": "\u001b[01;31m➜ \u001b[01;32m \u001b[36mps1parser \u001b[01;37m\u001b[01;37m \u001b[00m"
+}
+,
+{
+  "theme": "jispwoso",
+  "ps1": "%{$fg[green]%}%n@%m: %{$reset_color%}%{$fg[blue]%}%/ %{$reset_color%}%{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}\n${ret_status} %{$reset_color%} ",
+  "text": "\u001b[32mkumiko@kumikodeMacBook-Air: \u001b[00m\u001b[34m/Users/kumiko/Project/magonote/pkg/ps1parser \u001b[00m\u001b[01;34m\u001b[01;34m \u001b[00m\n\u001b[01;32m➜  \u001b[00m "
+}
+,
+{
+  "theme": "jnrowe",
+  "ps1": "${ret_status}%{$fg[blue]%}${PROMPT_HOST}%{$fg_bold[green]%} %{$fg_bold[yellow]%}%2~ ${vcs_info_msg_0_}${dir_status}%{$reset_color%} ",
+  "text": "\u001b[01;32mΞ\u001b[34m\u001b[01;32m \u001b[01;33mpkg/ps1parser \u001b[00m "
+}
+,
+{
+  "theme": "jonathan",
+  "ps1": "${PR_SET_CHARSET}${PR_STITLE}${(e)PR_TITLEBAR}\\\n${PR_CYAN}${PR_ULCORNER}${PR_HBAR}${PR_GREY}(\\\n${PR_GREEN}%${PR_PWDLEN}<...<%~%<<\\\n${PR_GREY})$(virtualenv_prompt_info)$(ruby_prompt_info)${PR_CYAN}${PR_HBAR}${PR_HBAR}${(e)PR_FILLBAR}${PR_HBAR}${PR_GREY}(\\\n${PR_CYAN}%(!.%SROOT%s.%n)${PR_GREY}@${PR_GREEN}%m:%l\\\n${PR_GREY})${PR_CYAN}${PR_HBAR}${PR_URCORNER}\\\n\n${PR_CYAN}${PR_LLCORNER}${PR_BLUE}${PR_HBAR}(\\\n${PR_YELLOW}%D{%H:%M:%S}\\\n${PR_LIGHT_BLUE}%{$reset_color%}$(git_prompt_info)$(git_prompt_status)${PR_BLUE})${PR_CYAN}${PR_HBAR}\\\n${PR_HBAR}\\\n>${PR_NO_COLOUR} ",
+  "text": "\u001b]0;kumiko@kumikodeMacBook-Air:~/Project/magonote/pkg/ps1parser | 183x52 | ttys001\u0007\n\u001b[1m\u001b[36m┌─\u001b[1m\u001b[30m(\n\u001b[1m\u001b[32m~/Project/magonote/pkg/ps1parser\n\u001b[1m\u001b[30m)\u001b[1m\u001b[36m───\u001b[1m\u001b[30m(\n\u001b[1m\u001b[36mkumiko\u001b[1m\u001b[30m@\u001b[1m\u001b[32mkumikodeMacBook-Air:s001\n\u001b[1m\u001b[30m)\u001b[1m\u001b[36m─┐\n\n\u001b[1m\u001b[36m└\u001b[1m\u001b[34m─(\n\u001b[1m\u001b[33m22:33:51\n\u001b[34m\u001b[00m\u001b[1m\u001b[34m)\u001b[1m\u001b[36m─\n─\n>\u001b(B\u001b[m "
+}
+,
+{
+  "theme": "josh",
+  "ps1": "\n%n@%m $(josh_prompt)\n%(?,%{%F{green}%},%{%F{red}%})⚡%{$reset_color%} ",
+  "text": "\nkumiko@kumikodeMacBook-Air \u001b[32m/Users/kumiko/Project/magonote/pkg/ps1parser                                                                                           \u001b[31m\u001b[00m feat-ps1-parser\n\u001b[32m⚡\u001b[00m "
+}
+,
+{
+  "theme": "jreese",
+  "ps1": "%{$fg[$NCOLOR]%}%n%{$fg[green]%}@%m%{$reset_color%} %~ \\\n$(git_prompt_info)\\\n%{$fg[red]%}%(!.#.»)%{$reset_color%} ",
+  "text": "\u001b[32mkumiko\u001b[32m@kumikodeMacBook-Air\u001b[00m ~/Project/magonote/pkg/ps1parser \n\n\u001b[31m»\u001b[00m "
+}
+,
+{
+  "theme": "jtriley",
+  "ps1": "%{\u001b[01;36m%}%T%{\u001b[01;32m%} %{\u001b[01;37m%}%n%{\u001b[35m%}@%{\u001b[01;37m%}%m %{\u001b[01;32m%}%d\n%{\u001b[01;33m%}%% %{\u001b[00m%}",
+  "text": "\u001b[01;36m22:33\u001b[01;32m \u001b[01;37mkumiko\u001b[35m@\u001b[01;37mkumikodeMacBook-Air \u001b[01;32m/Users/kumiko/Project/magonote/pkg/ps1parser\n\u001b[01;33m% \u001b[00m"
+}
+,
+{
+  "theme": "juanghurtado",
+  "ps1": "\n%{$GREEN_BOLD%}%n@%m%{$WHITE%}:%{$YELLOW%}%~%u$(parse_git_dirty)$(git_prompt_ahead)%{$RESET_COLOR%}\n%{$BLUE%}>%{$RESET_COLOR%} ",
+  "text": "\n\u001b[01;32mkumiko@kumikodeMacBook-Air\u001b[37m:\u001b[33m~/Project/magonote/pkg/ps1parser\u001b[24m\u001b[32m \u001b[31m(*)\u001b[00m\n\u001b[34m>\u001b[00m "
+}
+,
+{
+  "theme": "junkfood",
+  "ps1": "%{\u001b[01;31m%}#%{\u001b[01;37m%}( %{\u001b[01;33m%}%W%{\u001b[00m%}@%{\u001b[01;37m%}%t )( %{\u001b[00m%}%{\u001b[01;32m%}%n%{\u001b[00m%}@%{\u001b[01;34m%}%m%{\u001b[37m%} ):%{\u001b[00m%}%{\u001b[36m%}%~$(git_prompt_info)%{\u001b[00m%}\n   ",
+  "text": "\u001b[01;31m#\u001b[01;37m( \u001b[01;33m08/09/25\u001b[00m@\u001b[01;37m10:33PM )( \u001b[00m\u001b[01;32mkumiko\u001b[00m@\u001b[01;34mkumikodeMacBook-Air\u001b[37m ):\u001b[00m\u001b[36m~/Project/magonote/pkg/ps1parser\u001b[00m\n   "
+}
+,
+{
+  "theme": "kafeitu",
+  "ps1": "%{$fg_bold[red]%}➜ %{$fg_bold[green]%}%n%{$fg[cyan]%}@%{$fg_bold[green]%}%m %{$fg_bold[green]%} %{$fg[cyan]%}%~ %{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}",
+  "text": "\u001b[01;31m➜ \u001b[01;32mkumiko\u001b[36m@\u001b[01;32mkumikodeMacBook-Air \u001b[01;32m \u001b[36m~/Project/magonote/pkg/ps1parser \u001b[01;34m\u001b[01;34m \u001b[00m"
+}
+,
+{
+  "theme": "kardan",
+  "ps1": "> ",
+  "text": "> "
+}
+,
+{
+  "theme": "kennethreitz",
+  "ps1": "$(virtualenv_prompt_info)%{\u001b[03m%}%{$fg[green]%}%c \\\n$(git_prompt_info)\\\n\\\n%{$fg[red]%}%(!.#.»)%{$reset_color%} ",
+  "text": "\u001b[03m\u001b[32mps1parser \n\n\n\u001b[31m»\u001b[00m "
+}
+,
+{
+  "theme": "kiwi",
+  "ps1": "%{$fg_bold[green]%}┌[%{$fg_bold[cyan]%}kiwish-4.2%{$fg_bold[green]%}]-(%{$fg_bold[white]%}%2~%{$fg_bold[green]%})-$(git_prompt_info)$(svn_prompt_info)$(battery_pct_prompt)\n└> % %{$reset_color%}",
+  "text": "\u001b[01;32m┌[\u001b[01;36mkiwish-4.2\u001b[01;32m]-(\u001b[01;37mpkg/ps1parser\u001b[01;32m)-\n└> \u001b[00m"
+}
+,
+{
+  "theme": "kolo",
+  "ps1": "%B%F{magenta}%c%B%F{green}${vcs_info_msg_0_}%B%F{magenta} %{$reset_color%}%% ",
+  "text": "\u001b[1m\u001b[32m\u001b[35mps1parser\u001b[1m\u001b[35m\u001b[32m\u001b[1m\u001b[32m\u001b[35m \u001b[00m% "
+}
+,
+{
+  "theme": "kphoen",
+  "ps1": "[%{$fg[red]%}%n%{$reset_color%}@%{$fg[magenta]%}%m%{$reset_color%}:%{$fg[blue]%}%~%{$reset_color%}$(git_prompt_info)]\n%# ",
+  "text": "[\u001b[31mkumiko\u001b[00m@\u001b[35mkumikodeMacBook-Air\u001b[00m:\u001b[34m~/Project/magonote/pkg/ps1parser\u001b[00m]\n% "
+}
+,
+{
+  "theme": "lambda",
+  "ps1": "λ %~/ $(git_prompt_info)%{$reset_color%}",
+  "text": "λ ~/Project/magonote/pkg/ps1parser/ \u001b[00m"
+}
+,
+{
+  "theme": "linuxonly",
+  "ps1": "λ %~/ $(git_prompt_info)%{$reset_color%}",
+  "text": "λ ~/Project/magonote/pkg/ps1parser/ \u001b[00m"
+}
+,
+{
+  "theme": "lukerandall",
+  "ps1": "%{$fg_bold[green]%}%n@%m%{$reset_color%} %{$fg_bold[blue]%}%2~%{$reset_color%} $(my_git_prompt_info)%{$reset_color%}%B»%b ",
+  "text": "\u001b[01;32mkumiko@kumikodeMacBook-Air\u001b[00m \u001b[01;34mpkg/ps1parser\u001b[00m \u001b[33m(feat-ps1-parser) \u001b[00m\u001b[00m\u001b[1m\u001b[32m»\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "macovsky-ruby",
+  "ps1": "%{$fg[green]%}%~%{$reset_color%} $(ruby_prompt_info) $(git_prompt_info)%{$reset_color%}%B$%b ",
+  "text": "\u001b[32m~/Project/magonote/pkg/ps1parser\u001b[00m  \u001b[00m\u001b[1m\u001b[32m$\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "macovsky",
+  "ps1": "%{$fg[green]%}%~%{$reset_color%} $(ruby_prompt_info) $(git_prompt_info)%{$reset_color%}%B$%b ",
+  "text": "\u001b[32m~/Project/magonote/pkg/ps1parser\u001b[00m  \u001b[00m\u001b[1m\u001b[32m$\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "maran",
+  "ps1": "%{$fg[cyan]%}%n%{$reset_color%}@%{$fg[yellow]%}%M:%{$fg[green]%}%/%{$reset_color%}$(git_prompt_info) %(!.#.$) ",
+  "text": "\u001b[36mkumiko\u001b[00m@\u001b[33mkumikodeMacBook-Air.local:\u001b[32m/Users/kumiko/Project/magonote/pkg/ps1parser\u001b[00m $ "
+}
+,
+{
+  "theme": "mgutz",
+  "ps1": "%{$fg_bold[magenta]%}%1~$(git_prompt_info) %{$fg_bold[magenta]%}%# %{$reset_color%}",
+  "text": "\u001b[01;35mps1parser \u001b[01;35m% \u001b[00m"
+}
+,
+{
+  "theme": "mh",
+  "ps1": "[%{$fg[$NCOLOR]%}%B%n%b%{$reset_color%}:%{$fg[red]%}%30<...<%~%<<%{$reset_color%}]%(!.#.$) ",
+  "text": "[\u001b[37m\u001b[1m\u001b[32mkumiko\u001b[0m\u001b[32m\u001b[00m:\u001b[31m...ject/magonote/pkg/ps1parser\u001b[00m]$ "
+}
+,
+{
+  "theme": "michelebologna",
+  "ps1": "%(!..%{\u001b[01;34m%}%n%{\u001b[00m%}@)%{\u001b[01;35m%}%m%{\u001b[00m%}:%{\u001b[01;34m%}%~%{\u001b[00m%}%1(j. [%{\u001b[01;31m%}fg: %j%{\u001b[00m%}].)$(michelebologna_git_prompt) %(?.%(!.%{\u001b[01;31m%}.%{\u001b[01;32m%}).%{\u001b[01;33m%})%#%{\u001b[00m%} ",
+  "text": "\u001b[01;34mkumiko\u001b[00m@\u001b[01;35mkumikodeMacBook-Air\u001b[00m:\u001b[01;34m~/Project/magonote/pkg/ps1parser\u001b[00m \u001b[01;32m%\u001b[00m "
+}
+,
+{
+  "theme": "mikeh",
+  "ps1": "%{\u001b[0;34m%}%B..[%b%{\u001b[0m%}%{\u001b[1;32m%}%n%{\u001b[1;30m%}@%{\u001b[0m%}%{\u001b[0;36m%}%m%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %b%{\u001b[0;34m%}%B[%b%{\u001b[1;37m%}%~%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %{\u001b[0;34m%}%B[%b%{\u001b[0;33m%}%D{%a %b %d, %I:%M}%b%{\u001b[0;34m%}%B]%b%{\u001b[0m%}\n%{\u001b[0;34m%}%B..%B[%{\u001b[1;35m%}$%{\u001b[0;34m%}%B] <($vcs_info_msg_0_)>%{\u001b[0m%}%b ",
+  "text": "\u001b[0;34m\u001b[1m\u001b[32m..[\u001b[0m\u001b[32m\u001b[0m\u001b[1;32mkumiko\u001b[1;30m@\u001b[0m\u001b[0;36mkumikodeMacBook-Air\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m - \u001b[0m\u001b[32m\u001b[0;34m\u001b[1m\u001b[32m[\u001b[0m\u001b[32m\u001b[1;37m~/Project/magonote/pkg/ps1parser\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m - \u001b[0;34m\u001b[1m\u001b[32m[\u001b[0m\u001b[32m\u001b[0;33mSat Aug 09, 10:34\u001b[0m\u001b[32m\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m\n\u001b[0;34m\u001b[1m\u001b[32m..\u001b[1m\u001b[32m[\u001b[1;35m$\u001b[0;34m\u001b[1m\u001b[32m] <()>\u001b[0m\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "miloshadzic",
+  "ps1": "%{$fg[cyan]%}%1~%{$reset_color%}%{$fg[red]%}|%{$reset_color%}$(git_prompt_info)%{$fg[cyan]%}⇒%{$reset_color%} ",
+  "text": "\u001b[36mps1parser\u001b[00m\u001b[31m|\u001b[00m\u001b[36m⇒\u001b[00m "
+}
+,
+{
+  "theme": "minimal",
+  "ps1": "%2~ $(vcs_status)»%b ",
+  "text": "pkg/ps1parser »\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "mira",
+  "ps1": "╭─%{$terminfo[bold]$fg[green]%}%n@%m%{$reset_color%} %{$terminfo[bold]$fg[blue]%} %~%{$reset_color%} %{$fg[green]%}‹node-$(nvm_prompt_info)›%{$reset_color%} $(ruby_prompt_info) %{$fg[blue]%}‹$(jenv_prompt_info)›%{$reset_color%} $(git_prompt_info)\n╰─%B$%b ",
+  "text": "╭─\u001b[1m\u001b[32mkumiko@kumikodeMacBook-Air\u001b[00m \u001b[1m\u001b[34m ~/Project/magonote/pkg/ps1parser\u001b[00m \u001b[32m‹node-›\u001b[00m  \u001b[34m‹›\u001b[00m \n╰─\u001b[1m\u001b[32m$\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "mlh",
+  "ps1": "%b$(username)$MLH_AT_SYMBOL$(device)$MLH_IN_SYMBOL$(directory)$(git_prompt_info)%b$(prompt_end)",
+  "text": "\u001b[0m\u001b[32m\u001b[31mkumiko\u001b[39m@\u001b[38;5;33mkumikodeMacBook-Air\u001b[39m in \u001b[38;5;220mps1parser\u001b[39m\u001b[0m\n$ "
+}
+,
+{
+  "theme": "mortalscumbag",
+  "ps1": "\n$(_toolbox_prompt_info)$(ssh_connection)%{$fg_bold[green]%}%n@%m%{$reset_color%}$(my_git_prompt) : %~\n[${ret_status}] %# ",
+  "text": "\n\u001b[01;32mkumiko@kumikodeMacBook-Air\u001b[00m \u001b[37m‹ \u001b[01;33mfeat-ps1-parser \u001b[01;31m●\u001b[01;37m● \u001b[01;37m›\u001b[00m : ~/Project/magonote/pkg/ps1parser\n[\u001b[01;32m0\u001b[00m] % "
+}
+,
+{
+  "theme": "mrtazz",
+  "ps1": "%{$fg_bold[red]%}%m%{$reset_color%}:%{$fg[cyan]%}%c%{$reset_color%}:%# ",
+  "text": "\u001b[01;31mkumikodeMacBook-Air\u001b[00m:\u001b[36mps1parser\u001b[00m:% "
+}
+,
+{
+  "theme": "murilasso",
+  "ps1": "%{$terminfo[bold]$fg[green]%}%n@%m%{$reset_color%}:%{$terminfo[bold]$fg[blue]%}%~%{$reset_color%} %{$fg[red]%}$(ruby_prompt_info)%{$reset_color%}\n%{$fg[blue]%}$(git_prompt_info)%{$reset_color%} %B$%b ",
+  "text": "\u001b[1m\u001b[32mkumiko@kumikodeMacBook-Air\u001b[00m:\u001b[1m\u001b[34m~/Project/magonote/pkg/ps1parser\u001b[00m \u001b[31m\u001b[00m\n\u001b[34m\u001b[00m \u001b[1m\u001b[32m$\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "muse",
+  "ps1": "%{\u001b[38;5;117m%}%~%{\u001b[00m%}$(git_prompt_info)$(virtualenv_prompt_info)%{\u001b[38;5;133m%}$(git_prompt_status) %{\u001b[38;5;077m%}ᐅ%{\u001b[00m%} ",
+  "text": "\u001b[38;5;117m~/Project/magonote/pkg/ps1parser\u001b[00m\u001b[38;5;133m \u001b[38;5;077mᐅ\u001b[00m "
+}
+,
+{
+  "theme": "nanotech",
+  "ps1": "%F{green}%2c%F{blue} [%f ",
+  "text": "\u001b[32mpkg/ps1parser\u001b[34m [\u001b[39m "
+}
+,
+{
+  "theme": "nebirhos",
+  "ps1": "%{\u001b[01;31m%}@%m ➜ %{\u001b[01;36m%}%c %{\u001b[01;34m%}$(git_prompt_info)%{\u001b[01;34m%} % %{\u001b[00m%}",
+  "text": "\u001b[01;31m@kumikodeMacBook-Air ➜ \u001b[01;36mps1parser \u001b[01;34m\u001b[01;34m \u001b[00m"
+}
+,
+{
+  "theme": "nicoulaj",
+  "ps1": "%(0?.%{%{\u001b[38;5;071m%}%}.%{%{\u001b[38;5;124m%}%})%{%{\u001b[01m%}%}%30<..<${vcs_info_msg_0_%%.}%<<%(!.❯❯❯.❯)%{%{\u001b[22m%}%}%{%{\u001b[00m%}%} ",
+  "text": "\u001b[38;5;071m\u001b[01m❯\u001b[22m\u001b[00m "
+}
+,
+{
+  "theme": "norm",
+  "ps1": "%{$fg[yellow]%}λ %m %{$fg[green]%}%c %{$fg[yellow]%}→ $(git_prompt_info)$(hg_prompt_info)%{$reset_color%}",
+  "text": "\u001b[33mλ kumikodeMacBook-Air \u001b[32mps1parser \u001b[33m→ \u001b[00m"
+}
+,
+{
+  "theme": "obraun",
+  "ps1": "%{$fg[green]%}[%D{%H:%M:%S}]%{$reset_color%} %{$fg_no_bold[cyan]%}%n %{${fg_bold[blue]}%}::%{$reset_color%} %{$fg[yellow]%}%m%{$reset_color%} %{$fg_no_bold[magenta]%} ➜ %{$reset_color%} %{${fg[green]}%}%3~ $(git_prompt_info)%{${fg_bold[$CARETCOLOR]}%}»%{${reset_color}%} ",
+  "text": "\u001b[32m[22:34:16]\u001b[00m \u001b[22;36mkumiko \u001b[01;34m::\u001b[00m \u001b[33mkumikodeMacBook-Air\u001b[00m \u001b[22;35m ➜ \u001b[00m \u001b[32mmagonote/pkg/ps1parser \u001b[01;34m»\u001b[00m "
+}
+,
+{
+  "theme": "oldgallois",
+  "ps1": "%{$fg[cyan]%}[%~% ]%(?.%{$fg[green]%}.%{$fg[red]%})%B$%b ",
+  "text": "\u001b[36m[~/Project/magonote/pkg/ps1parser]\u001b[32m\u001b[1m\u001b[32m$\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "peepcode",
+  "ps1": "\n${VIRTUAL_ENV:+\"($VIRTUAL_ENV) \"}%~\n${smiley}  ",
+  "text": "\n~/Project/magonote/pkg/ps1parser\n\u001b[32m☺\u001b[39m  "
+}
+,
+{
+  "theme": "philips",
+  "ps1": "%{$fg[$NCOLOR]%}%B%n%b%{$reset_color%}:%{$fg[blue]%}%B%c/%b%{$reset_color%} $(git_prompt_info)%(!.#.$) ",
+  "text": "\u001b[32m\u001b[1m\u001b[32mkumiko\u001b[0m\u001b[32m\u001b[00m:\u001b[34m\u001b[1m\u001b[32mps1parser/\u001b[0m\u001b[32m\u001b[00m $ "
+}
+,
+{
+  "theme": "pmcgee",
+  "ps1": "\n%{$fg[$NCOLOR]%}%B%n@%m%b%{$reset_color%} %{$fg[white]%}%B${PWD/#$HOME/~}%b%{$reset_color%}\n$(git_prompt_info)%(!.#.$) ",
+  "text": "\n\u001b[32m\u001b[1m\u001b[32mkumiko@kumikodeMacBook-Air\u001b[0m\u001b[32m\u001b[00m \u001b[37m\u001b[1m\u001b[32m~/Project/magonote/pkg/ps1parser\u001b[0m\u001b[32m\u001b[00m\n$ "
+}
+,
+{
+  "theme": "pygmalion-virtualenv",
+  "ps1": "\n%{$fg[$NCOLOR]%}%B%n@%m%b%{$reset_color%} %{$fg[white]%}%B${PWD/#$HOME/~}%b%{$reset_color%}\n$(git_prompt_info)%(!.#.$) ",
+  "text": "\n\u001b[32m\u001b[1m\u001b[32mkumiko@kumikodeMacBook-Air\u001b[0m\u001b[32m\u001b[00m \u001b[37m\u001b[1m\u001b[32m~/Project/magonote/pkg/ps1parser\u001b[0m\u001b[32m\u001b[00m\n$ "
+}
+,
+{
+  "theme": "pygmalion",
+  "ps1": "%{\u001b[00m%}%F{magenta}%n%F{cyan}@%F{yellow}%m%F{red}:%F{cyan}%0~%F{red}|%f$(git_prompt_info)%{\u001b[00m%}%F{cyan}⇒%f  ",
+  "text": "\u001b[00m\u001b[35mkumiko\u001b[36m@\u001b[33mkumikodeMacBook-Air\u001b[31m:\u001b[36m~/Project/magonote/pkg/ps1parser\u001b[31m|\u001b[39m\u001b[00m\u001b[36m⇒\u001b[39m  "
+}
+,
+{
+  "theme": "random",
+  "ps1": "%{$fg[cyan]%}┌[%{$fg_bold[white]%}%n%{$reset_color%}%{$fg[cyan]%}☮%{$fg_bold[white]%}%M%{$reset_color%}%{$fg[cyan]%}]%{$fg[white]%}-%{$fg[cyan]%}(%{$fg_bold[white]%}%~%{$reset_color%}%{$fg[cyan]%})$(git_prompt_info)\n└> % %{$reset_color%}",
+  "text": "\u001b[36m┌[\u001b[01;37mkumiko\u001b[00m\u001b[36m☮\u001b[01;37mkumikodeMacBook-Air.local\u001b[00m\u001b[36m]\u001b[37m-\u001b[36m(\u001b[01;37m~/Project/magonote/pkg/ps1parser\u001b[00m\u001b[36m)\n└> \u001b[00m"
+}
+,
+{
+  "theme": "re5et",
+  "ps1": "\n%{$fg_bold[cyan]%}%n%{$reset_color%}%{$fg[yellow]%}@%{$reset_color%}%{$fg_bold[blue]%}%m%{$reset_color%}:%{${fg_bold[green]}%}%~%{$reset_color%}$(git_prompt_info)\n%{${fg[$CARETCOLOR]}%}%# %{${reset_color}%}",
+  "text": "\n\u001b[01;36mkumiko\u001b[00m\u001b[33m@\u001b[00m\u001b[01;34mkumikodeMacBook-Air\u001b[00m:\u001b[01;32m~/Project/magonote/pkg/ps1parser\u001b[00m\n\u001b[35m% \u001b[00m"
+}
+,
+{
+  "theme": "refined",
+  "ps1": "%(?.%F{magenta}.%F{red})❯%f ",
+  "text": "\u001b[35m❯\u001b[39m "
+}
+,
+{
+  "theme": "rgm",
+  "ps1": "\n%n@%m %{$fg[cyan]%}%~\n%? $(git_prompt_info)%{$fg_bold[blue]%}%% %{$reset_color%}",
+  "text": "\nkumiko@kumikodeMacBook-Air \u001b[36m~/Project/magonote/pkg/ps1parser\n0 \u001b[01;34m% \u001b[00m"
+}
+,
+{
+  "theme": "risto",
+  "ps1": "%{$fg[green]%}%n@%m:%{$fg_bold[blue]%}%2~ $(git_prompt_info)%{$reset_color%}%(!.#.$) ",
+  "text": "\u001b[32mkumiko@kumikodeMacBook-Air:\u001b[01;34mpkg/ps1parser \u001b[00m$ "
+}
+,
+{
+  "theme": "rixius",
+  "ps1": "\n%{$RIXIUS_PRE%}%n%{$reset_color%} in %{$fg_bold[green]%}$(collapse_pwd)%{$reset_color%}$(git_prompt_info)\n$(prompt_char) ",
+  "text": "\n\u001b[47m\u001b[31mkumiko\u001b[00m in \u001b[01;32m~/Project/magonote/pkg/ps1parser\u001b[00m\n\u001b[47m\u001b[31m±\u001b[00m "
+}
+,
+{
+  "theme": "rkj-repos",
+  "ps1": "%{$fg_bold[blue]%}┌─[%{$fg_bold[green]%}%n%b%{$fg[black]%}@%{$fg[cyan]%}%m%{$fg_bold[blue]%}]%{$reset_color%} - %{$fg_bold[blue]%}[%{$fg_bold[default]%}%~%{$fg_bold[blue]%}]%{$reset_color%} - %{$fg_bold[blue]%}[%b%{$fg[yellow]%}%D{%Y-%m-%d %I:%M:%S}%b%{$fg_bold[blue]%}]\n%{$fg_bold[blue]%}└─[%{$fg_bold[magenta]%}%?$(retcode)%{$fg_bold[blue]%}] <$(mygit)$(hg_prompt_info)>%{$reset_color%} ",
+  "text": "\u001b[01;34m┌─[\u001b[01;32mkumiko\u001b[0m\u001b[32m\u001b[30m@\u001b[36mkumikodeMacBook-Air\u001b[01;34m]\u001b[00m - \u001b[01;34m[\u001b[01;39m~/Project/magonote/pkg/ps1parser\u001b[01;34m]\u001b[00m - \u001b[01;34m[\u001b[0m\u001b[32m\u001b[33m2025-08-09 10:34:27\u001b[0m\u001b[32m\u001b[01;34m]\n\u001b[01;34m└─[\u001b[01;35m0\u001b[01;34m] <git:(feat-ps1-parser \u001b[34me262fee\u001b[00m\u001b[01;34m) >\u001b[00m "
+}
+,
+{
+  "theme": "rkj",
+  "ps1": "%{\u001b[0;34m%}%B┌─[%b%{\u001b[0m%}%{\u001b[1;32m%}%n%{\u001b[1;30m%}@%{\u001b[0m%}%{\u001b[0;36m%}%m%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %b%{\u001b[0;34m%}%B[%b%{\u001b[1;37m%}%~%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %{\u001b[0;34m%}%B[%b%{\u001b[0;33m%}%D{%Y-%m-%d %I:%M:%S}%b%{\u001b[0;34m%}%B]%b%{\u001b[0m%}\n%{\u001b[0;34m%}%B└─%B[%{\u001b[1;35m%}%?$(retcode)%{\u001b[0;34m%}%B]%{\u001b[0m%}%b ",
+  "text": "\u001b[0;34m\u001b[1m\u001b[32m┌─[\u001b[0m\u001b[32m\u001b[0m\u001b[1;32mkumiko\u001b[1;30m@\u001b[0m\u001b[0;36mkumikodeMacBook-Air\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m - \u001b[0m\u001b[32m\u001b[0;34m\u001b[1m\u001b[32m[\u001b[0m\u001b[32m\u001b[1;37m~/Project/magonote/pkg/ps1parser\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m - \u001b[0;34m\u001b[1m\u001b[32m[\u001b[0m\u001b[32m\u001b[0;33m2025-08-09 10:34:28\u001b[0m\u001b[32m\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m\n\u001b[0;34m\u001b[1m\u001b[32m└─\u001b[1m\u001b[32m[\u001b[1;35m0\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "robbyrussell",
+  "ps1": "%(?:%{\u001b[01;32m%}%1{➜%} :%{\u001b[01;31m%}%1{➜%} ) %{\u001b[36m%}%c%{\u001b[00m%} $(git_prompt_info)",
+  "text": "\u001b[01;32m➜  \u001b[36mps1parser\u001b[00m "
+}
+,
+{
+  "theme": "sammy",
+  "ps1": "%{$fg[white]%}%c$(git_prompt_info)$ % %{$reset_color%}",
+  "text": "\u001b[37mps1parser$ \u001b[00m"
+}
+,
+{
+  "theme": "simonoff",
+  "ps1": "$PR_SET_CHARSET$PR_STITLE${(e)PR_TITLEBAR}\\\n$PR_RED$PR_HBAR<\\\n$PR_BLUE%(!.$PR_RED%SROOT%s.%n)$PR_GREEN@$PR_BLUE%M:$PR_GREEN%$PR_PWDLEN<...<%~$PR_CYAN$(git_prompt_info)$(ruby_prompt_info)\\\n$PR_RED>$PR_HBAR${(e)PR_FILLBAR}\\\n$PR_RED$PR_HBAR<\\\n$PR_GREEN%l$PR_RED>$PR_HBAR\\\n\n$PR_RED$PR_HBAR<\\\n%(?..$PR_LIGHT_RED%?$PR_BLUE:)\\\n$PR_LIGHT_BLUE%(!.$PR_RED.$PR_WHITE)%#$PR_RED>$PR_HBAR\\\n$PR_NO_COLOUR ",
+  "text": "\u001b]0;kumiko@kumikodeMacBook-Air.local:~/Project/magonote/pkg/ps1parser   | 183x52 | ttys001\u0007\n\u001b[1m\u001b[31m-<\n\u001b[1m\u001b[34mkumiko\u001b[1m\u001b[32m@\u001b[1m\u001b[34mkumikodeMacBook-Air.local:\u001b[1m\u001b[32m~/Project/magonote/pkg/ps1parser\u001b[1m\u001b[36m\n\u001b[1m\u001b[31m>-\n\u001b[1m\u001b[31m-<\n\u001b[1m\u001b[32ms001\u001b[1m\u001b[31m>-\n\n\u001b[1m\u001b[31m-<\n\n\u001b[34m\u001b[1m\u001b[37m%\u001b[1m\u001b[31m>-\n\u001b(B\u001b[m "
+}
+,
+{
+  "theme": "simple",
+  "ps1": "%(!.%{$fg[red]%}.%{$fg[green]%})%~$(git_prompt_info)%{$reset_color%} ",
+  "text": "\u001b[32m~/Project/magonote/pkg/ps1parser\u001b[00m "
+}
+,
+{
+  "theme": "skaro",
+  "ps1": "%{$fg_bold[green]%}%h %{$fg[cyan]%}%2~ %{$fg_bold[blue]%}$(git_prompt_info) %{$reset_color%}» ",
+  "text": "\u001b[01;32m5370 \u001b[36mpkg/ps1parser \u001b[01;34m \u001b[00m» "
+}
+,
+{
+  "theme": "smt",
+  "ps1": "\n%{$fg[blue]%}%m%{$reset_color%} 福 %{$fg[cyan]%}%~ %{$reset_color%}$(git_prompt_short_sha)$(git_prompt_info)\n%{$fg[red]%}%!%{$reset_color%} $(prompt_char) : ",
+  "text": "\n\u001b[34mkumikodeMacBook-Air\u001b[00m 福 \u001b[36m~/Project/magonote/pkg/ps1parser \u001b[00m➤ \u001b[01;33me262fee\u001b[00m\n\u001b[31m5370\u001b[00m \u001b[32m±\u001b[00m : "
+}
+,
+{
+  "theme": "Soliah",
+  "ps1": "%{$fg[blue]%}%n%{$reset_color%} on %{$fg[red]%}%M%{$reset_color%} in %{$fg[blue]%}%~%b%{$reset_color%}$(git_time_since_commit)$(check_git_prompt_info)\n$ ",
+  "text": "\u001b[34mkumiko\u001b[00m on \u001b[31mkumikodeMacBook-Air.local\u001b[00m in \u001b[34m~/Project/magonote/pkg/ps1parser\u001b[0m\u001b[32m\u001b[00m(\u001b[33m12m\u001b[00m|\u001b[35mdetached-head\u001b[00m)\n$ "
+}
+,
+{
+  "theme": "sonicradish",
+  "ps1": "%{$ROOT_ICON_COLOR%}$ROOT_ICON%{$reset_color%}%{$MACHINE_NAME_COLOR%}%m➜  %{$reset_color%}%{$PROMPT_SUCCESS_COLOR%}%c%{$reset_color%} %{$GIT_PROMPT_INFO%}$(git_prompt_info)%{$GIT_DIRTY_COLOR%}$(git_prompt_status) %{$reset_color%}%{$PROMPT_PROMPT%}ᐅ %{$reset_color%} ",
+  "text": "\u001b[38;5;111m\u001b[00m\u001b[38;5;208mkumikodeMacBook-Air➜  \u001b[00m\u001b[38;5;103mps1parser\u001b[00m \u001b[38;5;148m\u001b[38;5;124m \u001b[00m\u001b[38;5;208mᐅ \u001b[00m "
+}
+,
+{
+  "theme": "sorin",
+  "ps1": "%{$fg[cyan]%}%c$(git_prompt_info) %(!.%{$fg_bold[red]%}#.%{$fg_bold[green]%}❯)%{$reset_color%} ",
+  "text": "\u001b[36mps1parser \u001b[01;32m❯\u001b[00m "
+}
+,
+{
+  "theme": "sporty_256",
+  "ps1": "%{$fg_bold[blue]%}$(git_prompt_info) %F{208}%c%f\n%{$fg_bold[white]%}%# %{$reset_color%}",
+  "text": "\u001b[01;34m \u001b[38;5;208mps1parser\u001b[39m\n\u001b[01;37m% \u001b[00m"
+}
+,
+{
+  "theme": "steeef",
+  "ps1": "\n%{$purple%}%n${PR_RST} at %{$orange%}%m${PR_RST} in %{$limegreen%}%~${PR_RST} $vcs_info_msg_0_$(virtualenv_info)\n$ ",
+  "text": "\n\u001b[38;5;135mkumiko\u001b[39m at \u001b[38;5;166mkumikodeMacBook-Air\u001b[39m in \u001b[38;5;118m~/Project/magonote/pkg/ps1parser\u001b[39m \n$ "
+}
+,
+{
+  "theme": "strug",
+  "ps1": "%{\u001b[32m%}╭─%n@%m %{\u001b[00m%}%{\u001b[33m%}in %~ %{\u001b[00m%}$(git_prompt_info)%{$reset_color%}$(git_remote_status)\n%{\u001b[32m%}╰$ %{\u001b[00m%}",
+  "text": "\u001b[32m╭─kumiko@kumikodeMacBook-Air \u001b[00m\u001b[33min ~/Project/magonote/pkg/ps1parser \u001b[00m\u001b[00m\n\u001b[32m╰$ \u001b[00m"
+}
+,
+{
+  "theme": "sunaku",
+  "ps1": "%(?..%{$fg_bold[red]%}exit %?\n%{$reset_color%})%{$bold_color%}$(git_prompt_status)%{$reset_color%}$(git_prompt_info)%{$fg[$user_color]%}%~%{$reset_color%}%(!.#.>) ",
+  "text": "\u001b[01m\u001b[00m\u001b[32m~/Project/magonote/pkg/ps1parser\u001b[00m> "
+}
+,
+{
+  "theme": "sunrise",
+  "ps1": "%B$PROMPTPREFIX %2~ $(custom_git_prompt)%{$M%}%B»%b%{$RESET%} ",
+  "text": "\u001b[1m\u001b[32m--- pkg/ps1parser \u001b[22;33m‹feat-ps1-parser\u001b[22;31m* \u001b[22;31mM\u001b[22;31m?\u001b[22;33m›\u001b[00m \u001b[22;35m\u001b[1m\u001b[32m»\u001b[0m\u001b[32m\u001b[00m "
+}
+,
+{
+  "theme": "superjarin",
+  "ps1": "%{\u001b[37m%}[%{\u001b[31m%}$(ruby_prompt_info)%{\u001b[37m%}]%{\u001b[00m%} %{\u001b[01;36m%}%~$(git_prompt_info)%{\u001b[00m%} ",
+  "text": "\u001b[37m[\u001b[31m\u001b[37m]\u001b[00m \u001b[01;36m~/Project/magonote/pkg/ps1parser\u001b[00m "
+}
+,
+{
+  "theme": "suvash",
+  "ps1": "%F{magenta}%n%f at %F{yellow}%m%f in %B%F{green}%~%f%b$(git_prompt_info)$(ruby_prompt_info)\n$(virtualenv_info) $(prompt_char) ",
+  "text": "\u001b[35mkumiko\u001b[39m at \u001b[33mkumikodeMacBook-Air\u001b[39m in \u001b[1m\u001b[32m~/Project/magonote/pkg/ps1parser\u001b[39m\u001b[0m\n ± "
+}
+,
+{
+  "theme": "takashiyoshida",
+  "ps1": "%{$fg_bold[white]%}[%{$fg_bold[cyan]%}%m%{$reset_color%}:%{$fg_bold[yellow]%}%c%{$fg_bold[white]%}]$(git_prompt_info)\n%{$fg_bold[white]%}[%{$fg_bold[white]%}%n%{$fg_bold[white]%}]%{$reset_color%}%# ",
+  "text": "\u001b[01;37m[\u001b[01;36mkumikodeMacBook-Air\u001b[00m:\u001b[01;33mps1parser\u001b[01;37m]\n\u001b[01;37m[\u001b[01;37mkumiko\u001b[01;37m]\u001b[00m% "
+}
+,
+{
+  "theme": "terminalparty",
+  "ps1": "%(?,%{$fg[green]%},%{$fg[red]%}) %% ",
+  "text": "\u001b[32m % "
+}
+,
+{
+  "theme": "theunraveler",
+  "ps1": "%{$fg[magenta]%}[%c] %{$reset_color%}",
+  "text": "\u001b[35m[ps1parser] \u001b[00m"
+}
+,
+{
+  "theme": "tjkirch_mod",
+  "ps1": "%(?,,%{$fg[red]%}FAIL: $?%{$reset_color%}\n)%{$fg[magenta]%}%n%{$reset_color%}@%{$fg[yellow]%}%m%{$reset_color%}: %{$fg_bold[blue]%}%~%{$reset_color%}$(git_prompt_info) $(prompt_char) ",
+  "text": "\u001b[35mkumiko\u001b[00m@\u001b[33mkumikodeMacBook-Air\u001b[00m: \u001b[01;34m~/Project/magonote/pkg/ps1parser\u001b[00m $ "
+}
+,
+{
+  "theme": "tjkirch",
+  "ps1": "%(?, ,%{$fg[red]%}FAIL: $?%{$reset_color%}\n)\n%{$fg[magenta]%}%n%{$reset_color%}@%{$fg[yellow]%}%m%{$reset_color%}: %{$fg_bold[blue]%}%~%{$reset_color%}$(git_prompt_info)\n$(prompt_char) ",
+  "text": " \n\u001b[35mkumiko\u001b[00m@\u001b[33mkumikodeMacBook-Air\u001b[00m: \u001b[01;34m~/Project/magonote/pkg/ps1parser\u001b[00m\n$ "
+}
+,
+{
+  "theme": "tonotdo",
+  "ps1": "%{$fg_no_bold[cyan]%}%n%{$fg_no_bold[magenta]%}➜%{$fg_no_bold[green]%}%3~$(git_prompt_info)%{$reset_color%}» ",
+  "text": "\u001b[22;36mkumiko\u001b[22;35m➜\u001b[22;32mmagonote/pkg/ps1parser\u001b[00m» "
+}
+,
+{
+  "theme": "trapd00r",
+  "ps1": "%{$fg_no_bold[cyan]%}%n%{$fg_no_bold[magenta]%}➜%{$fg_no_bold[green]%}%3~$(git_prompt_info)%{$reset_color%}» ",
+  "text": "\u001b[22;36mkumiko\u001b[22;35m➜\u001b[22;32mmagonote/pkg/ps1parser\u001b[00m» "
+}
+,
+{
+  "theme": "wedisagree",
+  "ps1": "%{$fg[magenta]%}[%c] %{$reset_color%}",
+  "text": "\u001b[35m[ps1parser] \u001b[00m"
+}
+,
+{
+  "theme": "wezm",
+  "ps1": "$(git_prompt_info)%(?,,%{${fg_bold[white]}%}[%?]%{$reset_color%} )%{$fg[yellow]%}%#%{$reset_color%} ",
+  "text": "\u001b[33m%\u001b[00m "
+}
+,
+{
+  "theme": "wezm+",
+  "ps1": "%{${fg_bold[yellow]}%}%n%{$reset_color%}%{${fg[yellow]}%}@%m%{$reset_color%} $(git_prompt_info)%(?,,%{${fg_bold[white]}%}[%?]%{$reset_color%} )%{$fg[yellow]%}%#%{$reset_color%} ",
+  "text": "\u001b[01;33mkumiko\u001b[00m\u001b[33m@kumikodeMacBook-Air\u001b[00m \u001b[33m%\u001b[00m "
+}
+,
+{
+  "theme": "wuffers",
+  "ps1": "%{$(git_prompt_info)%}%{$fg_bold[green]%}{%{$(rvm current 2>/dev/null || rbenv version-name 2>/dev/null)%}}%{$reset_color%} %{$fg[cyan]%}%c%{$reset_color%} ",
+  "text": "\u001b[01;32m{}\u001b[00m \u001b[36mps1parser\u001b[00m "
+}
+,
+{
+  "theme": "xiong-chiamiov-plus",
+  "ps1": "%{\u001b[0;34m%}%B┌─[%b%{\u001b[0m%}%{\u001b[1;32m%}%n%{\u001b[1;30m%}@%{\u001b[0m%}%{\u001b[0;36m%}%m%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %b%{\u001b[0;34m%}%B[%b%{\u001b[1;37m%}%~%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %{\u001b[0;34m%}%B[%b%{\u001b[0;33m%}%D{%a %b %d, %H:%M}%b%{\u001b[0;34m%}%B]%b%{\u001b[0m%}\n%{\u001b[0;34m%}%B└─%B[%{\u001b[1;35m%}$%{\u001b[0;34m%}%B] <$(git_prompt_info)>%{\u001b[0m%}%b ",
+  "text": "\u001b[0;34m\u001b[1m\u001b[32m┌─[\u001b[0m\u001b[32m\u001b[0m\u001b[1;32mkumiko\u001b[1;30m@\u001b[0m\u001b[0;36mkumikodeMacBook-Air\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m - \u001b[0m\u001b[32m\u001b[0;34m\u001b[1m\u001b[32m[\u001b[0m\u001b[32m\u001b[1;37m~/Project/magonote/pkg/ps1parser\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m - \u001b[0;34m\u001b[1m\u001b[32m[\u001b[0m\u001b[32m\u001b[0;33mSat Aug 09, 22:34\u001b[0m\u001b[32m\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m\n\u001b[0;34m\u001b[1m\u001b[32m└─\u001b[1m\u001b[32m[\u001b[1;35m$\u001b[0;34m\u001b[1m\u001b[32m] <>\u001b[0m\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "xiong-chiamiov",
+  "ps1": "%{\u001b[0;34m%}%B┌─[%b%{\u001b[0m%}%{\u001b[1;32m%}%n%{\u001b[1;30m%}@%{\u001b[0m%}%{\u001b[0;36m%}%m%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %b%{\u001b[0;34m%}%B[%b%{\u001b[1;37m%}%~%{\u001b[0;34m%}%B]%b%{\u001b[0m%} - %{\u001b[0;34m%}%B[%b%{\u001b[0;33m%}%D{%a %b %d, %H:%M}%b%{\u001b[0;34m%}%B]%b%{\u001b[0m%}\n%{\u001b[0;34m%}%B└─%B[%{\u001b[1;35m%}$%{\u001b[0;34m%}%B]>%{\u001b[0m%}%b ",
+  "text": "\u001b[0;34m\u001b[1m\u001b[32m┌─[\u001b[0m\u001b[32m\u001b[0m\u001b[1;32mkumiko\u001b[1;30m@\u001b[0m\u001b[0;36mkumikodeMacBook-Air\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m - \u001b[0m\u001b[32m\u001b[0;34m\u001b[1m\u001b[32m[\u001b[0m\u001b[32m\u001b[1;37m~/Project/magonote/pkg/ps1parser\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m - \u001b[0;34m\u001b[1m\u001b[32m[\u001b[0m\u001b[32m\u001b[0;33mSat Aug 09, 22:34\u001b[0m\u001b[32m\u001b[0;34m\u001b[1m\u001b[32m]\u001b[0m\u001b[32m\u001b[0m\n\u001b[0;34m\u001b[1m\u001b[32m└─\u001b[1m\u001b[32m[\u001b[1;35m$\u001b[0;34m\u001b[1m\u001b[32m]>\u001b[0m\u001b[0m\u001b[32m "
+}
+,
+{
+  "theme": "ys",
+  "ps1": "\n%{\u001b[1m\u001b[34m%}#%{\u001b[00m%} %(#,%{\u001b[43m%}%{\u001b[30m%}%n%{\u001b[00m%},%{\u001b[36m%}%n) %{\u001b[00m%}@ %{\u001b[32m%}%m %{\u001b[00m%}in %{\u001b[1m\u001b[33m%}%~%{\u001b[00m%}$(ys_hg_prompt_info)$(git_prompt_info)$(svn_prompt_info)$(virtenv_prompt) [%*] %(?,,C:%{\u001b[31m%}%?%{\u001b[00m%})\n%{\u001b[1m\u001b[31m%}$ %{\u001b[00m%}",
+  "text": "\n\u001b[1m\u001b[34m#\u001b[00m \u001b[36mkumiko \u001b[00m@ \u001b[32mkumikodeMacBook-Air \u001b[00min \u001b[1m\u001b[33m~/Project/magonote/pkg/ps1parser\u001b[00m [22:34:58] \n\u001b[1m\u001b[31m$ \u001b[00m"
+}
+,
+{
+  "theme": "zhann",
+  "ps1": "%B%F{blue}%c%B%F{green}${vcs_info_msg_0_}%B%F{magenta} %{$reset_color%}% ",
+  "text": "\u001b[1m\u001b[32m\u001b[34mps1parser\u001b[1m\u001b[34m\u001b[32m\u001b[1m\u001b[32m\u001b[35m \u001b[00m"
+}
+]
