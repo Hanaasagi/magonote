@@ -15,8 +15,7 @@ func TestStyledTextMatching(t *testing.T) {
 	styledText := "\x1b[1m\x1b[31merror\x1b[0m: something went wrong\n\x1b[4mwarning\x1b[0m: check this"
 	custom := []string{}
 
-	state := NewState(styledText, "abcd", custom)
-	state.ColorDetectionConfig = NewColorDetectionConfig()
+	state := NewState(styledText, "abcd", custom, WithColorDetection())
 	results := state.Matches(false, 0)
 
 	// Should have matches for styled text plus any regex matches
@@ -1365,7 +1364,9 @@ end of file.txt`
 		t.Run(tt.name, func(t *testing.T) {
 			// Set up exclusion config
 			if len(tt.exclusionRules) > 0 {
-				state.ExclusionConfig = NewExclusionConfig(tt.exclusionRules)
+				// Apply exclusion rules using option pattern
+				exclusionOpt := WithExclusionRules(tt.exclusionRules)
+				exclusionOpt.apply(state)
 			} else {
 				state.ExclusionConfig = nil
 			}
@@ -1422,7 +1423,8 @@ config.toml main.go`
 	matches1 := state.Matches(false, 0)
 
 	// Test with empty ExclusionConfig
-	state.ExclusionConfig = NewExclusionConfig([]ExclusionRule{})
+	emptyExclusionOpt := WithExclusionRules([]ExclusionRule{})
+	emptyExclusionOpt.apply(state)
 	matches2 := state.Matches(false, 0)
 
 	// Both should return the same number of matches
@@ -1473,8 +1475,7 @@ func TestExclusionEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			state := NewState(tt.input, "abcd", []string{})
-			state.ExclusionConfig = NewExclusionConfig(tt.rules)
+			state := NewState(tt.input, "abcd", []string{}, WithExclusionRules(tt.rules))
 
 			// Should not panic
 			matches := state.Matches(false, 0)

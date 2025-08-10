@@ -306,19 +306,20 @@ func runApp(config *Config, args *Arguments) error {
 			includePatterns = append(includePatterns, r.Pattern)
 		}
 	}
-	state := internal.NewState(text, config.Core.Alphabet, includePatterns)
+	// Build state options based on configuration
+	var opts []internal.Option
 
 	plugins := config.Plugins
 	if plugins.Tabledetection != nil && plugins.Tabledetection.Enabled {
-		state.TableDetectionConfig = internal.NewTableDetectionConfig(
+		opts = append(opts, internal.WithTableDetection(
 			plugins.Tabledetection.MinLines,
 			plugins.Tabledetection.MinColumns,
 			plugins.Tabledetection.ConfidenceThreshold,
-		)
-
+		))
 	}
+
 	if plugins.Colordetection != nil && plugins.Colordetection.Enabled {
-		state.ColorDetectionConfig = internal.NewColorDetectionConfig()
+		opts = append(opts, internal.WithColorDetection())
 	}
 
 	// Apply user-defined exclusion rules (unified rules section)
@@ -327,8 +328,11 @@ func runApp(config *Config, args *Arguments) error {
 		for _, rule := range config.Rules.Exclude.Rules {
 			rules = append(rules, internal.ExclusionRule{Type: rule.Type, Pattern: rule.Pattern})
 		}
-		state.ExclusionConfig = internal.NewExclusionConfig(rules)
+		opts = append(opts, internal.WithExclusionRules(rules))
 	}
+
+	// Create state with all configured options
+	state := internal.NewState(text, config.Core.Alphabet, includePatterns, opts...)
 
 	var selected []internal.ChosenMatch
 

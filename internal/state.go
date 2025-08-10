@@ -25,24 +25,7 @@ type TableDetectionConfig struct {
 	ConfidenceThreshold float64
 }
 
-func NewTableDetectionConfig(
-	minLines int,
-	minColumns int,
-	confidenceThreshold float64,
-
-) *TableDetectionConfig {
-	return &TableDetectionConfig{
-		MinLines:            minLines,
-		MinColumns:          minColumns,
-		ConfidenceThreshold: confidenceThreshold,
-	}
-}
-
 type ColorDetectionConfig struct {
-}
-
-func NewColorDetectionConfig() *ColorDetectionConfig {
-	return &ColorDetectionConfig{}
 }
 
 // ExclusionRule represents a rule for excluding matches
@@ -54,12 +37,6 @@ type ExclusionRule struct {
 // ExclusionConfig holds configuration for match exclusion
 type ExclusionConfig struct {
 	Rules []ExclusionRule
-}
-
-func NewExclusionConfig(rules []ExclusionRule) *ExclusionConfig {
-	return &ExclusionConfig{
-		Rules: rules,
-	}
 }
 
 // MatchPattern represents a pattern that should be matched
@@ -203,6 +180,45 @@ func (pc *PatternCache) GetCompiledPattern(name, pattern string) *CompiledPatter
 	return compiled
 }
 
+// Option defines a functional option for configuring State
+type Option interface {
+	apply(*State)
+}
+
+// optionFunc is a function that implements Option interface
+type optionFunc func(*State)
+
+func (f optionFunc) apply(s *State) {
+	f(s)
+}
+
+// WithTableDetection configures table detection with specified parameters
+func WithTableDetection(minLines, minColumns int, confidenceThreshold float64) Option {
+	return optionFunc(func(s *State) {
+		s.TableDetectionConfig = &TableDetectionConfig{
+			MinLines:            minLines,
+			MinColumns:          minColumns,
+			ConfidenceThreshold: confidenceThreshold,
+		}
+	})
+}
+
+// WithColorDetection enables color detection
+func WithColorDetection() Option {
+	return optionFunc(func(s *State) {
+		s.ColorDetectionConfig = &ColorDetectionConfig{}
+	})
+}
+
+// WithExclusionRules configures exclusion rules
+func WithExclusionRules(rules []ExclusionRule) Option {
+	return optionFunc(func(s *State) {
+		s.ExclusionConfig = &ExclusionConfig{
+			Rules: rules,
+		}
+	})
+}
+
 // State represents the current state of the application
 type State struct {
 	Lines                []string
@@ -217,9 +233,9 @@ type State struct {
 	ExclusionConfig      *ExclusionConfig
 }
 
-// NewState creates a new state from input text
+// NewState creates a new state from input text with optional configurations
 func NewState(
-	text string, alphabet string, patterns []string,
+	text string, alphabet string, patterns []string, opts ...Option,
 ) *State {
 	processor := CreateTextProcessor(text)
 	lines, styleMatches, err := processor.Process(text)
@@ -230,7 +246,7 @@ func NewState(
 		processor = NewPlainTextProcessor()
 	}
 
-	return &State{
+	state := &State{
 		Lines:                lines,
 		Alphabet:             alphabet,
 		CustomPatterns:       patterns,
@@ -241,12 +257,19 @@ func NewState(
 		ColorDetectionConfig: nil,
 		ExclusionConfig:      nil,
 	}
+
+	// Apply all options
+	for _, opt := range opts {
+		opt.apply(state)
+	}
+
+	return state
 }
 
-// NewStateFromLines creates a new state from lines (backward compatibility)
-func NewStateFromLines(lines []string, alphabet string, patterns []string) *State {
+// NewStateFromLines creates a new state from lines with optional configurations (backward compatibility)
+func NewStateFromLines(lines []string, alphabet string, patterns []string, opts ...Option) *State {
 	text := strings.Join(lines, "\n")
-	return NewState(text, alphabet, patterns)
+	return NewState(text, alphabet, patterns, opts...)
 }
 
 // getCompiledPatterns returns cached compiled patterns or compiles them
