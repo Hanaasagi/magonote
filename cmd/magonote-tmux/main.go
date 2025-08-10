@@ -220,8 +220,13 @@ func (m *Magonote) buildCaptureCommand() string {
 	scrollParams := m.buildScrollParams()
 
 	// Base capture command with ANSI escape sequences and join lines
-	captureCmd := fmt.Sprintf("tmux capture-pane -J -t %s -e -p %s",
-		m.activePaneInfo.ID, scrollParams)
+	captureCmd := fmt.Sprintf("tmux capture-pane -J -t %s -p -e",
+		m.activePaneInfo.ID)
+
+	// Append scroll params only when present to avoid trailing spaces
+	if scrollParams != "" {
+		captureCmd += scrollParams
+	}
 
 	// Add tail to limit output height when we have scroll data
 	if m.activePaneInfo.HasScrollData() {
