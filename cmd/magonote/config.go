@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	Core    CoreConfig    `toml:"core"`
-	Regexp  RegexpConfig  `toml:"regexp"`
+	Rules   RulesConfig   `toml:"rules"`
 	Colors  ColorConfig   `toml:"colors"`
 	Plugins PluginsConfig `toml:"plugins"`
 }
@@ -24,8 +24,16 @@ type CoreConfig struct {
 	Contrast    bool   `toml:"contrast"`
 }
 
-type RegexpConfig struct {
-	Patterns []string `toml:"patterns"`
+// RulesConfig unifies user-defined include (match) and exclude (filter) rules
+// Both include and exclude carry a "rules" list with items of the same shape: { type, pattern }
+type RulesConfig struct {
+	Include RulesList `toml:"include"`
+	Exclude RulesList `toml:"exclude"`
+}
+
+// RulesList groups a list of rules under a section
+type RulesList struct {
+	Rules []Rule `toml:"rules"`
 }
 
 type ColorGroup struct {
@@ -51,20 +59,15 @@ type ColorDetectionPluginConfig struct {
 	Enabled bool `toml:"enabled"`
 }
 
-type ExclusionRule struct {
+// Rule describes a single rule item used in include/exclude lists
+type Rule struct {
 	Type    string `toml:"type"`    // "regex" or "text"
 	Pattern string `toml:"pattern"` // The pattern or text to exclude
-}
-
-type ExclusionConfig struct {
-	Enabled bool            `toml:"enabled"`
-	Rules   []ExclusionRule `toml:"rules"`
 }
 
 type PluginsConfig struct {
 	Tabledetection *TableDetectionPluginConfig `toml:"tabledetection"`
 	Colordetection *ColorDetectionPluginConfig `toml:"colordetection"`
-	Exclusion      *ExclusionConfig            `toml:"exclusion"`
 }
 
 func NewDefaultConfig() *Config {
@@ -78,9 +81,7 @@ func NewDefaultConfig() *Config {
 			UniqueLevel: 0,
 			Contrast:    false,
 		},
-		Regexp: RegexpConfig{
-			Patterns: []string{},
-		},
+		Rules: RulesConfig{Include: RulesList{Rules: []Rule{}}, Exclude: RulesList{Rules: []Rule{}}},
 		Colors: ColorConfig{
 			Match: ColorGroup{
 				Foreground: "green",
@@ -102,7 +103,6 @@ func NewDefaultConfig() *Config {
 		Plugins: PluginsConfig{
 			Tabledetection: nil,
 			Colordetection: nil,
-			Exclusion:      nil,
 		},
 	}
 }
@@ -117,6 +117,5 @@ func LoadConfigFromFile(path string) (*Config, error) {
 	if _, err := toml.DecodeFile(path, config); err != nil {
 		return nil, fmt.Errorf("failed to decode TOML config: %w", err)
 	}
-
 	return config, nil
 }

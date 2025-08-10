@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime/debug"
 	"strings"
 
@@ -232,7 +233,11 @@ func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
 	}
 
 	if len(args.regexpPatterns) > 0 {
-		config.Regexp.Patterns = args.regexpPatterns
+		// CLI `--regexp` only accepts regex strings, map them into include rules
+		config.Rules.Include.Rules = make([]Rule, 0, len(args.regexpPatterns))
+		for _, p := range args.regexpPatterns {
+			config.Rules.Include.Rules = append(config.Rules.Include.Rules, Rule{Type: "regex", Pattern: p})
+		}
 	}
 
 	if cmd.Flags().Changed("fg-color") {
@@ -275,17 +280,14 @@ func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
 
 	// Handle extra exclusion patterns from CLI
 	if len(args.extraExclusion) > 0 {
-		if config.Plugins.Exclusion == nil {
-			config.Plugins.Exclusion = &ExclusionConfig{Enabled: true, Rules: []ExclusionRule{}}
-		}
-		// Add CLI exclusion patterns as text rules
+		// Add CLI exclusion patterns as regex rules into unified rules.exclude
 		for _, pattern := range args.extraExclusion {
-			config.Plugins.Exclusion.Rules = append(config.Plugins.Exclusion.Rules, ExclusionRule{
-				Type:    "text",
-				Pattern: pattern,
-			})
+			if _, err := regexp.Compile(pattern); err != nil {
+				slog.Warn("Invalid regex in --extra-exclusion; skipping", "pattern", pattern, "error", err)
+				continue
+			}
+			config.Rules.Exclude.Rules = append(config.Rules.Exclude.Rules, Rule{Type: "regex", Pattern: pattern})
 		}
-		config.Plugins.Exclusion.Enabled = true
 	}
 }
 
@@ -297,7 +299,14 @@ func runApp(config *Config, args *Arguments) error {
 		return err
 	}
 
-	state := internal.NewState(text, config.Core.Alphabet, config.Regexp.Patterns)
+	// Convert include rules to regex patterns list
+	var includePatterns []string
+	for _, r := range config.Rules.Include.Rules {
+		if r.Type == "regex" && r.Pattern != "" {
+			includePatterns = append(includePatterns, r.Pattern)
+		}
+	}
+	state := internal.NewState(text, config.Core.Alphabet, includePatterns)
 
 	plugins := config.Plugins
 	if plugins.Tabledetection != nil && plugins.Tabledetection.Enabled {
@@ -312,14 +321,11 @@ func runApp(config *Config, args *Arguments) error {
 		state.ColorDetectionConfig = internal.NewColorDetectionConfig()
 	}
 
-	if plugins.Exclusion != nil && plugins.Exclusion.Enabled {
-		// Convert config exclusion rules to internal exclusion rules
+	// Apply user-defined exclusion rules (unified rules section)
+	if len(config.Rules.Exclude.Rules) > 0 {
 		var rules []internal.ExclusionRule
-		for _, rule := range plugins.Exclusion.Rules {
-			rules = append(rules, internal.ExclusionRule{
-				Type:    rule.Type,
-				Pattern: rule.Pattern,
-			})
+		for _, rule := range config.Rules.Exclude.Rules {
+			rules = append(rules, internal.ExclusionRule{Type: rule.Type, Pattern: rule.Pattern})
 		}
 		state.ExclusionConfig = internal.NewExclusionConfig(rules)
 	}
@@ -446,7 +452,7 @@ func main() {
 	rootCmd.Flags().StringVarP(&args.target, "target", "t", "", "Stores the hint in the specified path")
 	rootCmd.Flags().StringVarP(&args.inputFile, "input-file", "i", "", "Read input from file instead of stdin")
 	rootCmd.Flags().BoolVarP(&args.showVersion, "version", "v", false, "Print version and exit")
-	rootCmd.Flags().StringArrayVar(&args.extraExclusion, "extra-exclusion", nil, "Additional text patterns to exclude from matching")
+	rootCmd.Flags().StringArrayVar(&args.extraExclusion, "extra-exclusion", nil, "Additional regex patterns to exclude from matching")
 
 	rootCmd.Flags().BoolVar(&args.listView, "list", false, "Enable list view")
 
