@@ -59,6 +59,7 @@ func NewPS1FilterConfig(ps1Pattern string) *PS1FilterConfig {
 		Enabled:    ps1Pattern != "",
 	}
 }
+
 // MatchPattern represents a pattern that should be matched
 type MatchPattern struct {
 	Name    string
@@ -1180,28 +1181,33 @@ func (s *State) applyPS1Filter(matches []Match) []Match {
 	return filtered
 }
 
-// findPS1PromptRegions finds all PS1 prompt regions in the original text
+// findPS1PromptRegions finds all PS1 prompt regions in the processed text
 func (s *State) findPS1PromptRegions() ([]PS1PromptRegion, error) {
 	if s.PS1FilterConfig == nil || !s.PS1FilterConfig.Enabled || s.PS1FilterConfig.PS1Pattern == "" {
 		return nil, nil
 	}
 
-	// Use ps1parser to find prompt matches in the original text
-	// Use strict options for more reliable matching
+	// Use the processed lines to ensure coordinate consistency with match positions
+	// This ensures PS1 regions and color matches use the same coordinate system
+	processedText := strings.Join(s.Lines, "\n")
+
+	// Use ps1parser to find prompt matches in the processed text
+	// Use flexible options to handle spacing and color differences between PS1 pattern and actual output
 	options := ps1parser.MatchOptions{
-		IgnoreColors:    false, // Don't ignore colors - we want to match the raw text
-		IgnoreSpacing:   false, // Keep spacing strict for accurate position
-		CaseSensitive:   true,  // Be strict about case for better accuracy
-		MaxLineSpan:     0,     // No line span limit
-		TimeoutPatterns: false,
+		IgnoreColors:      true,  // Ignore colors since PS1 pattern may differ from actual output
+		IgnoreSpacing:     true,  // Allow flexible spacing to handle formatting differences
+		CaseSensitive:     false, // Be flexible with case
+		MaxLineSpan:       0,     // No line span limit for multiline prompts
+		TimeoutPatterns:   false,
+		AnchorAtLineStart: true, // Prompts start at line head
 	}
 
-	matchResults, err := ps1parser.ParseAndMatch(s.PS1FilterConfig.PS1Pattern, s.originalText, options)
+	matchResults, err := ps1parser.ParseAndMatch(s.PS1FilterConfig.PS1Pattern, processedText, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse PS1 pattern: %w", err)
 	}
 
-	// Convert ps1parser.MatchResult to our PS1PromptRegion
+	// Convert ps1parser.MatchResult to our PS1PromptRegion using line-based positions
 	regions := make([]PS1PromptRegion, 0, len(matchResults))
 	for _, result := range matchResults {
 		regions = append(regions, PS1PromptRegion{

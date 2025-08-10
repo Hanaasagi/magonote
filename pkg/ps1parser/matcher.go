@@ -20,46 +20,82 @@ func NewMatcher(parsedPS1 *ParsedPS1, options MatchOptions) (*Matcher, error) {
 	}, nil
 }
 
-// Match finds all prompt matches in the given text.
-// It returns a slice of MatchResult containing position and captured groups.
-func (m *Matcher) Match(text string) ([]MatchResult, error) {
-	// Preprocess text if needed
-	processedText := m.preprocessText(text)
+// Match finds all prompt matches in the given lines.
+// The search proceeds line-by-line and uses a sliding window up to MaxLineSpan lines.
+// Positions are returned in zero-based line/column coordinates relative to the provided lines.
+func (m *Matcher) Match(lines []string) ([]MatchResult, error) {
+	// Preprocess each line independently for consistent coordinates
+	processedLines := make([]string, len(lines))
+	for i := range lines {
+		processedLines[i] = m.preprocessText(lines[i])
+	}
 
-	// Find all matches
-	matches := m.pattern.regex.FindAllStringSubmatch(processedText, -1)
-	indices := m.pattern.regex.FindAllStringSubmatchIndex(processedText, -1)
+	// Determine maximum span of lines to consider per match
+	maxSpan := m.options.MaxLineSpan
+	if maxSpan <= 0 { // 0 means unlimited; cap to remaining lines dynamically
+		maxSpan = len(processedLines)
+	}
 
 	var results []MatchResult
 
-	for i, match := range matches {
-		if len(indices) <= i {
-			continue
-		}
+	for startLine := 0; startLine < len(processedLines); startLine++ {
+		// Build incremental joined segments to support multi-line prompts
+		joined := ""
+		for span := 1; span <= maxSpan && startLine+span <= len(processedLines); span++ {
+			if span == 1 {
+				joined = processedLines[startLine]
+			} else {
+				joined = joined + "\n" + processedLines[startLine+span-1]
+			}
 
-		// Convert byte indices to line/column positions
-		startPos := m.byteIndexToPosition(processedText, indices[i][0])
-		endPos := m.byteIndexToPosition(processedText, indices[i][1])
+			// Try matching in this window
+			matches := m.pattern.regex.FindAllStringSubmatch(joined, -1)
+			indices := m.pattern.regex.FindAllStringSubmatchIndex(joined, -1)
 
-		// Extract named groups
-		groups := make(map[string]string)
-		subexpNames := m.pattern.regex.SubexpNames()
-		for j, name := range subexpNames {
-			if name != "" && j < len(match) {
-				groups[name] = match[j]
+			for mi, match := range matches {
+				if len(indices) <= mi {
+					continue
+				}
+
+				// Convert indices in 'joined' to (line, col) within the window
+				startIdx := indices[mi][0]
+				endIdx := indices[mi][1]
+
+				sLineOff, sCol := byteIndexToLineCol(joined, startIdx)
+				eLineOff, eCol := byteIndexToLineCol(joined, endIdx)
+
+				// Extract named groups
+				groups := make(map[string]string)
+				subexpNames := m.pattern.regex.SubexpNames()
+				for j, name := range subexpNames {
+					if name != "" && j < len(match) {
+						groups[name] = match[j]
+					}
+				}
+
+				results = append(results, MatchResult{
+					Position: Position{
+						StartLine: startLine + sLineOff,
+						StartCol:  sCol,
+						EndLine:   startLine + eLineOff,
+						EndCol:    eCol,
+					},
+					Matched: match[0],
+					Groups:  groups,
+				})
+
+				// Avoid duplicate matches for the same start line when expanding span
+				// Since prompts are anchored at line start, stop at first match for this startLine
+				break
+			}
+			// If we already recorded a match for this startLine, stop expanding span
+			if len(results) > 0 {
+				last := results[len(results)-1]
+				if last.Position.StartLine == startLine {
+					break
+				}
 			}
 		}
-
-		results = append(results, MatchResult{
-			Position: Position{
-				StartLine: startPos.StartLine,
-				StartCol:  startPos.StartCol,
-				EndLine:   endPos.StartLine,
-				EndCol:    endPos.StartCol,
-			},
-			Matched: match[0],
-			Groups:  groups,
-		})
 	}
 
 	return results, nil
@@ -87,6 +123,12 @@ func (m *Matcher) preprocessText(text string) string {
 		// Handle other escape sequences like \x1b(B
 		escapeRegex := regexp.MustCompile(`\x1b\([A-Za-z0-9]`)
 		processed = escapeRegex.ReplaceAllString(processed, "")
+
+		// Remove zero-width characters that can appear in terminal output
+		processed = strings.ReplaceAll(processed, "\u200b", "") // Zero Width Space
+		processed = strings.ReplaceAll(processed, "\u200c", "") // Zero Width Non-Joiner
+		processed = strings.ReplaceAll(processed, "\u200d", "") // Zero Width Joiner
+		processed = strings.ReplaceAll(processed, "\ufeff", "") // Byte Order Mark
 	}
 
 	if m.options.IgnoreSpacing {
@@ -98,16 +140,17 @@ func (m *Matcher) preprocessText(text string) string {
 	return processed
 }
 
-// byteIndexToPosition converts a byte index to line/column position
-func (m *Matcher) byteIndexToPosition(text string, byteIndex int) Position {
-	lines := strings.Split(text[:byteIndex], "\n")
-	line := len(lines) - 1
-	col := len(lines[line])
-
-	return Position{
-		StartLine: line,
-		StartCol:  col,
+// byteIndexToLineCol converts a byte index in a multi-line string to (lineOffset, col)
+func byteIndexToLineCol(text string, byteIndex int) (int, int) {
+	if byteIndex <= 0 {
+		return 0, 0
 	}
+	// Consider substring up to byteIndex, then count lines and last line width
+	sub := text[:byteIndex]
+	parts := strings.Split(sub, "\n")
+	lineOff := len(parts) - 1
+	col := len([]rune(parts[lineOff]))
+	return lineOff, col
 }
 
 // compilePattern converts a parsed PS1 into a regex pattern.
@@ -155,12 +198,12 @@ func compilePattern(parsedPS1 *ParsedPS1, options MatchOptions) (*MatchPattern, 
 	pattern := strings.Join(patternParts, "")
 
 	// Add line boundary handling if needed
-	if options.MaxLineSpan > 0 {
-		// Limit to specified number of lines - apply restriction
-		pattern = fmt.Sprintf("(?ms)^%s$", pattern)
-	} else {
-		// Allow multiline matching
-		pattern = fmt.Sprintf("(?ms)%s", pattern)
+	// Apply multiline and dotall by default so tokens can span lines
+	pattern = fmt.Sprintf("(?ms)%s", pattern)
+
+	// Anchor at start of line (or start of segment) if requested
+	if options.AnchorAtLineStart {
+		pattern = "^" + pattern
 	}
 
 	// Compile regex with appropriate flags

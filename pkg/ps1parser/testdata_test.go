@@ -215,7 +215,7 @@ func TestPS1MatchingAgainstRealOutput(t *testing.T) {
 			}
 
 			for _, config := range testConfigs {
-				matches, err := ParseAndMatch(tc.PS1, tc.Text, config.options)
+				matches, err := ParseAndMatch(tc.PS1, strings.Split(tc.Text, "\n"), config.options)
 
 				if err == nil && len(matches) > 0 {
 					// Found matches with this configuration
@@ -370,7 +370,7 @@ func TestComplexPS1Patterns(t *testing.T) {
 				IgnoreSpacing: true, // Be more lenient with spacing
 			}
 
-			matches, err := ParseAndMatch(testCase.PS1, testCase.Text, options)
+			matches, err := ParseAndMatch(testCase.PS1, strings.Split(testCase.Text, "\n"), options)
 			if err != nil {
 				t.Logf("Matching failed for complex theme %s: %v", themeName, err)
 			} else {

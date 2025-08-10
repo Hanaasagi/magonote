@@ -54,6 +54,9 @@ type MatchOptions struct {
 	CaseSensitive   bool // Whether matching should be case-sensitive
 	MaxLineSpan     int  // Maximum lines a prompt can span (0 = unlimited)
 	TimeoutPatterns bool // Whether to match timeout indicators like "took 5m30s"
+	// When true, the compiled pattern is anchored at the beginning of each line.
+	// Shell prompts appear at the start of a line, so this is enabled by default.
+	AnchorAtLineStart bool
 }
 
 // MatchResult represents the result of a successful pattern match.

@@ -1,6 +1,7 @@
 package ps1parser
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -243,7 +244,7 @@ kumiko@macbook:~/project $ pwd
 
 kumiko@macbook:~/project $ `
 
-	results, err := FindPrompts(ps1, text)
+	results, err := FindPrompts(ps1, strings.Split(text, "\n"))
 	if err != nil {
 		t.Fatalf("FindPrompts failed: %v", err)
 	}
@@ -281,7 +282,7 @@ index.md  main.go  main2.go
 kumiko in content/posts/2025-08-09-how-to-get-shell-prompt on  master [$!?] via 🐹 v1.24.5
 >> vim index.md`
 
-	results, err := FindPrompts(ps1, text)
+	results, err := FindPrompts(ps1, strings.Split(text, "\n"))
 	if err != nil {
 		t.Logf("FindPrompts failed (this may be expected for complex prompts): %v", err)
 		return
@@ -389,7 +390,7 @@ func TestRealWorldExample(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := FindPrompts(tt.ps1, tt.text)
+			results, err := FindPrompts(tt.ps1, strings.Split(tt.text, "\n"))
 			if err != nil {
 				// It's okay if complex parsing fails, we're testing real-world resilience
 				t.Logf("Parse failed (expected for complex prompts): %v", err)

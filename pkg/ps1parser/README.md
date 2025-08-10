@@ -20,24 +20,26 @@ import (
     "fmt"
     "log"
     
-    "your-repo/pkg/ps1parser"
+    "github.com/Hanaasagi/magonote/pkg/ps1parser"
 )
 
 func main() {
     // Define your zsh PS1 pattern
     ps1 := "%n@%m:%~ $ "
     
-    // Terminal output containing prompts
-    terminalOutput := `user@hostname:~/project $ ls
-file1.txt  file2.txt
-
-user@hostname:~/project $ pwd
-/home/user/project
-
-user@hostname:~/project $ `
+    // Terminal output lines containing prompts
+    terminalLines := []string{
+        "user@hostname:~/project $ ls",
+        "file1.txt  file2.txt",
+        "",
+        "user@hostname:~/project $ pwd",
+        "/home/user/project",
+        "",
+        "user@hostname:~/project $ ",
+    }
 
     // Find all prompts
-    matches, err := ps1parser.FindPrompts(ps1, terminalOutput)
+    matches, err := ps1parser.FindPrompts(ps1, terminalLines)
     if err != nil {
         log.Fatal(err)
     }
@@ -87,11 +89,11 @@ user@hostname:~/project $ `
 ### High-Level Functions
 
 ```go
-// Find prompts with default options
-func FindPrompts(ps1 string, terminalOutput string) ([]MatchResult, error)
+// Find prompts with default options (lines-based)
+func FindPrompts(ps1 string, terminalLines []string) ([]MatchResult, error)
 
-// Find prompts with strict matching
-func FindPromptsStrict(ps1 string, terminalOutput string) ([]MatchResult, error)
+// Find prompts with strict matching (lines-based)
+func FindPromptsStrict(ps1 string, terminalLines []string) ([]MatchResult, error)
 
 // Validate a PS1 string
 func ValidatePS1(ps1 string) error
@@ -118,19 +120,20 @@ matcher, err := ps1parser.NewMatcher(parsed, ps1parser.MatchOptions{
     MaxLineSpan:   3,
 })
 
-// Find matches
-matches, err := matcher.Match(terminalOutput)
+// Find matches over lines
+matches, err := matcher.Match(strings.Split(terminalOutput, "\n"))
 ```
 
 ### Match Options
 
 ```go
 type MatchOptions struct {
-    IgnoreColors    bool // Ignore ANSI color codes
-    IgnoreSpacing   bool // Ignore extra whitespace
-    CaseSensitive   bool // Case-sensitive matching
-    MaxLineSpan     int  // Max lines a prompt can span
-    TimeoutPatterns bool // Match timeout patterns like "took 5m30s"
+    IgnoreColors      bool // Ignore ANSI color codes
+    IgnoreSpacing     bool // Ignore extra whitespace
+    CaseSensitive     bool // Case-sensitive matching
+    MaxLineSpan       int  // Max lines a prompt can span (0 = unlimited)
+    TimeoutPatterns   bool // Match timeout patterns like "took 5m30s"
+    AnchorAtLineStart bool // Anchor pattern at start of line (shell prompts usually start at column 0)
 }
 ```
 
@@ -140,9 +143,9 @@ type MatchOptions struct {
 
 ```go
 ps1 := "%n@%m:%~ $ "
-text := "user@myhost:~/project $ ls"
+lines := []string{"user@myhost:~/project $ ls"}
 
-matches, _ := ps1parser.FindPrompts(ps1, text)
+matches, _ := ps1parser.FindPrompts(ps1, lines)
 // Returns: username="user", hostname="myhost", current_dir="~/project"
 ```
 
@@ -150,9 +153,9 @@ matches, _ := ps1parser.FindPrompts(ps1, text)
 
 ```go
 ps1 := "%{%}%n%{%}@%m:%~ $(git_prompt_info)$ "
-text := "user@host:~/repo main ✓ $ git status"
+lines := []string{"user@host:~/repo main ✓ $ git status"}
 
-matches, _ := ps1parser.FindPrompts(ps1, text)
+matches, _ := ps1parser.FindPrompts(ps1, lines)
 // Handles color sequences and git command output
 ```
 
@@ -170,10 +173,12 @@ text2 := "✗ user:~/work $ false"
 
 ```go
 ps1 := "%n in %~ via 🐍 v3.13.5\n>> "
-text := `user in ~/project via 🐍 v3.13.5
->> python script.py`
+lines := []string{
+    "user in ~/project via 🐍 v3.13.5",
+    ">> python script.py",
+}
 
-matches, _ := ps1parser.FindPrompts(ps1, text)
+matches, _ := ps1parser.FindPrompts(ps1, lines)
 // Handles multi-line prompts correctly
 ```
 

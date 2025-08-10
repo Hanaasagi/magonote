@@ -20,11 +20,12 @@ package ps1parser
 
 import (
 	"fmt"
+	"strings"
 )
 
 // ParseAndMatch is a convenience function that parses a PS1 string and immediately
 // creates a matcher for finding prompts in text. This is the recommended high-level API.
-func ParseAndMatch(ps1 string, text string, options MatchOptions) ([]MatchResult, error) {
+func ParseAndMatch(ps1 string, linesOrText interface{}, options MatchOptions) ([]MatchResult, error) {
 	parser := NewParser(ParserOptions{})
 
 	parsed, err := parser.Parse(ps1)
@@ -37,18 +38,27 @@ func ParseAndMatch(ps1 string, text string, options MatchOptions) ([]MatchResult
 		return nil, fmt.Errorf("failed to create matcher: %w", err)
 	}
 
-	return matcher.Match(text)
+	switch v := linesOrText.(type) {
+	case []string:
+		return matcher.Match(v)
+	case string:
+		// Backward compatibility: split by lines
+		return matcher.Match(strings.Split(v, "\n"))
+	default:
+		return nil, fmt.Errorf("unsupported input type: %T", linesOrText)
+	}
 }
 
 // DefaultMatchOptions returns sensible default options for matching.
 // These options work well for most terminal environments and use cases.
 func DefaultMatchOptions() MatchOptions {
 	return MatchOptions{
-		IgnoreColors:    true,
-		IgnoreSpacing:   false,
-		CaseSensitive:   false,
-		MaxLineSpan:     3, // Most prompts span at most 3 lines
-		TimeoutPatterns: true,
+		IgnoreColors:      true,
+		IgnoreSpacing:     false,
+		CaseSensitive:     false,
+		MaxLineSpan:       3, // Most prompts span at most 3 lines
+		TimeoutPatterns:   true,
+		AnchorAtLineStart: true,
 	}
 }
 
@@ -56,23 +66,24 @@ func DefaultMatchOptions() MatchOptions {
 // Use these when you need exact matching including colors and spacing.
 func StrictMatchOptions() MatchOptions {
 	return MatchOptions{
-		IgnoreColors:    false,
-		IgnoreSpacing:   false,
-		CaseSensitive:   true,
-		MaxLineSpan:     0, // No limit
-		TimeoutPatterns: false,
+		IgnoreColors:      false,
+		IgnoreSpacing:     false,
+		CaseSensitive:     true,
+		MaxLineSpan:       0, // No limit
+		TimeoutPatterns:   false,
+		AnchorAtLineStart: true,
 	}
 }
 
 // FindPrompts is a high-level function to find all prompts in terminal output
 // using a PS1 pattern with default options. This is the simplest way to use the library.
-func FindPrompts(ps1 string, terminalOutput string) ([]MatchResult, error) {
-	return ParseAndMatch(ps1, terminalOutput, DefaultMatchOptions())
+func FindPrompts(ps1 string, terminalLines []string) ([]MatchResult, error) {
+	return ParseAndMatch(ps1, terminalLines, DefaultMatchOptions())
 }
 
 // FindPromptsStrict is like FindPrompts but uses strict matching options
-func FindPromptsStrict(ps1 string, terminalOutput string) ([]MatchResult, error) {
-	return ParseAndMatch(ps1, terminalOutput, StrictMatchOptions())
+func FindPromptsStrict(ps1 string, terminalLines []string) ([]MatchResult, error) {
+	return ParseAndMatch(ps1, terminalLines, StrictMatchOptions())
 }
 
 // ValidatePS1 checks if a PS1 string is valid and parseable.

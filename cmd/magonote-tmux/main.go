@@ -269,9 +269,9 @@ func (m *Magonote) getShellPrompt(workingDir string) (string, error) {
 	case "zsh":
 		// Use zsh -i -c with print -P for prompt expansion in the specified directory
 		if workingDir != "" {
-			cmdStr = fmt.Sprintf(`cd "%s" && print -P "$PS1"`, workingDir)
+			cmdStr = fmt.Sprintf(`cd "%s" && echo "$PS1"`, workingDir)
 		} else {
-			cmdStr = `print -P "$PS1"`
+			cmdStr = `echo "$PS1"`
 		}
 		cmd = exec.Command("zsh", "-i", "-c", cmdStr)
 	case "bash":
