@@ -8,7 +8,7 @@ alphabet = "qwerty"
 # Output format for the picked hint (%H = hint text, %U = uppercase flag)
 format = "%H"
 
-# Hint position: "left" or "right"
+# Hint position: "left", "right", "off_left", or "off_right"
 position = "left"
 
 # Enable multi-selection mode
@@ -23,12 +23,14 @@ unique_level = 0
 # Put square brackets around hint for visibility
 contrast = false
 
-[regexp]
-# Additional regex patterns to match
-patterns = [
-    # Example patterns (uncomment to use)
-    # "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",  # Email
-    # "\\bhttps?://[\\w.-]+\\b",  # URL
+[rules]
+# User-defined matching and filtering rules
+
+[rules.include]
+# Additional rules to match. Only { type = "regex" } is honored here.
+rules = [
+    # { type = "regex", pattern = "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b" },  # Email
+    # { type = "regex", pattern = "\\bhttps?://[\\w.-]+\\b" },                                 # URL
 ]
 
 [colors.match]
@@ -64,23 +66,22 @@ confidence_threshold = 0.8
 [plugins.colordetection]
 enabled = true
 
-[plugins.exclusion]
-enabled = false
+[rules.exclude]
 # Exclusion rules to filter out unwanted matches by defining regions in the original text
 # The rules first identify exclusion regions in the input text, then filter out any matches
 # whose coordinates overlap with these regions
 rules = [
-    # Example: Exclude entire shell prompt lines (automatically configured by tmux integration)
-    # { type = "regex", pattern = "^user@hostname:.*\\$ " },  # Exclude entire lines starting with prompt
-    # { type = "text", pattern = "~/project$ " },             # Exclude specific prompt text
+    # Example: Exclude entire shell prompt lines
+    # { type = "regex", pattern = "^user@hostname:.*\\$ " },  # Lines starting with prompt
+    # { type = "text", pattern = "~/project$ " },             # Specific prompt fragment
 
     # Additional examples:
-    # { type = "text", pattern = "DEBUG" },                   # Exclude matches in regions containing "DEBUG"
-    # { type = "regex", pattern = "^\\[.*\\]\\$ " },         # Exclude bracketed prompts like "[user@host]$ "
-    # { type = "regex", pattern = "^\\d{4}-\\d{2}-\\d{2}" }, # Exclude regions starting with dates
-    # { type = "regex", pattern = "Error:.*" },              # Exclude entire error message lines
+    # { type = "text", pattern = "DEBUG" },                   # Regions containing "DEBUG"
+    # { type = "regex", pattern = "^\\[.*\\]\\$ " },         # Bracketed prompts like "[user@host]$ "
+    # { type = "regex", pattern = "^\\d{4}-\\d{2}-\\d{2}" }, # Lines starting with dates
+    # { type = "regex", pattern = "Error:.*" },              # Entire error message lines
 
     # Exclude log timestamps and noise:
-    # { type = "regex", pattern = "^\\d{2}:\\d{2}:\\d{2}" }, # Lines starting with timestamps
+    # { type = "regex", pattern = "^\\d{2}:\\d{2}:\\d{2}" }, # Timestamps like 12:34:56
     # { type = "text", pattern = "INFO" },                   # Any region containing INFO logs
 ]
