@@ -48,6 +48,7 @@ type Arguments struct {
 	showVersion    bool
 	listView       bool
 	extraExclusion []string // Extra exclusion patterns from CLI
+	ps1Pattern     string   // PS1 pattern for prompt filtering
 
 	// colors
 	foregroundColor       string
@@ -289,6 +290,16 @@ func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
 			config.Rules.Exclude.Rules = append(config.Rules.Exclude.Rules, Rule{Type: "regex", Pattern: pattern})
 		}
 	}
+
+	// Handle PS1 pattern from CLI
+	if cmd.Flags().Changed("ps1-pattern") && args.ps1Pattern != "" {
+		if config.Plugins.PS1Filter == nil {
+			config.Plugins.PS1Filter = &PS1FilterConfig{}
+		}
+		config.Plugins.PS1Filter.PS1Pattern = args.ps1Pattern
+		config.Plugins.PS1Filter.Enabled = true
+		slog.Debug("PS1 pattern configured from CLI", "pattern", args.ps1Pattern)
+	}
 }
 
 // runApp runs the main application logic
@@ -334,6 +345,11 @@ func runApp(config *Config, args *Arguments) error {
 	// Create state with all configured options
 	state := internal.NewState(text, config.Core.Alphabet, includePatterns, opts...)
 
+	// Apply PS1 filter if configured
+	if plugins.PS1Filter != nil && plugins.PS1Filter.Enabled {
+		state.PS1FilterConfig = internal.NewPS1FilterConfig(plugins.PS1Filter.PS1Pattern)
+		slog.Debug("PS1 filtering enabled", "pattern", plugins.PS1Filter.PS1Pattern)
+	}
 	var selected []internal.ChosenMatch
 
 	if args.listView {
@@ -456,7 +472,8 @@ func main() {
 	rootCmd.Flags().StringVarP(&args.target, "target", "t", "", "Stores the hint in the specified path")
 	rootCmd.Flags().StringVarP(&args.inputFile, "input-file", "i", "", "Read input from file instead of stdin")
 	rootCmd.Flags().BoolVarP(&args.showVersion, "version", "v", false, "Print version and exit")
-	rootCmd.Flags().StringArrayVar(&args.extraExclusion, "extra-exclusion", nil, "Additional regex patterns to exclude from matching")
+	rootCmd.Flags().StringArrayVar(&args.extraExclusion, "extra-exclusion", nil, "Additional text patterns to exclude from matching")
+	rootCmd.Flags().StringVar(&args.ps1Pattern, "ps1-pattern", "", "PS1 pattern for filtering prompt regions")
 
 	rootCmd.Flags().BoolVar(&args.listView, "list", false, "Enable list view")
 
