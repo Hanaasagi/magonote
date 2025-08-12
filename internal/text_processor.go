@@ -73,7 +73,7 @@ func (s *StyledTextProcessor) Process(text string) ([]string, []Match, error) {
 	}
 
 	colorDuration := time.Since(colorStart)
-	slog.Info("colordetection completed", "input_length", inputLength, "duration_ms", colorDuration.Milliseconds(), "matches_count", len(styleMatches))
+	slog.Info("colordetection completed", "duration_ms", colorDuration.Milliseconds(), "input_length", inputLength, "matches_count", len(styleMatches))
 	return lines, styleMatches, nil
 }
 

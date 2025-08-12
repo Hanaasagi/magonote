@@ -766,7 +766,7 @@ func (s *State) getGridMatches(existingMatches []Match) []Match {
 	}
 
 	tableDuration := time.Since(tableStart)
-	slog.Info("tabledetection completed", "input_lines", inputLineCount, "duration_ms", tableDuration.Milliseconds(), "matches_count", len(gridMatches))
+	slog.Info("tabledetection completed", "duration_ms", tableDuration.Milliseconds(), "input_lines", inputLineCount, "matches_count", len(gridMatches))
 	return gridMatches
 }
 
