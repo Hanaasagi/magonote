@@ -126,50 +126,89 @@ Create a configuration file at `~/.config/magonote/config.toml`:
 
 ```toml
 [core]
-# Alphabet for generating hints
+# Sets the alphabet used for generating hints
 alphabet = "qwerty"
 
-# Output format (%H = hint text, %U = uppercase flag)
+# Output format for the picked hint (%H = hint text, %U = uppercase flag)
 format = "%H"
 
-# Hint position: "left" or "right"
+# Hint position: "left", "right", "off_left", or "off_right"
 position = "left"
 
-# Enable multi-selection mode by default
+# Enable multi-selection mode
 multi = false
 
-# Reverse hint order
+# Reverse the order for assigned hints
 reverse = false
 
-# Unique level: 0 = none, 1 = unique hints, 2 = highlight one duplicate
+# Unique level: 0 = none, 1 = unique hints, 2 = highlight only one duplicate
 unique_level = 0
 
-# Add brackets around hints for better visibility
+# Put square brackets around hint for visibility
 contrast = false
 
-[regexp]
-# Custom regex patterns
-patterns = [
-    "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",  # Email
-    "JIRA-[0-9]+",  # JIRA tickets
-    "\\b(TODO|FIXME|HACK)\\b",  # Code annotations
+[rules]
+# User-defined matching and filtering rules
+
+[rules.include]
+# Additional rules to match. Only { type = "regex" } is honored here.
+rules = [
+    # { type = "regex", pattern = "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b" },  # Email
+    # { type = "regex", pattern = "\\bhttps?://[\\w.-]+\\b" },                                 # URL
+]
+
+[rules.exclude]
+# Exclusion rules to filter out unwanted matches by defining regions in the original text
+# The rules first identify exclusion regions in the input text, then filter out any matches
+# whose coordinates overlap with these regions
+rules = [
+    # Example: Exclude entire shell prompt lines
+    # { type = "regex", pattern = "^user@hostname:.*\\$ " },  # Lines starting with prompt
+    # { type = "text", pattern = "~/project$ " },             # Specific prompt fragment
+
+    # Additional examples:
+    # { type = "text", pattern = "DEBUG" },                   # Regions containing "DEBUG"
+    # { type = "regex", pattern = "^\\[.*\\]\\$ " },         # Bracketed prompts like "[user@host]$ "
+    # { type = "regex", pattern = "^\\d{4}-\\d{2}-\\d{2}" }, # Lines starting with dates
+    # { type = "regex", pattern = "Error:.*" },              # Entire error message lines
+
+    # Exclude log timestamps and noise:
+    # { type = "regex", pattern = "^\\d{2}:\\d{2}:\\d{2}" }, # Timestamps like 12:34:56
+    # { type = "text", pattern = "INFO" },                   # Any region containing INFO logs
 ]
 
 [colors.match]
+# Foreground color for matches
 foreground = "green"
+# Background color for matches
 background = "black"
 
 [colors.hint]
+# Foreground color for hints
 foreground = "yellow"
+# Background color for hints
 background = "black"
 
 [colors.multi]
+# Foreground color for multi selected items
 foreground = "yellow"
+# Background color for multi selected items
 background = "black"
 
 [colors.select]
+# Foreground color for selection
 foreground = "blue"
+# Background color for selection
 background = "black"
+
+[plugins.tabledetection]
+enabled = true
+min_lines = 3
+min_columns = 3
+confidence_threshold = 0.8
+
+[plugins.colordetection]
+enabled = true
 ```
 
 ### Command Line Options

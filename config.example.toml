@@ -33,6 +33,26 @@ rules = [
     # { type = "regex", pattern = "\\bhttps?://[\\w.-]+\\b" },                                 # URL
 ]
 
+[rules.exclude]
+# Exclusion rules to filter out unwanted matches by defining regions in the original text
+# The rules first identify exclusion regions in the input text, then filter out any matches
+# whose coordinates overlap with these regions
+rules = [
+    # Example: Exclude entire shell prompt lines
+    # { type = "regex", pattern = "^user@hostname:.*\\$ " },  # Lines starting with prompt
+    # { type = "text", pattern = "~/project$ " },             # Specific prompt fragment
+
+    # Additional examples:
+    # { type = "text", pattern = "DEBUG" },                   # Regions containing "DEBUG"
+    # { type = "regex", pattern = "^\\[.*\\]\\$ " },         # Bracketed prompts like "[user@host]$ "
+    # { type = "regex", pattern = "^\\d{4}-\\d{2}-\\d{2}" }, # Lines starting with dates
+    # { type = "regex", pattern = "Error:.*" },              # Entire error message lines
+
+    # Exclude log timestamps and noise:
+    # { type = "regex", pattern = "^\\d{2}:\\d{2}:\\d{2}" }, # Timestamps like 12:34:56
+    # { type = "text", pattern = "INFO" },                   # Any region containing INFO logs
+]
+
 [colors.match]
 # Foreground color for matches
 foreground = "green"
@@ -65,23 +85,3 @@ confidence_threshold = 0.8
 
 [plugins.colordetection]
 enabled = true
-
-[rules.exclude]
-# Exclusion rules to filter out unwanted matches by defining regions in the original text
-# The rules first identify exclusion regions in the input text, then filter out any matches
-# whose coordinates overlap with these regions
-rules = [
-    # Example: Exclude entire shell prompt lines
-    # { type = "regex", pattern = "^user@hostname:.*\\$ " },  # Lines starting with prompt
-    # { type = "text", pattern = "~/project$ " },             # Specific prompt fragment
-
-    # Additional examples:
-    # { type = "text", pattern = "DEBUG" },                   # Regions containing "DEBUG"
-    # { type = "regex", pattern = "^\\[.*\\]\\$ " },         # Bracketed prompts like "[user@host]$ "
-    # { type = "regex", pattern = "^\\d{4}-\\d{2}-\\d{2}" }, # Lines starting with dates
-    # { type = "regex", pattern = "Error:.*" },              # Entire error message lines
-
-    # Exclude log timestamps and noise:
-    # { type = "regex", pattern = "^\\d{2}:\\d{2}:\\d{2}" }, # Timestamps like 12:34:56
-    # { type = "text", pattern = "INFO" },                   # Any region containing INFO logs
-]
