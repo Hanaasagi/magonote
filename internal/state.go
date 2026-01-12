@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/Hanaasagi/magonote/pkg/ps1parser"
 	td "github.com/Hanaasagi/magonote/pkg/textdetection/tabledetection"
 )
 
@@ -37,6 +38,26 @@ type ExclusionRule struct {
 // ExclusionConfig holds configuration for match exclusion
 type ExclusionConfig struct {
 	Rules []ExclusionRule
+}
+
+// PS1FilterConfig holds configuration for PS1 prompt filtering
+type PS1FilterConfig struct {
+	PS1Pattern string // The PS1 pattern to match against
+	Enabled    bool   // Whether PS1 filtering is enabled
+}
+
+func NewExclusionConfig(rules []ExclusionRule) *ExclusionConfig {
+	return &ExclusionConfig{
+		Rules: rules,
+	}
+}
+
+// NewPS1FilterConfig creates a new PS1 filter configuration
+func NewPS1FilterConfig(ps1Pattern string) *PS1FilterConfig {
+	return &PS1FilterConfig{
+		PS1Pattern: ps1Pattern,
+		Enabled:    ps1Pattern != "",
+	}
 }
 
 // MatchPattern represents a pattern that should be matched
@@ -231,6 +252,8 @@ type State struct {
 	TableDetectionConfig *TableDetectionConfig
 	ColorDetectionConfig *ColorDetectionConfig
 	ExclusionConfig      *ExclusionConfig
+	PS1FilterConfig      *PS1FilterConfig
+	originalText         string // Store original text with ANSI codes for PS1 parsing
 }
 
 // NewState creates a new state from input text with optional configurations
@@ -256,6 +279,8 @@ func NewState(
 		TableDetectionConfig: nil,
 		ColorDetectionConfig: nil,
 		ExclusionConfig:      nil,
+		PS1FilterConfig:      nil,
+		originalText:         text, // Store original text for PS1 parsing
 	}
 
 	// Apply all options
@@ -270,6 +295,16 @@ func NewState(
 func NewStateFromLines(lines []string, alphabet string, patterns []string, opts ...Option) *State {
 	text := strings.Join(lines, "\n")
 	return NewState(text, alphabet, patterns, opts...)
+}
+
+// SetPS1FilterConfig sets the PS1 filter configuration for the state
+func (s *State) SetPS1FilterConfig(config *PS1FilterConfig) {
+	s.PS1FilterConfig = config
+}
+
+// SetPS1Pattern sets the PS1 pattern for filtering (convenience method)
+func (s *State) SetPS1Pattern(ps1Pattern string) {
+	s.PS1FilterConfig = NewPS1FilterConfig(ps1Pattern)
 }
 
 // getCompiledPatterns returns cached compiled patterns or compiles them
@@ -493,6 +528,11 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 
 	if uniqueLevel >= 2 {
 		matches = s.filterSuperUniqueMatches(matches)
+	}
+
+	// Apply PS1 filtering if configured
+	if s.PS1FilterConfig != nil && s.PS1FilterConfig.Enabled {
+		matches = s.applyPS1Filter(matches)
 	}
 
 	if s.ExclusionConfig != nil {
@@ -1103,6 +1143,119 @@ func (s *State) regionsOverlap(
 	// For multi-line or different line scenarios, we consider them overlapping
 	// if the line ranges overlap at all
 	return true
+}
+
+// applyPS1Filter filters out matches that overlap with PS1 prompt regions
+func (s *State) applyPS1Filter(matches []Match) []Match {
+	filterStart := time.Now()
+
+	// Find PS1 prompt regions in the original text
+	promptRegions, err := s.findPS1PromptRegions()
+	if err != nil {
+		slog.Warn("Failed to parse PS1 pattern, skipping PS1 filtering", "error", err, "pattern", s.PS1FilterConfig.PS1Pattern)
+		return matches
+	}
+
+	if len(promptRegions) == 0 {
+		return matches
+	}
+
+	// Filter matches that overlap with prompt regions
+	filtered := make([]Match, 0, len(matches))
+	for _, match := range matches {
+		if !s.matchOverlapsWithPS1Regions(match, promptRegions) {
+			filtered = append(filtered, match)
+		} else {
+			slog.Debug("Excluding match in PS1 prompt region", "text", match.Text, "pattern", match.Pattern, "x", match.X, "y", match.Y)
+		}
+	}
+
+	filterDuration := time.Since(filterStart)
+	slog.Info(
+		"PS1 filter completed", "duration_ms",
+		filterDuration.Milliseconds(),
+		"filtered_count", len(matches)-len(filtered),
+		"prompt_regions", len(promptRegions),
+	)
+
+	return filtered
+}
+
+// findPS1PromptRegions finds all PS1 prompt regions in the processed text
+func (s *State) findPS1PromptRegions() ([]PS1PromptRegion, error) {
+	if s.PS1FilterConfig == nil || !s.PS1FilterConfig.Enabled || s.PS1FilterConfig.PS1Pattern == "" {
+		return nil, nil
+	}
+
+	// Use the processed lines to ensure coordinate consistency with match positions
+	// This ensures PS1 regions and color matches use the same coordinate system
+	processedText := strings.Join(s.Lines, "\n")
+
+	// Use ps1parser to find prompt matches in the processed text
+	// Use flexible options to handle spacing and color differences between PS1 pattern and actual output
+	options := ps1parser.MatchOptions{
+		IgnoreColors:      true,  // Ignore colors since PS1 pattern may differ from actual output
+		IgnoreSpacing:     true,  // Allow flexible spacing to handle formatting differences
+		CaseSensitive:     false, // Be flexible with case
+		MaxLineSpan:       0,     // No line span limit for multiline prompts
+		TimeoutPatterns:   false,
+		AnchorAtLineStart: true, // Prompts start at line head
+	}
+
+	matchResults, err := ps1parser.ParseAndMatch(s.PS1FilterConfig.PS1Pattern, processedText, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse PS1 pattern: %w", err)
+	}
+
+	// Convert ps1parser.MatchResult to our PS1PromptRegion using line-based positions
+	regions := make([]PS1PromptRegion, 0, len(matchResults))
+	for _, result := range matchResults {
+		regions = append(regions, PS1PromptRegion{
+			StartLine: result.Position.StartLine,
+			StartCol:  result.Position.StartCol,
+			EndLine:   result.Position.EndLine,
+			EndCol:    result.Position.EndCol,
+			Matched:   result.Matched,
+			Groups:    result.Groups,
+		})
+	}
+
+	return regions, nil
+}
+
+// matchOverlapsWithPS1Regions checks if a match overlaps with any PS1 prompt region
+func (s *State) matchOverlapsWithPS1Regions(match Match, regions []PS1PromptRegion) bool {
+	matchStartLine := match.Y
+	matchStartCol := match.X
+	matchEndLine := match.Y
+	matchEndCol := match.X + len(match.Text)
+
+	for _, region := range regions {
+		// Check if there's any overlap between the match and the prompt region
+		if s.regionsOverlap(
+			matchStartLine, matchStartCol, matchEndLine, matchEndCol,
+			region.StartLine, region.StartCol, region.EndLine, region.EndCol,
+		) {
+			slog.Debug("Match overlaps with PS1 prompt region",
+				"matchText", match.Text,
+				"matchPos", fmt.Sprintf("(%d,%d)-(%d,%d)", matchStartLine, matchStartCol, matchEndLine, matchEndCol),
+				"promptPos", fmt.Sprintf("(%d,%d)-(%d,%d)", region.StartLine, region.StartCol, region.EndLine, region.EndCol),
+				"promptMatched", region.Matched)
+			return true
+		}
+	}
+
+	return false
+}
+
+// PS1PromptRegion represents a region in the text that contains a PS1 prompt
+type PS1PromptRegion struct {
+	StartLine int
+	StartCol  int
+	EndLine   int
+	EndCol    int
+	Matched   string            // The matched prompt text
+	Groups    map[string]string // Named capture groups from PS1 parsing
 }
 
 // ExtractValidWords extracts valid words from the grid segment (backward compatibility)

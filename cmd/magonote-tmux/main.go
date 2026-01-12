@@ -71,6 +71,7 @@ type Magonote struct {
 	// Runtime state
 	activePaneInfo *PaneInfo
 	magonotePaneID string
+	ps1Pattern     string // Detected PS1 pattern
 }
 
 // New creates a new Magonote instance with the given configuration
@@ -90,6 +91,11 @@ func (m *Magonote) Run() error {
 
 	if err := m.captureActivePane(); err != nil {
 		return fmt.Errorf("capturing active pane: %w", err)
+	}
+
+	if err := m.detectPS1Pattern(); err != nil {
+		slog.Warn("Failed to detect PS1 pattern", "error", err)
+		// Continue without PS1 filtering
 	}
 
 	if err := m.createMagonoteWindow(); err != nil {
@@ -202,6 +208,107 @@ func (m *Magonote) parsePaneInfo(parts []string) (*PaneInfo, error) {
 	return paneInfo, nil
 }
 
+// detectPS1Pattern detects the current shell's PS1 pattern
+func (m *Magonote) detectPS1Pattern() error {
+	slog.Debug("Detecting PS1 pattern")
+
+	// Get current working directory from the active pane
+	workingDir, err := m.getActivePaneWorkingDir()
+	if err != nil {
+		slog.Warn("Failed to get working directory", "error", err)
+		workingDir = "" // Use current directory as fallback
+	}
+
+	// Get shell prompt
+	ps1Pattern, err := m.getShellPrompt(workingDir)
+	if err != nil {
+		return fmt.Errorf("getting shell prompt: %w", err)
+	}
+
+	if ps1Pattern == "" {
+		slog.Debug("No PS1 pattern detected")
+		return nil
+	}
+
+	m.ps1Pattern = ps1Pattern
+	slog.Debug("Detected PS1 pattern", "pattern", ps1Pattern)
+	return nil
+}
+
+// getActivePaneWorkingDir gets the working directory of the active pane
+func (m *Magonote) getActivePaneWorkingDir() (string, error) {
+	if m.activePaneInfo == nil {
+		return "", fmt.Errorf("no active pane info available")
+	}
+
+	// Get the current path using tmux's pane_current_path
+	output, err := m.tmuxCommand("display-message", "-t", m.activePaneInfo.ID, "-p", "#{pane_current_path}")
+	if err != nil {
+		return "", fmt.Errorf("getting pane current path: %w", err)
+	}
+
+	workingDir := strings.TrimSpace(output)
+	slog.Debug("Active pane working directory", "dir", workingDir)
+	return workingDir, nil
+}
+
+// getShellPrompt gets the shell prompt for the given directory
+func (m *Magonote) getShellPrompt(workingDir string) (string, error) {
+	// Detect shell from SHELL environment variable
+	shellPath := os.Getenv("SHELL")
+	if shellPath == "" {
+		shellPath = "zsh" // Default to zsh
+	} else {
+		shellPath = filepath.Base(shellPath)
+	}
+
+	var cmd *exec.Cmd
+	var cmdStr string
+
+	switch shellPath {
+	case "zsh":
+		// Use zsh -i -c with print -P for prompt expansion in the specified directory
+		if workingDir != "" {
+			cmdStr = fmt.Sprintf(`cd "%s" && echo "$PS1"`, workingDir)
+		} else {
+			cmdStr = `echo "$PS1"`
+		}
+		cmd = exec.Command("zsh", "-i", "-c", cmdStr)
+	case "bash":
+		// Use bash -i -c to get expanded PS1 in the specified directory
+		if workingDir != "" {
+			cmdStr = fmt.Sprintf(`cd "%s" && echo "${PS1@P}"`, workingDir)
+		} else {
+			cmdStr = `echo "${PS1@P}"`
+		}
+		cmd = exec.Command("bash", "-i", "-c", cmdStr)
+	default:
+		// For unknown shells, try zsh approach as our target is primarily zsh
+		slog.Warn("Unknown shell detected, trying zsh approach", "shell", shellPath)
+		if workingDir != "" {
+			cmdStr = fmt.Sprintf(`cd "%s" && print -P "$PS1"`, workingDir)
+		} else {
+			cmdStr = `print -P "$PS1"`
+		}
+		cmd = exec.Command("zsh", "-i", "-c", cmdStr)
+	}
+
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+
+	err := cmd.Run()
+	if err != nil {
+		slog.Warn("Failed to get shell prompt", "error", err, "shell", shellPath, "workingDir", workingDir, "stderr", errOut.String())
+		return "", nil // Return empty string instead of error to avoid breaking the workflow
+	}
+
+	prompt := strings.TrimSpace(out.String())
+	slog.Debug("Retrieved shell prompt", "prompt", prompt, "shell", shellPath, "workingDir", workingDir)
+	return prompt, nil
+}
+
 // buildScrollParams generates tmux capture-pane scroll parameters based on pane state
 func (m *Magonote) buildScrollParams() string {
 	if m.activePaneInfo == nil || !m.activePaneInfo.HasScrollData() {
@@ -294,6 +401,12 @@ func (m *Magonote) buildMagonoteArgs() ([]string, error) {
 		case strings.HasPrefix(name, "regexp"):
 			args = append(args, "--regexp", fmt.Sprintf("'%s'", strings.ReplaceAll(value, "\\\\", "\\")))
 		}
+	}
+
+	// Add PS1 pattern if detected
+	if m.ps1Pattern != "" {
+		args = append(args, "--ps1-pattern", fmt.Sprintf("'%s'", m.ps1Pattern))
+		slog.Debug("Added PS1 pattern to magonote args", "pattern", m.ps1Pattern)
 	}
 
 	return args, nil
