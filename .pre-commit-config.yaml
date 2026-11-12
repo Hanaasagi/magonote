@@ -1,14 +1,37 @@
-repos:
-- repo: local
-  hooks:
-    - id: format
-      name: format
-      entry: make format
-      language: golang
-      types: [go]
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
 
-    - id: lint
-      name: lint
-      entry: make lint
-      language: golang
-      types: [go]
+fail_fast: true
+default_install_hook_types: [pre-push]
+
+repos:
+  - repo: builtin
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: mixed-line-ending
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: lint
+        name: golangci-lint
+        entry: make lint
+        language: system
+        types: [go]
+        pass_filenames: false
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.47.2
+    hooks:
+      - id: typos
+        args: [--force-exclude]
