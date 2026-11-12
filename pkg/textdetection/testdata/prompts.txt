@@ -1,0 +1,10 @@
+$ kubectl get pods
+user@host:~/x$ docker ps
+root@host:/tmp# git status
+目录 ❯ ls -alh
+[user@host]$ echo ok
+~/project> echo ok
+-> foo
+# comment
+>>> print("x")
+a > b

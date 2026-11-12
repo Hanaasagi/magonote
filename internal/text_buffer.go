@@ -2,28 +2,31 @@ package internal
 
 import (
 	"fmt"
-	"github.com/adrg/xdg"
-	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-runewidth"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/adrg/xdg"
+	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
+	"github.com/rivo/uniseg"
 )
 
 const extraCapacity = 16
 
 type TextCell struct {
 	Rune  rune
+	Comb  []rune
+	Width int
 	Style tcell.Style
 }
 
-// TextBuffer manages text rendering with automatic wrapping
 type TextBuffer struct {
-	content [][]TextCell // [row][column] -> TextCell, stores original positions
-	width   int          // Terminal width
-	height  int          // Terminal height
-	maxX    int          // Maximum X coordinate for each line
+	content [][]TextCell
+	width   int
+	height  int
+	maxX    int
 }
 
 func (tb *TextBuffer) String() string {
@@ -32,6 +35,9 @@ func (tb *TextBuffer) String() string {
 		for _, cell := range row {
 			if cell.Rune != 0 {
 				sb.WriteRune(cell.Rune)
+				for _, r := range cell.Comb {
+					sb.WriteRune(r)
+				}
 			}
 		}
 	}
@@ -41,26 +47,18 @@ func (tb *TextBuffer) String() string {
 func NewTextBuffer(lines []string, width, height int) *TextBuffer {
 	maxLineWidth := 0
 	for _, line := range lines {
-		lineWidth := len([]rune(line)) + extraCapacity
+		lineWidth := runewidth.StringWidth(line) + extraCapacity
 		if lineWidth > maxLineWidth {
 			maxLineWidth = lineWidth
 		}
 	}
-
 	content := make([][]TextCell, len(lines))
 	for i := range content {
 		content[i] = make([]TextCell, maxLineWidth)
 	}
-
-	return &TextBuffer{
-		content: content,
-		width:   width,
-		height:  height,
-		maxX:    maxLineWidth,
-	}
+	return &TextBuffer{content: content, width: width, height: height, maxX: maxLineWidth}
 }
 
-// Clear clears the buffer
 func (tb *TextBuffer) Clear() {
 	for i := range tb.content {
 		for j := range tb.content[i] {
@@ -69,119 +67,121 @@ func (tb *TextBuffer) Clear() {
 	}
 }
 
-// SetCell sets a character at the specified original coordinates
-// The buffer stores content without wrapping - wrapping is applied only when writing to screen
 func (tb *TextBuffer) SetCell(x, y int, r rune, style tcell.Style) {
-	// Ensure the row is wide enough
+	width := runewidth.RuneWidth(r)
+	if width <= 0 {
+		width = 1
+	}
+	tb.SetGrapheme(x, y, string(r), width, style)
+}
+
+// SetGrapheme stores one grapheme at a display-column coordinate. Width-zero
+// leading runes use a space as tcell's main rune and remain in the comb slice.
+func (tb *TextBuffer) SetGrapheme(x, y int, text string, width int, style tcell.Style) {
 	if len(tb.content[y]) <= x {
-		newRow := make([]TextCell, x+extraCapacity) // Add some buffer
+		newRow := make([]TextCell, x+extraCapacity)
 		copy(newRow, tb.content[y])
 		tb.content[y] = newRow
 		if x+extraCapacity > tb.maxX {
 			tb.maxX = x + extraCapacity
 		}
 	}
-
-	// Store the cell at its original coordinates
-	tb.content[y][x] = TextCell{
-		Rune:  r,
-		Style: style,
+	runes := []rune(text)
+	if len(runes) == 0 {
+		return
 	}
+	main, comb := runes[0], runes[1:]
+	if runewidth.RuneWidth(main) == 0 {
+		main, comb = ' ', runes
+	}
+	tb.content[y][x] = TextCell{Rune: main, Comb: comb, Width: width, Style: style}
 }
 
-// SetString sets a string at the specified original coordinates
 func (tb *TextBuffer) SetString(x, y int, text string, style tcell.Style) {
 	currentX := x
-	for _, r := range text {
-		tb.SetCell(currentX, y, r, style)
-
-		// Calculate the width of the current rune
-		width := runewidth.RuneWidth(r)
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		width := runewidth.StringWidth(graphemes.Str())
 		if width <= 0 {
 			width = 1
 		}
+		tb.SetGrapheme(currentX, y, graphemes.Str(), width, style)
 		currentX += width
 	}
 }
 
 func (tb *TextBuffer) dumpSnapshot() error {
 	unixMilli := time.Now().UnixMilli()
-
 	appDir := filepath.Join(xdg.StateHome, "magonote")
 	filePath := filepath.Join(appDir, fmt.Sprintf("snapshot-%d.txt", unixMilli))
-
 	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
-	defer f.Close() // nolint
-
+	defer f.Close() // nolint: errcheck
 	_, err = f.WriteString(tb.String())
 	return err
 }
 
-// WriteToScreen writes the buffer content to a tcell screen with automatic wrapping
+// WriteToScreen wraps logical rows at grapheme boundaries. A wide grapheme
+// that cannot fit in the remaining columns moves to the next screen row.
 func (tb *TextBuffer) WriteToScreen(screen tcell.Screen) {
 	if tb.width <= 0 {
 		return
 	}
-
 	if IsDebugMode() {
-		tb.dumpSnapshot() // nolint
+		tb.dumpSnapshot() // nolint: errcheck
 	}
-
 	screenY := 0
-
-	// Process each line in order
 	for y := 0; y < len(tb.content); y++ {
 		if screenY >= tb.height {
-			break // Screen is full
+			break
 		}
-
 		row := tb.content[y]
 		if len(row) == 0 {
-			screenY++ // Empty line takes one screen line
+			screenY++
 			continue
 		}
-
-		// Find the last non-empty cell in this row
 		maxX := -1
-		for x := 0; x < len(row); x++ {
-			cell := row[x]
-			if cell.Rune != 0 {
+		for x := range row {
+			if row[x].Rune != 0 {
 				maxX = x
 			}
 		}
-
 		if maxX == -1 {
-			screenY++ // No content in this line
+			screenY++
 			continue
 		}
 
-		// Render this line with wrapping
+		screenX := 0
 		for x := 0; x <= maxX; x++ {
+			cell := row[x]
+			if screenX >= tb.width {
+				screenY++
+				screenX = 0
+			}
+			width := 1
+			if cell.Rune != 0 {
+				width = cell.Width
+				if width <= 0 {
+					width = runewidth.RuneWidth(cell.Rune)
+					if width <= 0 {
+						width = 1
+					}
+				}
+			}
+			if cell.Rune != 0 && screenX+width > tb.width {
+				screenY++
+				screenX = 0
+			}
 			if screenY >= tb.height {
 				break
 			}
-
-			cell := row[x]
-
-			// Calculate screen position considering wrapping
-			screenX := x % tb.width
-			if x > 0 && screenX == 0 {
-				// We've wrapped to a new line
-				screenY++
-				if screenY >= tb.height {
-					break
-				}
+			if cell.Rune != 0 {
+				screen.SetContent(screenX, screenY, cell.Rune, cell.Comb, cell.Style)
 			}
-
-			// Set content on screen
-			if cell.Rune != 0 && cell.Rune != ' ' {
-				screen.SetContent(screenX, screenY, cell.Rune, nil, cell.Style)
-			}
+			screenX++
 		}
-
-		screenY++ // Move to next line after processing this original line
+		screenY++
 	}
 }

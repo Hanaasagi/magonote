@@ -1,0 +1,73 @@
+{
+  "entities": [],
+  "tables": [],
+  "prompts": [
+    {
+      "line": 0,
+      "prefix_end": 2,
+      "command": {
+        "raw": "kubectl get pods",
+        "argv": [
+          "kubectl",
+          "get",
+          "pods"
+        ]
+      }
+    },
+    {
+      "line": 1,
+      "prefix_end": 15,
+      "command": {
+        "raw": "docker ps",
+        "argv": [
+          "docker",
+          "ps"
+        ]
+      }
+    },
+    {
+      "line": 2,
+      "prefix_end": 16,
+      "command": {
+        "raw": "git status",
+        "argv": [
+          "git",
+          "status"
+        ]
+      }
+    },
+    {
+      "line": 3,
+      "prefix_end": 7,
+      "command": {
+        "raw": "ls -alh",
+        "argv": [
+          "ls",
+          "-alh"
+        ]
+      }
+    },
+    {
+      "line": 4,
+      "prefix_end": 13,
+      "command": {
+        "raw": "echo ok",
+        "argv": [
+          "echo",
+          "ok"
+        ]
+      }
+    },
+    {
+      "line": 5,
+      "prefix_end": 11,
+      "command": {
+        "raw": "echo ok",
+        "argv": [
+          "echo",
+          "ok"
+        ]
+      }
+    }
+  ]
+}

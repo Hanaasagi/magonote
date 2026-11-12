@@ -1,0 +1,1178 @@
+{
+  "entities": [
+    {
+      "kind": "cell",
+      "text": "Name",
+      "span": {
+        "line": 0,
+        "start_col": 0,
+        "end_col": 4
+      },
+      "confidence": 0.5,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Email",
+      "span": {
+        "line": 0,
+        "start_col": 16,
+        "end_col": 21
+      },
+      "confidence": 0.5,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Email",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Age",
+      "span": {
+        "line": 0,
+        "start_col": 36,
+        "end_col": 39
+      },
+      "confidence": 0.5,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Country",
+      "span": {
+        "line": 0,
+        "start_col": 41,
+        "end_col": 48
+      },
+      "confidence": 0.5,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 1",
+      "span": {
+        "line": 2,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user1@example.com",
+      "span": {
+        "line": 2,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "53",
+      "span": {
+        "line": 2,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Australia",
+      "span": {
+        "line": 2,
+        "start_col": 41,
+        "end_col": 50
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 2",
+      "span": {
+        "line": 3,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user2@example.com",
+      "span": {
+        "line": 3,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "37",
+      "span": {
+        "line": 3,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "USA",
+      "span": {
+        "line": 3,
+        "start_col": 41,
+        "end_col": 44
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 3",
+      "span": {
+        "line": 4,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user3@example.com",
+      "span": {
+        "line": 4,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "44",
+      "span": {
+        "line": 4,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Canada",
+      "span": {
+        "line": 4,
+        "start_col": 41,
+        "end_col": 47
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 4",
+      "span": {
+        "line": 5,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user4@example.com",
+      "span": {
+        "line": 5,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "50",
+      "span": {
+        "line": 5,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Canada",
+      "span": {
+        "line": 5,
+        "start_col": 41,
+        "end_col": 47
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 5",
+      "span": {
+        "line": 6,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user5@example.com",
+      "span": {
+        "line": 6,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "46",
+      "span": {
+        "line": 6,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Germany",
+      "span": {
+        "line": 6,
+        "start_col": 41,
+        "end_col": 48
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 6",
+      "span": {
+        "line": 7,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user6@example.com",
+      "span": {
+        "line": 7,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "37",
+      "span": {
+        "line": 7,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Australia",
+      "span": {
+        "line": 7,
+        "start_col": 41,
+        "end_col": 50
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 7",
+      "span": {
+        "line": 8,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user7@example.com",
+      "span": {
+        "line": 8,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "22",
+      "span": {
+        "line": 8,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Canada",
+      "span": {
+        "line": 8,
+        "start_col": 41,
+        "end_col": 47
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 8",
+      "span": {
+        "line": 9,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user8@example.com",
+      "span": {
+        "line": 9,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "45",
+      "span": {
+        "line": 9,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Germany",
+      "span": {
+        "line": 9,
+        "start_col": 41,
+        "end_col": 48
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 9",
+      "span": {
+        "line": 10,
+        "start_col": 0,
+        "end_col": 13
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user9@example.com",
+      "span": {
+        "line": 10,
+        "start_col": 16,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "45",
+      "span": {
+        "line": 10,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "UK",
+      "span": {
+        "line": 10,
+        "start_col": 41,
+        "end_col": 43
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Sample User 10",
+      "span": {
+        "line": 11,
+        "start_col": 0,
+        "end_col": 14
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "email",
+      "text": "user10@example.com",
+      "span": {
+        "line": 11,
+        "start_col": 16,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "27",
+      "span": {
+        "line": 11,
+        "start_col": 36,
+        "end_col": 38
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Germany",
+      "span": {
+        "line": 11,
+        "start_col": 41,
+        "end_col": 48
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Country"
+      }
+    }
+  ],
+  "tables": [
+    {
+      "start_line": 0,
+      "end_line": 11,
+      "header_line": 0,
+      "columns": [
+        {
+          "index": 0,
+          "start": 0,
+          "end": 14,
+          "name": "Name",
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 1,
+          "start": 16,
+          "end": 34,
+          "name": "Email",
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 2,
+          "start": 36,
+          "end": 39,
+          "name": "Age",
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 3,
+          "start": 41,
+          "end": 50,
+          "name": "Country",
+          "align": "left",
+          "weight": 1
+        }
+      ],
+      "rows": [
+        {
+          "line": 0,
+          "cells": [
+            {
+              "text": "Name",
+              "span": {
+                "line": 0,
+                "start_col": 0,
+                "end_col": 4
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "Email",
+              "span": {
+                "line": 0,
+                "start_col": 16,
+                "end_col": 21
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "Age",
+              "span": {
+                "line": 0,
+                "start_col": 36,
+                "end_col": 39
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Country",
+              "span": {
+                "line": 0,
+                "start_col": 41,
+                "end_col": 48
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "cells": [
+            {
+              "text": "Sample User 1",
+              "span": {
+                "line": 2,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user1@example.com",
+              "span": {
+                "line": 2,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "53",
+              "span": {
+                "line": 2,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Australia",
+              "span": {
+                "line": 2,
+                "start_col": 41,
+                "end_col": 50
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "cells": [
+            {
+              "text": "Sample User 2",
+              "span": {
+                "line": 3,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user2@example.com",
+              "span": {
+                "line": 3,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "37",
+              "span": {
+                "line": 3,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "USA",
+              "span": {
+                "line": 3,
+                "start_col": 41,
+                "end_col": 44
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 4,
+          "cells": [
+            {
+              "text": "Sample User 3",
+              "span": {
+                "line": 4,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user3@example.com",
+              "span": {
+                "line": 4,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "44",
+              "span": {
+                "line": 4,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Canada",
+              "span": {
+                "line": 4,
+                "start_col": 41,
+                "end_col": 47
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 5,
+          "cells": [
+            {
+              "text": "Sample User 4",
+              "span": {
+                "line": 5,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user4@example.com",
+              "span": {
+                "line": 5,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "50",
+              "span": {
+                "line": 5,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Canada",
+              "span": {
+                "line": 5,
+                "start_col": 41,
+                "end_col": 47
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 6,
+          "cells": [
+            {
+              "text": "Sample User 5",
+              "span": {
+                "line": 6,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user5@example.com",
+              "span": {
+                "line": 6,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "46",
+              "span": {
+                "line": 6,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Germany",
+              "span": {
+                "line": 6,
+                "start_col": 41,
+                "end_col": 48
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 7,
+          "cells": [
+            {
+              "text": "Sample User 6",
+              "span": {
+                "line": 7,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user6@example.com",
+              "span": {
+                "line": 7,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "37",
+              "span": {
+                "line": 7,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Australia",
+              "span": {
+                "line": 7,
+                "start_col": 41,
+                "end_col": 50
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 8,
+          "cells": [
+            {
+              "text": "Sample User 7",
+              "span": {
+                "line": 8,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user7@example.com",
+              "span": {
+                "line": 8,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "22",
+              "span": {
+                "line": 8,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Canada",
+              "span": {
+                "line": 8,
+                "start_col": 41,
+                "end_col": 47
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 9,
+          "cells": [
+            {
+              "text": "Sample User 8",
+              "span": {
+                "line": 9,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user8@example.com",
+              "span": {
+                "line": 9,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "45",
+              "span": {
+                "line": 9,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Germany",
+              "span": {
+                "line": 9,
+                "start_col": 41,
+                "end_col": 48
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 10,
+          "cells": [
+            {
+              "text": "Sample User 9",
+              "span": {
+                "line": 10,
+                "start_col": 0,
+                "end_col": 13
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user9@example.com",
+              "span": {
+                "line": 10,
+                "start_col": 16,
+                "end_col": 33
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "45",
+              "span": {
+                "line": 10,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "UK",
+              "span": {
+                "line": 10,
+                "start_col": 41,
+                "end_col": 43
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 11,
+          "cells": [
+            {
+              "text": "Sample User 10",
+              "span": {
+                "line": 11,
+                "start_col": 0,
+                "end_col": 14
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "user10@example.com",
+              "span": {
+                "line": 11,
+                "start_col": 16,
+                "end_col": 34
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "27",
+              "span": {
+                "line": 11,
+                "start_col": 36,
+                "end_col": 38
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Germany",
+              "span": {
+                "line": 11,
+                "start_col": 41,
+                "end_col": 48
+              },
+              "col": 3,
+              "empty": false
+            }
+          ]
+        }
+      ],
+      "confidence": 1
+    }
+  ],
+  "prompts": []
+}

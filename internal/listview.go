@@ -9,6 +9,7 @@ import (
 	"time"
 
 	fz "github.com/Hanaasagi/magonote/pkg/fuzzymatch"
+	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
 	"github.com/fatih/color"
 	"golang.org/x/term"
 )
@@ -38,6 +39,7 @@ type ListView struct {
 	// Core state
 	state           *State
 	candidates      []string
+	locations       []*entity.FileLocation
 	filteredMatches []fz.FuzzyMatch
 	selectedIndex   int
 	scrollOffset    int
@@ -86,13 +88,16 @@ func NewListView(
 	// Extract candidate texts from matches
 	matches := state.Matches(false, 2) // list view should only show unique matches
 	candidates := make([]string, len(matches))
+	locations := make([]*entity.FileLocation, len(matches))
 	for i, match := range matches {
 		candidates[i] = match.Text
+		locations[i] = match.Location
 	}
 
 	lv := &ListView{
 		state:              state,
 		candidates:         candidates,
+		locations:          locations,
 		filteredMatches:    []fz.FuzzyMatch{},
 		selectedIndex:      0,
 		scrollOffset:       0,
@@ -546,6 +551,7 @@ func (lv *ListView) selectCurrentItem() bool {
 			Text:           match.Text,
 			Uppercase:      false,
 			ShouldOpenFile: false,
+			Location:       lv.locations[match.Original],
 		})
 
 		if !lv.multi {
@@ -564,6 +570,7 @@ func (lv *ListView) getDefaultSelection() []ChosenMatch {
 				Text:           match.Text,
 				Uppercase:      false,
 				ShouldOpenFile: false,
+				Location:       lv.locations[match.Original],
 			},
 		}
 	}

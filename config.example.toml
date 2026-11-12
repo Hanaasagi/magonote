@@ -24,6 +24,9 @@ unique_level = 0
 contrast = false
 
 [rules]
+# Enable low-priority candidates for every word (default: false)
+words = false
+
 # User-defined matching and filtering rules
 
 [rules.include]
@@ -85,3 +88,9 @@ confidence_threshold = 0.8
 
 [plugins.colordetection]
 enabled = true
+
+[plugins.profiles]
+enabled = true
+exclude_prompt = true
+# Additional prompt regexes; each must contain a named `cmd` capture group.
+prompt_patterns = []

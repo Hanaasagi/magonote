@@ -15,6 +15,7 @@ import (
 	"github.com/Hanaasagi/magonote/cmd"
 	"github.com/Hanaasagi/magonote/internal"
 	"github.com/Hanaasagi/magonote/internal/logger"
+	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
 	"github.com/adrg/xdg"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -48,6 +49,7 @@ type Arguments struct {
 	showVersion    bool
 	listView       bool
 	extraExclusion []string // Extra exclusion patterns from CLI
+	words          bool
 
 	// colors
 	foregroundColor       string
@@ -152,18 +154,23 @@ func writeOutput(target, content string) error {
 	return nil
 }
 
-// openFileWithEditor opens the specified file with the editor
-func openFileWithEditor(filePath string) error {
+// openFileWithEditor opens the real path from a structured file location.
+func openFileWithEditor(location entity.FileLocation) error {
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
 		editor = defaultEditor
 	}
 
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	if _, err := os.Stat(location.Path); os.IsNotExist(err) {
 		return fmt.Errorf("file does not exist: %w", err)
 	}
 
-	cmd := exec.Command(editor, filePath)
+	args := make([]string, 0, 2)
+	if location.Line > 0 {
+		args = append(args, fmt.Sprintf("+%d", location.Line))
+	}
+	args = append(args, location.Path)
+	cmd := exec.Command(editor, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -181,8 +188,12 @@ func processResults(selected []internal.ChosenMatch, format string) (string, err
 
 	for _, item := range selected {
 		if item.ShouldOpenFile {
-			slog.Info("Opening file with editor", "file", item.Text, "editor", os.Getenv("EDITOR"))
-			if err := openFileWithEditor(item.Text); err != nil {
+			location := entity.FileLocation{Path: item.Text}
+			if item.Location != nil {
+				location = *item.Location
+			}
+			slog.Info("Opening file with editor", "file", location.Path, "editor", os.Getenv("EDITOR"))
+			if err := openFileWithEditor(location); err != nil {
 				return "", fmt.Errorf("opening file with editor: %w", err)
 			}
 			os.Exit(0)
@@ -277,6 +288,9 @@ func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
 	if cmd.Flags().Changed("contrast") {
 		config.Core.Contrast = args.contrast
 	}
+	if cmd.Flags().Changed("words") {
+		config.Rules.Words = args.words
+	}
 
 	// Handle extra exclusion patterns from CLI
 	if len(args.extraExclusion) > 0 {
@@ -320,6 +334,12 @@ func runApp(config *Config, args *Arguments) error {
 
 	if plugins.Colordetection != nil && plugins.Colordetection.Enabled {
 		opts = append(opts, internal.WithColorDetection())
+	}
+	if plugins.Profiles != nil && plugins.Profiles.Enabled {
+		opts = append(opts, internal.WithProfiles(profilesExcludePrompt(plugins.Profiles), plugins.Profiles.PromptPatterns))
+	}
+	if config.Rules.Words {
+		opts = append(opts, internal.WithWords())
 	}
 
 	// Apply user-defined exclusion rules (unified rules section)
@@ -372,7 +392,7 @@ func runApp(config *Config, args *Arguments) error {
 	}
 
 	if len(selected) == 0 {
-		// slient here
+		// silent here
 		return nil
 		// return fmt.Errorf("no selection made")
 
@@ -459,6 +479,8 @@ func main() {
 	rootCmd.Flags().StringArrayVar(&args.extraExclusion, "extra-exclusion", nil, "Additional regex patterns to exclude from matching")
 
 	rootCmd.Flags().BoolVar(&args.listView, "list", false, "Enable list view")
+	rootCmd.Flags().BoolVar(&args.words, "words", false, "Enable fallback word candidates")
+	rootCmd.AddCommand(newDetectCommand(&configPath, args))
 
 	rootCmd.SetHelpTemplate(cmd.HelpTemplate)
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {

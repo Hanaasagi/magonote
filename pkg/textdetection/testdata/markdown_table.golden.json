@@ -1,0 +1,185 @@
+{
+  "entities": [
+    {
+      "kind": "cell",
+      "text": "Name",
+      "span": {
+        "line": 0,
+        "start_col": 2,
+        "end_col": 6
+      },
+      "confidence": 0.5,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Age",
+      "span": {
+        "line": 0,
+        "start_col": 9,
+        "end_col": 12
+      },
+      "confidence": 0.5,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Alice",
+      "span": {
+        "line": 2,
+        "start_col": 2,
+        "end_col": 7
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Bob",
+      "span": {
+        "line": 3,
+        "start_col": 2,
+        "end_col": 5
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Name"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "22",
+      "span": {
+        "line": 3,
+        "start_col": 8,
+        "end_col": 10
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Age"
+      }
+    }
+  ],
+  "tables": [
+    {
+      "start_line": 0,
+      "end_line": 3,
+      "header_line": 0,
+      "columns": [
+        {
+          "index": 0,
+          "start": 1,
+          "end": 7,
+          "name": "Name",
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 1,
+          "start": 8,
+          "end": 13,
+          "name": "Age",
+          "align": "left",
+          "weight": 1
+        }
+      ],
+      "rows": [
+        {
+          "line": 0,
+          "cells": [
+            {
+              "text": "Name",
+              "span": {
+                "line": 0,
+                "start_col": 2,
+                "end_col": 6
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "Age",
+              "span": {
+                "line": 0,
+                "start_col": 9,
+                "end_col": 12
+              },
+              "col": 1,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "cells": [
+            {
+              "text": "Alice",
+              "span": {
+                "line": 2,
+                "start_col": 2,
+                "end_col": 7
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "8",
+              "span": {
+                "line": 2,
+                "start_col": 10,
+                "end_col": 11
+              },
+              "col": 1,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 3,
+          "cells": [
+            {
+              "text": "Bob",
+              "span": {
+                "line": 3,
+                "start_col": 2,
+                "end_col": 5
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "22",
+              "span": {
+                "line": 3,
+                "start_col": 8,
+                "end_col": 10
+              },
+              "col": 1,
+              "empty": false
+            }
+          ]
+        }
+      ],
+      "confidence": 0.77
+    }
+  ],
+  "prompts": []
+}

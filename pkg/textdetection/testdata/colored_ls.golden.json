@@ -1,0 +1,30 @@
+{
+  "entities": [
+    {
+      "kind": "styled",
+      "text": "error",
+      "span": {
+        "line": 0,
+        "start_col": 0,
+        "end_col": 5
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "style"
+    },
+    {
+      "kind": "path",
+      "text": "/var/log/app.log",
+      "span": {
+        "line": 0,
+        "start_col": 6,
+        "end_col": 22
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    }
+  ],
+  "tables": [],
+  "prompts": []
+}
