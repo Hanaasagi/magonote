@@ -1,7 +1,7 @@
 <h1 align="center"> magonote 🦯 </h1>
 
 <div align="center">
-  
+
 𝑨 𝒎𝒐𝒅𝒆𝒓𝒏 𝒕𝒎𝒖𝒙 𝒑𝒍𝒖𝒈𝒊𝒏 𝒕𝒐 𝒔𝒆𝒍𝒆𝒄𝒕 𝒂𝒏𝒅 𝒂𝒄𝒕 𝒐𝒏 𝒗𝒊𝒔𝒊𝒃𝒍𝒆 𝒕𝒆𝒙𝒕 𝒘𝒊𝒕𝒉 𝒎𝒊𝒏𝒊𝒎𝒂𝒍 𝒌𝒆𝒚𝒔𝒕𝒓𝒐𝒌𝒆𝒔
 </div>
 
@@ -24,7 +24,7 @@
 
 ### 🎨 **Flexible Customization**
 - **Multiple Keyboard Layouts**: Support for QWERTY, QWERTZ, AZERTY, Colemak, Dvorak, and variations
-- **Color Themes**: Fully customizable color schemes for hints and highlights  
+- **Color Themes**: Fully customizable color schemes for hints and highlights
 - **Positioning Options**: Choose hint placement (left/right) for optimal visibility
 
 ### 🔧 **Advanced Functionality**
@@ -44,7 +44,7 @@
 ### Prerequisites
 
 - **tmux** version 3.1 or higher
-- **Go** 1.21 or higher (for building from source)
+- **Go** 1.24 or higher (for building from source)
 
 ### Quick Install
 
@@ -112,7 +112,7 @@ magonote automatically recognizes these patterns:
 | **File Paths** | `/home/user/file.txt`, `./config/app.toml` |
 | **Git Hashes** | `a1b2c3d`, `1234567890abcdef...` |
 | **UUIDs** | `550e8400-e29b-41d4-a716-446655440000` |
-| **Docker** | `sha256:30557a29d5abc51e...` |
+| **Docker Digest** | `sha256:30557a29d5abc51e...` |
 | **Colors** | `#FF0000`, `#00FF00` |
 | **Dates** | `2023-12-01`, `2024-01-15T10:30:45Z` |
 
@@ -148,6 +148,9 @@ unique_level = 0
 contrast = false
 
 [rules]
+# Enable low-priority candidates for every word (default: false)
+words = false
+
 # User-defined matching and filtering rules
 
 [rules.include]
@@ -209,6 +212,12 @@ confidence_threshold = 0.8
 
 [plugins.colordetection]
 enabled = true
+
+[plugins.profiles]
+enabled = true
+exclude_prompt = true
+# Additional prompt regexes; each must contain a named `cmd` capture group.
+prompt_patterns = []
 ```
 
 ### Command Line Options
@@ -239,7 +248,20 @@ Flags:
   -t, --target string            Stores the hint in the specified path
   -u, --unique count             Don't show duplicated hints for the same match (use -u for unique hints, -uu for unique match)
   -v, --version                  Print version and exit
+      --words                    Enable fallback word candidates
 ```
+
+### Detection JSON
+
+Run the recognition engine without entering the TUI. The output contains entities, tables, and prompts with display-column spans:
+
+```bash
+magonote detect --json -i test/e2e/fixtures/docker_ps.txt --config NONE
+# Read from stdin:
+tmux capture-pane -p -e | magonote detect --json --config NONE
+```
+
+Use a configuration file to enable table, style, or command-profile detection in this mode.
 
 ### Keyboard Layout Options
 
@@ -247,7 +269,7 @@ Available layouts: `qwerty`, `qwertz`, `azerty`, `colemak`, `dvorak`
 
 Each layout also supports hand-specific variants:
 - `qwerty-left-hand` - Optimized for left hand
-- `qwerty-right-hand` - Optimized for right hand  
+- `qwerty-right-hand` - Optimized for right hand
 - `qwerty-homerow` - Only homerow keys
 
 

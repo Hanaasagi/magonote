@@ -10,6 +10,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+	"github.com/rivo/uniseg"
+
+	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
+	tdscreen "github.com/Hanaasagi/magonote/pkg/textdetection/screen"
 )
 
 // View represents the terminal UI for displaying and interacting with matches
@@ -43,6 +47,7 @@ type ChosenMatch struct {
 	Text           string
 	Uppercase      bool
 	ShouldOpenFile bool
+	Location       *entity.FileLocation
 }
 
 // CaptureEvent represents the result of the user interaction
@@ -157,14 +162,12 @@ func (v *View) render(typedHint string) {
 
 // renderTextLines renders the original text lines
 func (v *View) renderTextLines() {
-	for y, line := range v.state.Lines {
-		cleanLine := strings.TrimRight(line, " \t\n\r")
-		if cleanLine == "" {
-			continue
+	for y, line := range v.state.Screen().Lines {
+		x := 0
+		for _, cell := range line.Cells {
+			v.textBuffer.SetGrapheme(x, y, cell.Grapheme, int(cell.Width), screenStyleToTcell(cell.Style))
+			x += int(cell.Width)
 		}
-
-		// Use the text buffer to handle wrapping
-		v.textBuffer.SetString(0, y, cleanLine, tcell.StyleDefault)
 	}
 }
 
@@ -202,35 +205,26 @@ func (v *View) getMatchStyle(mat *Match, selected *Match, chosenMap map[string]b
 
 // renderSingleMatch renders a single match with its hint
 func (v *View) renderSingleMatch(mat *Match, style tcell.Style, typedHint string) {
-	// Calculate display position accounting for wide characters
-	line := v.state.Lines[mat.Y]
-	prefix := line[:mat.X]
-
-	// Calculate the actual display position by summing up character widths
-	offset := 0
-	for _, r := range prefix {
-		width := runewidth.RuneWidth(r)
-		if width <= 0 {
-			width = 1
-		}
-		offset += width
+	visible := mat.Text
+	if mat.EndCol > mat.X {
+		line := v.state.Screen().Lines[mat.Y]
+		byteStart := v.state.Screen().ByteOf(mat.Y, mat.X)
+		byteEnd := v.state.Screen().ByteOf(mat.Y, mat.EndCol)
+		visible = line.Plain[byteStart:byteEnd]
 	}
-
-	// Display the match text
-	text := v.makeHintText(mat.Text)
-	currentX := offset
-	for _, r := range text {
-		v.textBuffer.SetCell(currentX, mat.Y, r, style)
-		width := runewidth.RuneWidth(r)
+	text := v.makeHintText(visible)
+	currentX := mat.X
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		width := runewidth.StringWidth(graphemes.Str())
 		if width <= 0 {
 			width = 1
 		}
+		v.textBuffer.SetGrapheme(currentX, mat.Y, graphemes.Str(), width, style)
 		currentX += width
 	}
-
-	// Display the hint if available
 	if mat.Hint != nil {
-		v.renderHint(mat, offset, text, typedHint)
+		v.renderHint(mat, mat.X, text, typedHint)
 	}
 }
 
@@ -245,31 +239,25 @@ func (v *View) renderHint(mat *Match, offset int, text string, typedHint string)
 	// Display the hint
 	hintText := v.makeHintText(hint)
 	currentX := finalPosition
-	hintRunes := []rune(hintText)
-	for i, r := range hintRunes {
-		hintStyle := v.getHintStyle(hint, typedHint, i)
-		v.textBuffer.SetCell(currentX, mat.Y, r, hintStyle)
-		width := runewidth.RuneWidth(r)
+	graphemes := uniseg.NewGraphemes(hintText)
+	charIndex := 0
+	for graphemes.Next() {
+		hintStyle := v.getHintStyle(hint, typedHint, charIndex)
+		width := runewidth.StringWidth(graphemes.Str())
 		if width <= 0 {
 			width = 1
 		}
+		v.textBuffer.SetGrapheme(currentX, mat.Y, graphemes.Str(), width, hintStyle)
 		currentX += width
+		charIndex++
 	}
 }
 
 // calculateHintPosition calculates where to position the hint
 func (v *View) calculateHintPosition(text, hint string) int {
+	textWidth := runewidth.StringWidth(text)
 	switch v.position {
 	case "right":
-		// Calculate actual display width of the text
-		textWidth := 0
-		for _, r := range text {
-			width := runewidth.RuneWidth(r)
-			if width <= 0 {
-				width = 1
-			}
-			textWidth += width
-		}
 		return textWidth - len([]rune(hint))
 	case "off_left":
 		offset := -len([]rune(hint))
@@ -278,15 +266,6 @@ func (v *View) calculateHintPosition(text, hint string) int {
 		}
 		return offset
 	case "off_right":
-		// Calculate actual display width of the text
-		textWidth := 0
-		for _, r := range text {
-			width := runewidth.RuneWidth(r)
-			if width <= 0 {
-				width = 1
-			}
-			textWidth += width
-		}
 		return textWidth
 	default: // "left"
 		return 0
@@ -401,6 +380,7 @@ func (v *View) handleEnter() *CaptureEvent {
 			Text:           v.matches[v.skip].Text,
 			Uppercase:      false,
 			ShouldOpenFile: false,
+			Location:       v.matches[v.skip].Location,
 		})
 
 		if !v.multi {
@@ -433,6 +413,7 @@ func (v *View) handleRuneKey(ev *tcell.EventKey, typedHint *string, hasUppercase
 				Uppercase: *hasUppercase,
 				// ShouldOpenFile: *hasUppercase && isLikelyFilePath(mat.Text),
 				ShouldOpenFile: *hasUppercase,
+				Location:       mat.Location,
 			})
 
 			if v.multi {
@@ -496,6 +477,35 @@ func (v *View) Present() []ChosenMatch {
 	}
 
 	return v.chosen
+}
+
+func screenStyleToTcell(style tdscreen.Style) tcell.Style {
+	result := tcell.StyleDefault.
+		Foreground(screenColorToTcell(style.Fg)).
+		Background(screenColorToTcell(style.Bg)).
+		Bold(style.Attr&tdscreen.AttrBold != 0).
+		Dim(style.Attr&tdscreen.AttrDim != 0).
+		Italic(style.Attr&tdscreen.AttrItalic != 0).
+		Underline(style.Attr&tdscreen.AttrUnderline != 0).
+		Blink(style.Attr&tdscreen.AttrBlink != 0).
+		Reverse(style.Attr&tdscreen.AttrReverse != 0).
+		StrikeThrough(style.Attr&tdscreen.AttrStrike != 0)
+	// tcell has no hidden attribute; retain the other style information.
+	if style.Hyperlink != "" {
+		result = result.Url(style.Hyperlink)
+	}
+	return result
+}
+
+func screenColorToTcell(color tdscreen.Color) tcell.Color {
+	switch color.Mode {
+	case tdscreen.ColorANSI16, tdscreen.ColorANSI256:
+		return tcell.PaletteColor(int(color.Index))
+	case tdscreen.ColorRGB:
+		return tcell.NewRGBColor(int32(color.R), int32(color.G), int32(color.B))
+	default:
+		return tcell.ColorDefault
+	}
 }
 
 // Pre-compiled pattern for RGB color matching

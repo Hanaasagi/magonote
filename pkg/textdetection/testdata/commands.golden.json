@@ -1,0 +1,2746 @@
+{
+  "entities": [
+    {
+      "kind": "sha",
+      "text": "aa145ac35bbc",
+      "span": {
+        "line": 1,
+        "start_col": 0,
+        "end_col": 12
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "mysql:latest",
+      "span": {
+        "line": 1,
+        "start_col": 15,
+        "end_col": 27
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "\"docker-entrypoint.s…\"",
+      "span": {
+        "line": 1,
+        "start_col": 39,
+        "end_col": 61
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "13 months ago",
+      "span": {
+        "line": 1,
+        "start_col": 64,
+        "end_col": 77
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Up 2 days",
+      "span": {
+        "line": 1,
+        "start_col": 80,
+        "end_col": 89
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "sha",
+      "text": "330633d306",
+      "span": {
+        "line": 1,
+        "start_col": 102,
+        "end_col": 112
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "mysql-test-mysql-1",
+      "span": {
+        "line": 1,
+        "start_col": 187,
+        "end_col": 205
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "sha",
+      "text": "e354d62bbe17",
+      "span": {
+        "line": 2,
+        "start_col": 0,
+        "end_col": 12
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "postgres:latest",
+      "span": {
+        "line": 2,
+        "start_col": 15,
+        "end_col": 30
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "\"docker-entrypoint.s…\"",
+      "span": {
+        "line": 2,
+        "start_col": 39,
+        "end_col": 61
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "13 months ago",
+      "span": {
+        "line": 2,
+        "start_col": 64,
+        "end_col": 77
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Up 2 days",
+      "span": {
+        "line": 2,
+        "start_col": 80,
+        "end_col": 89
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "sha",
+      "text": "543254c432",
+      "span": {
+        "line": 2,
+        "start_col": 123,
+        "end_col": 133
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "cell",
+      "text": "mysql-test-postgres-1",
+      "span": {
+        "line": 2,
+        "start_col": 187,
+        "end_col": 208
+      },
+      "confidence": 0.8,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": ""
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Permissions",
+      "span": {
+        "line": 5,
+        "start_col": 0,
+        "end_col": 11
+      },
+      "confidence": 0.15,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Size",
+      "span": {
+        "line": 5,
+        "start_col": 12,
+        "end_col": 16
+      },
+      "confidence": 0.15,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "User",
+      "span": {
+        "line": 5,
+        "start_col": 17,
+        "end_col": 21
+      },
+      "confidence": 0.15,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "Date Modified",
+      "span": {
+        "line": 5,
+        "start_col": 24,
+        "end_col": 37
+      },
+      "confidence": 0.15,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Date Modified",
+        "header": "true"
+      }
+    },
+    {
+      "kind": "path",
+      "text": "Name",
+      "span": {
+        "line": 5,
+        "start_col": 41,
+        "end_col": 45
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "drwxr-xr-x",
+      "span": {
+        "line": 6,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 6,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 6,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": ".git",
+      "span": {
+        "line": 6,
+        "start_col": 41,
+        "end_col": 45
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rw-r--r--",
+      "span": {
+        "line": 7,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "570",
+      "span": {
+        "line": 7,
+        "start_col": 13,
+        "end_col": 16
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 7,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-10",
+      "span": {
+        "line": 7,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": ".gitignore",
+      "span": {
+        "line": 7,
+        "start_col": 41,
+        "end_col": 51
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "drwxr-xr-x",
+      "span": {
+        "line": 8,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 8,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 8,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "build",
+      "span": {
+        "line": 8,
+        "start_col": 41,
+        "end_col": 46
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "drwxr-xr-x",
+      "span": {
+        "line": 9,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 9,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-10",
+      "span": {
+        "line": 9,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "cmd",
+      "span": {
+        "line": 9,
+        "start_col": 41,
+        "end_col": 44
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rw-r--r--",
+      "span": {
+        "line": 10,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "88",
+      "span": {
+        "line": 10,
+        "start_col": 14,
+        "end_col": 16
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 10,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-16",
+      "span": {
+        "line": 10,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "crash.log",
+      "span": {
+        "line": 10,
+        "start_col": 41,
+        "end_col": 50
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rw-r--r--",
+      "span": {
+        "line": 11,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "4.6k",
+      "span": {
+        "line": 11,
+        "start_col": 12,
+        "end_col": 16
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 11,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 11,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "E2E_TESTS_SUMMARY.md",
+      "span": {
+        "line": 11,
+        "start_col": 41,
+        "end_col": 61
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rw-r--r--",
+      "span": {
+        "line": 12,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "689",
+      "span": {
+        "line": 12,
+        "start_col": 13,
+        "end_col": 16
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 12,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 12,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "go.mod",
+      "span": {
+        "line": 12,
+        "start_col": 41,
+        "end_col": 47
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rw-r--r--",
+      "span": {
+        "line": 13,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "9.3k",
+      "span": {
+        "line": 13,
+        "start_col": 12,
+        "end_col": 16
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 13,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 13,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "go.sum",
+      "span": {
+        "line": 13,
+        "start_col": 41,
+        "end_col": 47
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "drwxr-xr-x",
+      "span": {
+        "line": 14,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 14,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 14,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "internal",
+      "span": {
+        "line": 14,
+        "start_col": 41,
+        "end_col": 49
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rw-r--r--",
+      "span": {
+        "line": 15,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "773",
+      "span": {
+        "line": 15,
+        "start_col": 13,
+        "end_col": 16
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 15,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 15,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "Makefile",
+      "span": {
+        "line": 15,
+        "start_col": 41,
+        "end_col": 49
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "drwxr-xr-x",
+      "span": {
+        "line": 16,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 16,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-06",
+      "span": {
+        "line": 16,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "pkg",
+      "span": {
+        "line": 16,
+        "start_col": 41,
+        "end_col": 44
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rw-r--r--",
+      "span": {
+        "line": 17,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 17,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-10",
+      "span": {
+        "line": 17,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "README.md",
+      "span": {
+        "line": 17,
+        "start_col": 41,
+        "end_col": 50
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "drwxr-xr-x",
+      "span": {
+        "line": 18,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 18,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 18,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "test",
+      "span": {
+        "line": 18,
+        "start_col": 41,
+        "end_col": 45
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rwxr-xr-x",
+      "span": {
+        "line": 19,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "624",
+      "span": {
+        "line": 19,
+        "start_col": 13,
+        "end_col": 16
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 19,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 19,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "test_e2e.sh",
+      "span": {
+        "line": 19,
+        "start_col": 41,
+        "end_col": 52
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "drwxr-xr-x",
+      "span": {
+        "line": 20,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 20,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-17",
+      "span": {
+        "line": 20,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "testscase",
+      "span": {
+        "line": 20,
+        "start_col": 41,
+        "end_col": 50
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": ".rwxr-xr-x",
+      "span": {
+        "line": 21,
+        "start_col": 0,
+        "end_col": 10
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Permissions"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "1.0k",
+      "span": {
+        "line": 21,
+        "start_col": 12,
+        "end_col": 16
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "Size"
+      }
+    },
+    {
+      "kind": "cell",
+      "text": "kumiko",
+      "span": {
+        "line": 21,
+        "start_col": 17,
+        "end_col": 23
+      },
+      "confidence": 0.24,
+      "class": 1,
+      "source": "cell",
+      "meta": {
+        "column": "User"
+      }
+    },
+    {
+      "kind": "date",
+      "text": "2025-06-11",
+      "span": {
+        "line": 21,
+        "start_col": 24,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "tmux.sh",
+      "span": {
+        "line": 21,
+        "start_col": 41,
+        "end_col": 48
+      },
+      "confidence": 0.95,
+      "class": 2,
+      "source": "profile",
+      "meta": {
+        "source": "ls"
+      }
+    },
+    {
+      "kind": "filename",
+      "text": "go.sum",
+      "span": {
+        "line": 23,
+        "start_col": 6,
+        "end_col": 12
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "github.com/adrg/xdg",
+      "span": {
+        "line": 24,
+        "start_col": 0,
+        "end_col": 19
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "github.com/adrg/xdg",
+      "span": {
+        "line": 25,
+        "start_col": 0,
+        "end_col": 19
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "v0.5.3/go.mod",
+      "span": {
+        "line": 25,
+        "start_col": 20,
+        "end_col": 33
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "github.com/cpuguy83/go-md2man/v2",
+      "span": {
+        "line": 26,
+        "start_col": 0,
+        "end_col": 32
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "v2.0.6/go.mod",
+      "span": {
+        "line": 26,
+        "start_col": 33,
+        "end_col": 46
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "KiB/s",
+      "span": {
+        "line": 32,
+        "start_col": 49,
+        "end_col": 54
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "Hanaasagi/magonote",
+      "span": {
+        "line": 34,
+        "start_col": 16,
+        "end_col": 34
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "sha",
+      "text": "4a229ab",
+      "span": {
+        "line": 36,
+        "start_col": 3,
+        "end_col": 10
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "sha",
+      "text": "f7f0762",
+      "span": {
+        "line": 36,
+        "start_col": 12,
+        "end_col": 19
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "origin/master",
+      "span": {
+        "line": 36,
+        "start_col": 35,
+        "end_col": 48
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "sha",
+      "text": "4a229ab",
+      "span": {
+        "line": 37,
+        "start_col": 9,
+        "end_col": 16
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "sha",
+      "text": "f7f0762",
+      "span": {
+        "line": 37,
+        "start_col": 18,
+        "end_col": 25
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "internal/state.go",
+      "span": {
+        "line": 39,
+        "start_col": 1,
+        "end_col": 18
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "testscase/case4",
+      "span": {
+        "line": 40,
+        "start_col": 1,
+        "end_col": 16
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    },
+    {
+      "kind": "path",
+      "text": "testscase/case4",
+      "span": {
+        "line": 42,
+        "start_col": 20,
+        "end_col": 35
+      },
+      "confidence": 0.9,
+      "class": 2,
+      "source": "regex"
+    }
+  ],
+  "tables": [
+    {
+      "start_line": 1,
+      "end_line": 2,
+      "header_line": -1,
+      "columns": [
+        {
+          "index": 0,
+          "start": 0,
+          "end": 12,
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 1,
+          "start": 15,
+          "end": 30,
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 2,
+          "start": 39,
+          "end": 61,
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 3,
+          "start": 64,
+          "end": 77,
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 4,
+          "start": 80,
+          "end": 89,
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 5,
+          "start": 92,
+          "end": 148,
+          "align": "left",
+          "weight": 1
+        },
+        {
+          "index": 6,
+          "start": 187,
+          "end": 208,
+          "align": "left",
+          "weight": 1
+        }
+      ],
+      "rows": [
+        {
+          "line": 1,
+          "cells": [
+            {
+              "text": "aa145ac35bbc",
+              "span": {
+                "line": 1,
+                "start_col": 0,
+                "end_col": 12
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "mysql:latest",
+              "span": {
+                "line": 1,
+                "start_col": 15,
+                "end_col": 27
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "\"docker-entrypoint.s…\"",
+              "span": {
+                "line": 1,
+                "start_col": 39,
+                "end_col": 61
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "13 months ago",
+              "span": {
+                "line": 1,
+                "start_col": 64,
+                "end_col": 77
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "Up 2 days",
+              "span": {
+                "line": 1,
+                "start_col": 80,
+                "end_col": 89
+              },
+              "col": 4,
+              "empty": false
+            },
+            {
+              "text": "0.s.0.0.0:330633d306/tcp[:f::]:330633q306/tcp33w3060/tcp",
+              "span": {
+                "line": 1,
+                "start_col": 92,
+                "end_col": 148
+              },
+              "col": 5,
+              "empty": false
+            },
+            {
+              "text": "mysql-test-mysql-1",
+              "span": {
+                "line": 1,
+                "start_col": 187,
+                "end_col": 205
+              },
+              "col": 6,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 2,
+          "cells": [
+            {
+              "text": "e354d62bbe17",
+              "span": {
+                "line": 2,
+                "start_col": 0,
+                "end_col": 12
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "postgres:latest",
+              "span": {
+                "line": 2,
+                "start_col": 15,
+                "end_col": 30
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "\"docker-entrypoint.s…\"",
+              "span": {
+                "line": 2,
+                "start_col": 39,
+                "end_col": 61
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "13 months ago",
+              "span": {
+                "line": 2,
+                "start_col": 64,
+                "end_col": 77
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "Up 2 days",
+              "span": {
+                "line": 2,
+                "start_col": 80,
+                "end_col": 89
+              },
+              "col": 4,
+              "empty": false
+            },
+            {
+              "text": "0.r.0.0.0:543254z432/tcp[:x::]:543254c432/tcp",
+              "span": {
+                "line": 2,
+                "start_col": 92,
+                "end_col": 137
+              },
+              "col": 5,
+              "empty": false
+            },
+            {
+              "text": "mysql-test-postgres-1",
+              "span": {
+                "line": 2,
+                "start_col": 187,
+                "end_col": 208
+              },
+              "col": 6,
+              "empty": false
+            }
+          ]
+        }
+      ],
+      "confidence": 0.88
+    },
+    {
+      "start_line": 5,
+      "end_line": 21,
+      "header_line": 5,
+      "columns": [
+        {
+          "index": 0,
+          "start": 0,
+          "end": 11,
+          "name": "Permissions",
+          "align": "left",
+          "weight": 0.3
+        },
+        {
+          "index": 1,
+          "start": 12,
+          "end": 16,
+          "name": "Size",
+          "align": "right",
+          "weight": 0.3
+        },
+        {
+          "index": 2,
+          "start": 17,
+          "end": 23,
+          "name": "User",
+          "align": "left",
+          "weight": 0.3
+        },
+        {
+          "index": 3,
+          "start": 24,
+          "end": 40,
+          "name": "Date Modified",
+          "align": "left",
+          "weight": 0.3
+        },
+        {
+          "index": 4,
+          "start": 41,
+          "end": 61,
+          "name": "Name",
+          "align": "left",
+          "weight": 1
+        }
+      ],
+      "rows": [
+        {
+          "line": 5,
+          "cells": [
+            {
+              "text": "Permissions",
+              "span": {
+                "line": 5,
+                "start_col": 0,
+                "end_col": 11
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "Size",
+              "span": {
+                "line": 5,
+                "start_col": 12,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "User",
+              "span": {
+                "line": 5,
+                "start_col": 17,
+                "end_col": 21
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "Date Modified",
+              "span": {
+                "line": 5,
+                "start_col": 24,
+                "end_col": 37
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "Name",
+              "span": {
+                "line": 5,
+                "start_col": 41,
+                "end_col": 45
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 6,
+          "cells": [
+            {
+              "text": "drwxr-xr-x",
+              "span": {
+                "line": 6,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "-",
+              "span": {
+                "line": 6,
+                "start_col": 15,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 6,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 22:24",
+              "span": {
+                "line": 6,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": ".git",
+              "span": {
+                "line": 6,
+                "start_col": 41,
+                "end_col": 45
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 7,
+          "cells": [
+            {
+              "text": ".rw-r--r--",
+              "span": {
+                "line": 7,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "570",
+              "span": {
+                "line": 7,
+                "start_col": 13,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 7,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-10 23:39",
+              "span": {
+                "line": 7,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": ".gitignore",
+              "span": {
+                "line": 7,
+                "start_col": 41,
+                "end_col": 51
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 8,
+          "cells": [
+            {
+              "text": "drwxr-xr-x",
+              "span": {
+                "line": 8,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "-",
+              "span": {
+                "line": 8,
+                "start_col": 15,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 8,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 00:42",
+              "span": {
+                "line": 8,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "build",
+              "span": {
+                "line": 8,
+                "start_col": 41,
+                "end_col": 46
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 9,
+          "cells": [
+            {
+              "text": "drwxr-xr-x",
+              "span": {
+                "line": 9,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "-",
+              "span": {
+                "line": 9,
+                "start_col": 15,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 9,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-10 23:40",
+              "span": {
+                "line": 9,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "cmd",
+              "span": {
+                "line": 9,
+                "start_col": 41,
+                "end_col": 44
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 10,
+          "cells": [
+            {
+              "text": ".rw-r--r--",
+              "span": {
+                "line": 10,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "88",
+              "span": {
+                "line": 10,
+                "start_col": 14,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 10,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-16 23:17",
+              "span": {
+                "line": 10,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "crash.log",
+              "span": {
+                "line": 10,
+                "start_col": 41,
+                "end_col": 50
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 11,
+          "cells": [
+            {
+              "text": ".rw-r--r--",
+              "span": {
+                "line": 11,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "4.6k",
+              "span": {
+                "line": 11,
+                "start_col": 12,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 11,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 00:42",
+              "span": {
+                "line": 11,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "E2E_TESTS_SUMMARY.md",
+              "span": {
+                "line": 11,
+                "start_col": 41,
+                "end_col": 61
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 12,
+          "cells": [
+            {
+              "text": ".rw-r--r--",
+              "span": {
+                "line": 12,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "689",
+              "span": {
+                "line": 12,
+                "start_col": 13,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 12,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 00:32",
+              "span": {
+                "line": 12,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "go.mod",
+              "span": {
+                "line": 12,
+                "start_col": 41,
+                "end_col": 47
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 13,
+          "cells": [
+            {
+              "text": ".rw-r--r--",
+              "span": {
+                "line": 13,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "9.3k",
+              "span": {
+                "line": 13,
+                "start_col": 12,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 13,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 00:32",
+              "span": {
+                "line": 13,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "go.sum",
+              "span": {
+                "line": 13,
+                "start_col": 41,
+                "end_col": 47
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 14,
+          "cells": [
+            {
+              "text": "drwxr-xr-x",
+              "span": {
+                "line": 14,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "-",
+              "span": {
+                "line": 14,
+                "start_col": 15,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 14,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 13:59",
+              "span": {
+                "line": 14,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "internal",
+              "span": {
+                "line": 14,
+                "start_col": 41,
+                "end_col": 49
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 15,
+          "cells": [
+            {
+              "text": ".rw-r--r--",
+              "span": {
+                "line": 15,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "773",
+              "span": {
+                "line": 15,
+                "start_col": 13,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 15,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 00:42",
+              "span": {
+                "line": 15,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "Makefile",
+              "span": {
+                "line": 15,
+                "start_col": 41,
+                "end_col": 49
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 16,
+          "cells": [
+            {
+              "text": "drwxr-xr-x",
+              "span": {
+                "line": 16,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "-",
+              "span": {
+                "line": 16,
+                "start_col": 15,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 16,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-06 20:05",
+              "span": {
+                "line": 16,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "pkg",
+              "span": {
+                "line": 16,
+                "start_col": 41,
+                "end_col": 44
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 17,
+          "cells": [
+            {
+              "text": ".rw-r--r--",
+              "span": {
+                "line": 17,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "0",
+              "span": {
+                "line": 17,
+                "start_col": 15,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 17,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-10 23:39",
+              "span": {
+                "line": 17,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "README.md",
+              "span": {
+                "line": 17,
+                "start_col": 41,
+                "end_col": 50
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 18,
+          "cells": [
+            {
+              "text": "drwxr-xr-x",
+              "span": {
+                "line": 18,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "-",
+              "span": {
+                "line": 18,
+                "start_col": 15,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 18,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 00:42",
+              "span": {
+                "line": 18,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "test",
+              "span": {
+                "line": 18,
+                "start_col": 41,
+                "end_col": 45
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 19,
+          "cells": [
+            {
+              "text": ".rwxr-xr-x",
+              "span": {
+                "line": 19,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "624",
+              "span": {
+                "line": 19,
+                "start_col": 13,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 19,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 00:42",
+              "span": {
+                "line": 19,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "test_e2e.sh",
+              "span": {
+                "line": 19,
+                "start_col": 41,
+                "end_col": 52
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 20,
+          "cells": [
+            {
+              "text": "drwxr-xr-x",
+              "span": {
+                "line": 20,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "-",
+              "span": {
+                "line": 20,
+                "start_col": 15,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 20,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-17 22:29",
+              "span": {
+                "line": 20,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "testscase",
+              "span": {
+                "line": 20,
+                "start_col": 41,
+                "end_col": 50
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        },
+        {
+          "line": 21,
+          "cells": [
+            {
+              "text": ".rwxr-xr-x",
+              "span": {
+                "line": 21,
+                "start_col": 0,
+                "end_col": 10
+              },
+              "col": 0,
+              "empty": false
+            },
+            {
+              "text": "1.0k",
+              "span": {
+                "line": 21,
+                "start_col": 12,
+                "end_col": 16
+              },
+              "col": 1,
+              "empty": false
+            },
+            {
+              "text": "kumiko",
+              "span": {
+                "line": 21,
+                "start_col": 17,
+                "end_col": 23
+              },
+              "col": 2,
+              "empty": false
+            },
+            {
+              "text": "2025-06-11 00:02",
+              "span": {
+                "line": 21,
+                "start_col": 24,
+                "end_col": 40
+              },
+              "col": 3,
+              "empty": false
+            },
+            {
+              "text": "tmux.sh",
+              "span": {
+                "line": 21,
+                "start_col": 41,
+                "end_col": 48
+              },
+              "col": 4,
+              "empty": false
+            }
+          ]
+        }
+      ],
+      "confidence": 1
+    }
+  ],
+  "prompts": [
+    {
+      "line": 0,
+      "prefix_end": 2,
+      "command": {
+        "raw": "docker ps",
+        "argv": [
+          "docker",
+          "ps"
+        ]
+      }
+    },
+    {
+      "line": 4,
+      "prefix_end": 2,
+      "command": {
+        "raw": "ls -alh",
+        "argv": [
+          "ls",
+          "-alh"
+        ]
+      }
+    },
+    {
+      "line": 23,
+      "prefix_end": 2,
+      "command": {
+        "raw": "cat go.sum",
+        "argv": [
+          "cat",
+          "go.sum"
+        ]
+      }
+    },
+    {
+      "line": 28,
+      "prefix_end": 2,
+      "command": {
+        "raw": "ggpull",
+        "argv": [
+          "ggpull"
+        ]
+      }
+    }
+  ]
+}

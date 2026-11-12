@@ -29,6 +29,7 @@ type CoreConfig struct {
 type RulesConfig struct {
 	Include RulesList `toml:"include"`
 	Exclude RulesList `toml:"exclude"`
+	Words   bool      `toml:"words"`
 }
 
 // RulesList groups a list of rules under a section
@@ -59,6 +60,16 @@ type ColorDetectionPluginConfig struct {
 	Enabled bool `toml:"enabled"`
 }
 
+type ProfilesPluginConfig struct {
+	Enabled        bool     `toml:"enabled"`
+	ExcludePrompt  *bool    `toml:"exclude_prompt"`
+	PromptPatterns []string `toml:"prompt_patterns"`
+}
+
+func profilesExcludePrompt(config *ProfilesPluginConfig) bool {
+	return config == nil || config.ExcludePrompt == nil || *config.ExcludePrompt
+}
+
 // Rule describes a single rule item used in include/exclude lists
 type Rule struct {
 	Type    string `toml:"type"`    // "regex" or "text"
@@ -68,6 +79,7 @@ type Rule struct {
 type PluginsConfig struct {
 	Tabledetection *TableDetectionPluginConfig `toml:"tabledetection"`
 	Colordetection *ColorDetectionPluginConfig `toml:"colordetection"`
+	Profiles       *ProfilesPluginConfig       `toml:"profiles"`
 }
 
 func NewDefaultConfig() *Config {
@@ -103,6 +115,7 @@ func NewDefaultConfig() *Config {
 		Plugins: PluginsConfig{
 			Tabledetection: nil,
 			Colordetection: nil,
+			Profiles:       nil,
 		},
 	}
 }
