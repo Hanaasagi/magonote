@@ -409,10 +409,9 @@ func (v *View) handleRuneKey(ev *tcell.EventKey, typedHint *string, hasUppercase
 	for _, mat := range v.matches {
 		if mat.Hint != nil && *mat.Hint == *typedHint {
 			v.chosen = append(v.chosen, ChosenMatch{
-				Text:      mat.Text,
-				Uppercase: *hasUppercase,
-				// ShouldOpenFile: *hasUppercase && isLikelyFilePath(mat.Text),
-				ShouldOpenFile: *hasUppercase,
+				Text:           mat.Text,
+				Uppercase:      *hasUppercase,
+				ShouldOpenFile: *hasUppercase && (mat.Location != nil || isLikelyFilePath(mat.Text)),
 				Location:       mat.Location,
 			})
 
@@ -549,7 +548,7 @@ func colorToTcell(c Color) tcell.Color {
 }
 
 // isLikelyFilePath checks if the given text looks like a file path
-func isLikelyFilePath(text string) bool { // nolint: unused
+func isLikelyFilePath(text string) bool {
 	if len(text) < 2 {
 		return false
 	}
