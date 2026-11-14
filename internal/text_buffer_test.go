@@ -225,10 +225,18 @@ func TestTextBuffer_MultipleLines(t *testing.T) {
 				t.Errorf("Column %d in row %d should exist", j, i)
 				continue
 			}
-			if cell := buffer.content[i][j]; cell.Rune != expectedChar {
+				if cell := buffer.content[i][j]; cell.Rune != expectedChar {
 				t.Errorf("Character at position (%d,%d) should be '%c', got '%c'",
 					j, i, expectedChar, cell.Rune)
 			}
 		}
 	}
+}
+
+func TestTextBuffer_SetGraphemeOutOfBoundsY(t *testing.T) {
+	buffer := NewTextBuffer([]string{"hello"}, 10, 1)
+	// Should not panic
+	buffer.SetGrapheme(0, -1, "x", 1, tcell.StyleDefault)
+	buffer.SetGrapheme(0, 5, "x", 1, tcell.StyleDefault)
+	buffer.SetGrapheme(0, 100, "x", 1, tcell.StyleDefault)
 }

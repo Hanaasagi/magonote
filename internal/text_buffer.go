@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	tdscreen "github.com/Hanaasagi/magonote/pkg/textdetection/screen"
 	"github.com/adrg/xdg"
 	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
@@ -47,7 +47,7 @@ func (tb *TextBuffer) String() string {
 func NewTextBuffer(lines []string, width, height int) *TextBuffer {
 	maxLineWidth := 0
 	for _, line := range lines {
-		lineWidth := runewidth.StringWidth(line) + extraCapacity
+		lineWidth := tdscreen.GraphemeWidth(line) + extraCapacity
 		if lineWidth > maxLineWidth {
 			maxLineWidth = lineWidth
 		}
@@ -68,16 +68,16 @@ func (tb *TextBuffer) Clear() {
 }
 
 func (tb *TextBuffer) SetCell(x, y int, r rune, style tcell.Style) {
-	width := runewidth.RuneWidth(r)
-	if width <= 0 {
-		width = 1
-	}
+	width := tdscreen.GraphemeWidth(string(r))
 	tb.SetGrapheme(x, y, string(r), width, style)
 }
 
 // SetGrapheme stores one grapheme at a display-column coordinate. Width-zero
 // leading runes use a space as tcell's main rune and remain in the comb slice.
 func (tb *TextBuffer) SetGrapheme(x, y int, text string, width int, style tcell.Style) {
+	if y < 0 || y >= len(tb.content) {
+		return
+	}
 	if len(tb.content[y]) <= x {
 		newRow := make([]TextCell, x+extraCapacity)
 		copy(newRow, tb.content[y])
@@ -91,7 +91,7 @@ func (tb *TextBuffer) SetGrapheme(x, y int, text string, width int, style tcell.
 		return
 	}
 	main, comb := runes[0], runes[1:]
-	if runewidth.RuneWidth(main) == 0 {
+	if uniseg.StringWidth(string(main)) == 0 {
 		main, comb = ' ', runes
 	}
 	tb.content[y][x] = TextCell{Rune: main, Comb: comb, Width: width, Style: style}
@@ -101,7 +101,7 @@ func (tb *TextBuffer) SetString(x, y int, text string, style tcell.Style) {
 	currentX := x
 	graphemes := uniseg.NewGraphemes(text)
 	for graphemes.Next() {
-		width := runewidth.StringWidth(graphemes.Str())
+		width := tdscreen.GraphemeWidth(graphemes.Str())
 		if width <= 0 {
 			width = 1
 		}
@@ -164,10 +164,7 @@ func (tb *TextBuffer) WriteToScreen(screen tcell.Screen) {
 			if cell.Rune != 0 {
 				width = cell.Width
 				if width <= 0 {
-					width = runewidth.RuneWidth(cell.Rune)
-					if width <= 0 {
-						width = 1
-					}
+					width = tdscreen.GraphemeWidth(string(cell.Rune))
 				}
 			}
 			if cell.Rune != 0 && screenX+width > tb.width {

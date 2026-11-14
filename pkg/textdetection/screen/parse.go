@@ -3,7 +3,6 @@ package screen
 import (
 	"strings"
 
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
@@ -52,7 +51,6 @@ type styleRun struct {
 type lineBuilder struct {
 	plain strings.Builder
 	runs  []styleRun
-	width int
 }
 
 // Parse converts captured terminal text into a display-column grid. Invalid
@@ -75,6 +73,7 @@ type parser struct {
 	tabWidth int
 	line     lineBuilder
 	lines    []Line
+	cursor   int // byte offset into line.plain for CR overwrites
 }
 
 func (p *parser) parse(input string) {
@@ -85,9 +84,14 @@ func (p *parser) parse(input string) {
 			p.finishLine()
 			i++
 		case b == '\r':
+			if i+1 < len(input) && input[i+1] == '\n' {
+				i++
+				continue
+			}
+			p.resetLine()
 			i++
 		case b == '\t':
-			count := p.tabWidth - p.line.width%p.tabWidth
+			count := p.tabWidth - plainDisplayWidth(p.line.plain.String())%p.tabWidth
 			p.append(strings.Repeat(" ", count))
 			i++
 		case b == 0x1b:
@@ -108,11 +112,33 @@ func (p *parser) parse(input string) {
 	}
 }
 
+func (p *parser) resetLine() {
+	p.cursor = 0
+}
+
 func (p *parser) append(text string) {
 	if text == "" {
 		return
 	}
-	start := p.line.plain.Len()
+	lineLen := p.line.plain.Len()
+	if p.cursor < lineLen {
+		existing := p.line.plain.String()
+		overEnd := p.cursor + len(text)
+		if overEnd > lineLen {
+			p.line.plain.Reset()
+			p.line.plain.WriteString(existing[:p.cursor])
+			p.line.plain.WriteString(text)
+		} else {
+			p.line.plain.Reset()
+			p.line.plain.WriteString(existing[:p.cursor])
+			p.line.plain.WriteString(text)
+			p.line.plain.WriteString(existing[overEnd:])
+		}
+		p.line.runs = append(p.line.runs, styleRun{start: p.cursor, end: p.cursor + len(text), style: p.style})
+		p.cursor += len(text)
+		return
+	}
+	start := lineLen
 	p.line.plain.WriteString(text)
 	if len(p.line.runs) > 0 {
 		last := &p.line.runs[len(p.line.runs)-1]
@@ -124,18 +150,16 @@ func (p *parser) append(text string) {
 	} else {
 		p.line.runs = append(p.line.runs, styleRun{start: start, end: p.line.plain.Len(), style: p.style})
 	}
+	p.cursor = p.line.plain.Len()
+}
 
-	graphemes := uniseg.NewGraphemes(text)
+func plainDisplayWidth(plain string) int {
+	width := 0
+	graphemes := uniseg.NewGraphemes(plain)
 	for graphemes.Next() {
-		width := runewidth.StringWidth(graphemes.Str())
-		if width == 0 && p.line.width > 0 {
-			continue
-		}
-		if width <= 0 {
-			width = 1
-		}
-		p.line.width += width
+		width += GraphemeWidth(graphemes.Str())
 	}
+	return width
 }
 
 func (p *parser) finishLine() {
@@ -159,25 +183,27 @@ func (p *parser) finishLine() {
 		if runIndex < len(p.line.runs) {
 			style = p.line.runs[runIndex].style
 		}
-		width := runewidth.StringWidth(text)
-		if width == 0 && len(data) > 0 {
+		rawWidth := uniseg.StringWidth(text)
+		if rawWidth == 0 && len(data) > 0 {
 			data[len(data)-1].text += text
 			data[len(data)-1].end = end
 			continue
 		}
-		if width <= 0 {
-			width = 1
-		}
+		width := GraphemeWidth(text)
 		data = append(data, cellData{text: text, style: style, width: width, start: start, end: end})
 	}
 
+	finalWidth := 0
+	for _, item := range data {
+		finalWidth += item.width
+	}
 	line := Line{
 		Plain:        plain,
 		Cells:        make([]Cell, 0, len(data)),
-		colToByte:    make([]int, p.line.width+1),
+		colToByte:    make([]int, finalWidth+1),
 		byteToCol:    make([]int, len(plain)+1),
 		byteToEndCol: make([]int, len(plain)+1),
-		Width:        p.line.width,
+		Width:        finalWidth,
 	}
 	col := 0
 	for _, item := range data {
@@ -199,6 +225,7 @@ func (p *parser) finishLine() {
 	}
 	p.lines = append(p.lines, line)
 	p.line = lineBuilder{}
+	p.cursor = 0
 }
 
 func (p *parser) escape(input string, start int) int {

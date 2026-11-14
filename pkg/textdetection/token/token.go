@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/Hanaasagi/magonote/pkg/textdetection/screen"
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
@@ -87,7 +86,7 @@ func Words(chunk Chunk) []Word {
 				startCol = chunk.Span.StartCol + col
 			}
 		}
-		col += runewidth.StringWidth(text)
+		col += screen.GraphemeWidth(text)
 	}
 	flush(len(chunk.Text))
 	return words

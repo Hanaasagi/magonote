@@ -44,6 +44,14 @@ func TestWordsKeepAbsoluteDisplayColumns(t *testing.T) {
 	}
 }
 
+func TestWordsHandleLeadingZeroWidthGrapheme(t *testing.T) {
+	s := screen.Parse("́1/e")
+	words := Words(Chunks(s, 0)[0])
+	if len(words) != 1 || words[0].Text != "́1/e" || words[0].Span.StartCol != 0 || words[0].Span.EndCol != 4 {
+		t.Fatalf("word = %#v, want text ́1/e and span [0,4)", words)
+	}
+}
+
 func TestIsSeparatorLine(t *testing.T) {
 	for _, input := range []string{"  ├─:──^  ", "|---|", "++++", "^^^^"} {
 		if !IsSeparatorLine(input) {
