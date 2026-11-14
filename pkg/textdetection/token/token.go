@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/Hanaasagi/magonote/pkg/textdetection/screen"
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
@@ -74,6 +73,7 @@ func Words(chunk Chunk) []Word {
 	}
 
 	graphemes := uniseg.NewGraphemes(chunk.Text)
+	seenGrapheme := false
 	for graphemes.Next() {
 		byteStart, _ := graphemes.Positions()
 		text := graphemes.Str()
@@ -87,7 +87,13 @@ func Words(chunk Chunk) []Word {
 				startCol = chunk.Span.StartCol + col
 			}
 		}
-		col += runewidth.StringWidth(text)
+		w := uniseg.StringWidth(text)
+		if w == 0 && seenGrapheme {
+			// Zero-width character merged with previous cell; no column advance
+		} else {
+			col += screen.GraphemeWidth(text)
+		}
+		seenGrapheme = true
 	}
 	flush(len(chunk.Text))
 	return words

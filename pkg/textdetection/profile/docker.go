@@ -11,11 +11,37 @@ type dockerProfile struct{}
 func (dockerProfile) Name() string { return "docker" }
 func (dockerProfile) Match(command Command) bool {
 	base := commandBase(command)
-	if base != "docker" && base != "podman" || len(command.Argv) < 2 {
+	if base != "docker" && base != "podman" {
 		return false
 	}
-	argv := command.Argv
-	return argv[1] == "ps" || argv[1] == "images" || len(argv) > 2 && (argv[1] == "container" || argv[1] == "image") && argv[2] == "ls"
+	argv := dockerCommandArgs(command.Argv)
+	if len(argv) == 0 {
+		return false
+	}
+	return argv[0] == "ps" || argv[0] == "images" || len(argv) > 1 && (argv[0] == "container" || argv[0] == "image") && argv[1] == "ls"
+}
+
+func dockerCommandArgs(argv []string) []string {
+	for i := 1; i < len(argv); {
+		arg := argv[i]
+		switch arg {
+		case "--context", "--host", "--config", "--tlscacert", "--tlscert", "--tlskey":
+			if i+1 >= len(argv) {
+				return nil
+			}
+			i += 2
+			continue
+		case "--debug", "--tls", "--tlsverify":
+			i++
+			continue
+		}
+		if strings.HasPrefix(arg, "--context=") || strings.HasPrefix(arg, "--host=") || strings.HasPrefix(arg, "--config=") {
+			i++
+			continue
+		}
+		return argv[i:]
+	}
+	return nil
 }
 
 func (dockerProfile) Detect(block Block, ctx *Context) []entity.Candidate {

@@ -33,8 +33,11 @@ func Candidates(input []entity.Candidate, exclusions []screen.Span) []entity.Ent
 	accepted := make([]entity.Entity, 0, len(candidates))
 	for _, candidate := range candidates {
 		overlaps := false
-		for _, existing := range accepted {
+		for i, existing := range accepted {
 			if spansIntersect(candidate.Span, existing.Span) {
+				if candidate.Span == existing.Span {
+					accepted[i].Meta = mergeCellMetadata(existing, candidate)
+				}
 				overlaps = true
 				break
 			}
@@ -53,6 +56,22 @@ func Candidates(input []entity.Candidate, exclusions []screen.Span) []entity.Ent
 		return accepted[i].Span.EndCol < accepted[j].Span.EndCol
 	})
 	return accepted
+}
+
+func mergeCellMetadata(winner, loser entity.Candidate) map[string]string {
+	if winner.Kind == entity.KindCell || loser.Kind != entity.KindCell {
+		return winner.Meta
+	}
+	merged := make(map[string]string, len(winner.Meta)+len(loser.Meta))
+	for key, value := range winner.Meta {
+		merged[key] = value
+	}
+	for key, value := range loser.Meta {
+		if _, exists := merged[key]; !exists && value != "" {
+			merged[key] = value
+		}
+	}
+	return merged
 }
 
 func intersectsAny(span screen.Span, exclusions []screen.Span) bool {

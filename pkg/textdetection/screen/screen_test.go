@@ -30,7 +30,7 @@ func TestParsePlainAndEmptyLines(t *testing.T) {
 }
 
 func TestParseUnicodeUsesDisplayColumns(t *testing.T) {
-	s := Parse("A中é👩‍💻B https://example.com")
+	s := Parse("A中é👩\u200d💻B https://example.com")
 	line := s.Lines[0]
 	if line.Width != 27 {
 		t.Fatalf("line width = %d, want 27", line.Width)
@@ -45,7 +45,7 @@ func TestParseUnicodeUsesDisplayColumns(t *testing.T) {
 		{0, "A", 1, 0},
 		{1, "中", 2, 1},
 		{3, "é", 1, 4},
-		{4, "👩‍💻", 2, 7},
+		{4, "👩\u200d💻", 2, 7},
 		{6, "B", 1, 18},
 		{8, "h", 1, 20},
 	}
@@ -76,6 +76,48 @@ func TestParseUnicodeUsesDisplayColumns(t *testing.T) {
 	}
 }
 
+func TestParseEmojiUsesGraphemeWidth(t *testing.T) {
+	tests := []struct {
+		prefix    string
+		start     int
+		lineWidth int
+	}{
+		{prefix: "🇺🇸", start: 3, lineWidth: 22},
+		{prefix: "1️⃣", start: 3, lineWidth: 22},
+		{prefix: "❤️", start: 3, lineWidth: 22},
+		{prefix: "α", start: 2, lineWidth: 21},
+	}
+	for _, test := range tests {
+		s := Parse(test.prefix + " https://example.com")
+		if got := s.ColOf(0, len(test.prefix)+1); got != test.start {
+			t.Errorf("%q URL start = %d, want %d", test.prefix, got, test.start)
+		}
+		if got := s.Lines[0].Width; got != test.lineWidth {
+			t.Errorf("%q line width = %d, want %d", test.prefix, got, test.lineWidth)
+		}
+	}
+}
+
+func TestANSISplitGraphemeKeepsWidthAndMappings(t *testing.T) {
+	for _, input := range []string{"❤\x1b[31m️\x1b[0m", "👩\x1b[31m\u200d💻\x1b[0m"} {
+		s := Parse(input)
+		line := s.Lines[0]
+		if len(line.Cells) != 1 || line.Cells[0].Width != 2 || line.Width != 2 {
+			t.Errorf("%q cells/width = %#v/%d", input, line.Cells, line.Width)
+		}
+		if got := s.ByteOf(0, 2); got != len(line.Plain) {
+			t.Errorf("%q ByteOf(end) = %d, want %d", input, got, len(line.Plain))
+		}
+	}
+}
+
+func TestANSISplitGraphemeBeforeTabUsesFinalWidth(t *testing.T) {
+	s := Parse("👩\x1b[31m\u200d💻\x1b[0m\tX")
+	if got := s.ColOf(0, len("👩\u200d💻")+6); got != 8 {
+		t.Fatalf("X column = %d, want 8", got)
+	}
+}
+
 func TestParseTabsExpandsAtDisplayColumn(t *testing.T) {
 	s := Parse("中\tX")
 	if got := s.Lines[0].Plain; got != "中      X" {
@@ -91,5 +133,134 @@ func TestParseTabsExpandsAtDisplayColumn(t *testing.T) {
 	s = Parse("a\tb", 4)
 	if got := s.Lines[0].Plain; got != "a   b" {
 		t.Fatalf("tab width 4 plain = %q", got)
+	}
+}
+
+func TestHiddenSpans(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []Span
+	}{
+		{
+			name:  "no hidden text",
+			input: "hello world",
+			want:  nil,
+		},
+		{
+			name:  "entire line hidden",
+			input: "\x1b[8msecret\x1b[28m",
+			want:  []Span{{Line: 0, StartCol: 0, EndCol: 6}},
+		},
+		{
+			name:  "hidden in middle",
+			input: "before\x1b[8msecret\x1b[28mafter",
+			want:  []Span{{Line: 0, StartCol: 6, EndCol: 12}},
+		},
+		{
+			name:  "multiple hidden spans",
+			input: "a\x1b[8mXX\x1b[28mb\x1b[8mYY\x1b[28mc",
+			want:  []Span{{Line: 0, StartCol: 1, EndCol: 3}, {Line: 0, StartCol: 4, EndCol: 6}},
+		},
+		{
+			name:  "hidden until end of line",
+			input: "visible\x1b[8mhidden",
+			want:  []Span{{Line: 0, StartCol: 7, EndCol: 13}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Parse(tt.input)
+			got := s.HiddenSpans()
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("HiddenSpans() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseCarriageReturn(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+		lines int
+	}{
+		{
+			name:  "overwrite from start",
+			input: "old text\rnew!",
+			want:  "new!text",
+			lines: 1,
+		},
+		{
+			name:  "full overwrite",
+			input: "loading\rdone!!!",
+			want:  "done!!!",
+			lines: 1,
+		},
+		{
+			name:  "CRLF is newline",
+			input: "line1\r\nline2",
+			want:  "line1",
+			lines: 2,
+		},
+		{
+			name:  "multiple CR",
+			input: "aaa\rbbb\rccc",
+			want:  "ccc",
+			lines: 1,
+		},
+		{
+			name:  "multibyte overwrite",
+			input: "éx\ra",
+			want:  "ax",
+			lines: 1,
+		},
+		{
+			name:  "CJK partial overwrite",
+			input: "中文\rab",
+			want:  "ab文",
+			lines: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Parse(tt.input)
+			if len(s.Lines) != tt.lines {
+				t.Fatalf("lines = %d, want %d", len(s.Lines), tt.lines)
+			}
+			if s.Lines[0].Plain != tt.want {
+				t.Errorf("plain = %q, want %q", s.Lines[0].Plain, tt.want)
+			}
+		})
+	}
+}
+
+func TestCROverwriteReplacesStyleRuns(t *testing.T) {
+	s := Parse("abc\r\x1b[8mXYZ")
+	spans := s.HiddenSpans()
+	if len(spans) == 0 {
+		t.Fatal("expected hidden spans after CR + ESC[8m overwrite")
+	}
+	if spans[0] != (Span{Line: 0, StartCol: 0, EndCol: 3}) {
+		t.Errorf("hidden span = %v, want {0 0 3}", spans[0])
+	}
+}
+
+func TestTabAfterCR(t *testing.T) {
+	s := Parse("abcdef\r\tX")
+	plain := s.Lines[0].Plain
+	if plain != "abcdef  X" {
+		t.Fatalf("plain = %q, want %q", plain, "abcdef  X")
+	}
+	if got := s.ColOf(0, 8); got != 8 {
+		t.Errorf("X column = %d, want 8", got)
+	}
+}
+
+func TestZeroWidthBeforeTab(t *testing.T) {
+	s := Parse("a\u200b\tX")
+	if got := s.ColOf(0, len("a\u200b")+7); got != 8 {
+		t.Fatalf("X column = %d, want 8", got)
 	}
 }

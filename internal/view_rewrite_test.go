@@ -93,7 +93,7 @@ func TestTextBufferWritesStyledSpaces(t *testing.T) {
 }
 
 func TestViewHyperlinkKeepsVisibleLabel(t *testing.T) {
-	state := NewState("\x1b]8;;https://example.com\adocs\x1b]8;;\a", "abcd", nil, WithColorDetection())
+	state := mustNewState(t, "\x1b]8;;https://example.com\adocs\x1b]8;;\a", "abcd", nil, WithColorDetection())
 	matches := state.Matches(false, 0)
 	matches[0].Hint = nil
 	screen := simulationScreen(t, 20, 1)
@@ -115,7 +115,7 @@ func TestViewHyperlinkKeepsVisibleLabel(t *testing.T) {
 }
 
 func TestViewSelectionPreservesFileLocation(t *testing.T) {
-	state := NewState("main.go:12:4", "abcd", nil)
+	state := mustNewState(t, "main.go:12:4", "abcd", nil)
 	matches := state.Matches(false, 0)
 	view := &View{matches: matches}
 	typedHint := ""
@@ -131,8 +131,23 @@ func TestViewSelectionPreservesFileLocation(t *testing.T) {
 	}
 }
 
+func TestViewConcealsHiddenText(t *testing.T) {
+	state := mustNewState(t, "\x1b[8msecret\x1b[0m", "abcd", nil)
+	screen := simulationScreen(t, 8, 1)
+	view := &View{state: state, screen: screen}
+	view.textBuffer = NewTextBuffer(state.Lines, 8, 1)
+	view.renderTextLines()
+	view.textBuffer.WriteToScreen(screen)
+	for x := 0; x < len("secret"); x++ {
+		main, _, _, _ := screen.GetContent(x, 0)
+		if main != ' ' {
+			t.Fatalf("hidden cell %d = %q, want space", x, main)
+		}
+	}
+}
+
 func TestViewRestoresANSIColor(t *testing.T) {
-	state := NewState("\x1b[31mred\x1b[0m", "abcd", nil)
+	state := mustNewState(t, "\x1b[31mred\x1b[0m", "abcd", nil)
 	screen := simulationScreen(t, 8, 1)
 	view := &View{state: state, screen: screen}
 	view.textBuffer = NewTextBuffer(state.Lines, 8, 1)

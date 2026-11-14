@@ -80,7 +80,7 @@ func ParseCommand(raw string) Command {
 			for len(fields) > 0 && strings.HasPrefix(fields[0], "-") {
 				option := fields[0]
 				fields = fields[1:]
-				if base == "sudo" && (option == "-u" || option == "--user" || option == "-g" || option == "--group" || option == "-h" || option == "--host") && len(fields) > 0 {
+				if wrapperOptionTakesValue(base, option) && len(fields) > 0 {
 					fields = fields[1:]
 				}
 			}
@@ -89,6 +89,21 @@ func ParseCommand(raw string) Command {
 		break
 	}
 	return Command{Raw: segment, Argv: fields}
+}
+
+func wrapperOptionTakesValue(base, option string) bool {
+	switch base {
+	case "sudo":
+		return option == "-u" || option == "--user" || option == "-g" || option == "--group" || option == "-h" || option == "--host"
+	case "env":
+		return option == "-u" || option == "--unset" || option == "-C" || option == "--chdir"
+	case "nice":
+		return option == "-n" || option == "--adjustment"
+	case "time":
+		return option == "-o" || option == "--output" || option == "-f" || option == "--format"
+	default:
+		return false
+	}
 }
 
 func shellFields(raw string) ([]string, string) {

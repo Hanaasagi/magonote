@@ -3,7 +3,6 @@ package screen
 import (
 	"strings"
 
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
@@ -52,7 +51,6 @@ type styleRun struct {
 type lineBuilder struct {
 	plain strings.Builder
 	runs  []styleRun
-	width int
 }
 
 // Parse converts captured terminal text into a display-column grid. Invalid
@@ -75,6 +73,7 @@ type parser struct {
 	tabWidth int
 	line     lineBuilder
 	lines    []Line
+	cursor   int // display column position for CR/tab handling
 }
 
 func (p *parser) parse(input string) {
@@ -85,10 +84,23 @@ func (p *parser) parse(input string) {
 			p.finishLine()
 			i++
 		case b == '\r':
+			if i+1 < len(input) && input[i+1] == '\n' {
+				i++
+				continue
+			}
+			p.resetLine()
 			i++
 		case b == '\t':
-			count := p.tabWidth - p.line.width%p.tabWidth
-			p.append(strings.Repeat(" ", count))
+			tabStop := p.cursor + (p.tabWidth - p.cursor%p.tabWidth)
+			lineWidth := uniseg.StringWidth(p.line.plain.String())
+			if tabStop > lineWidth {
+				padding := strings.Repeat(" ", tabStop-lineWidth)
+				start := p.line.plain.Len()
+				p.line.plain.WriteString(padding)
+				end := p.line.plain.Len()
+				p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
+			}
+			p.cursor = tabStop
 			i++
 		case b == 0x1b:
 			i = p.escape(input, i)
@@ -108,34 +120,123 @@ func (p *parser) parse(input string) {
 	}
 }
 
+func (p *parser) resetLine() {
+	p.cursor = 0
+}
+
+// displayColToByte returns the byte offset in text corresponding to the given
+// display column. If col falls in the middle of a wide character, it rounds up
+// to the next grapheme boundary.
+func displayColToByte(text string, col int) int {
+	if col <= 0 {
+		return 0
+	}
+	pos := 0
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		_, end := graphemes.Positions()
+		w := uniseg.StringWidth(graphemes.Str())
+		pos += w
+		if pos >= col {
+			return end
+		}
+	}
+	return len(text)
+}
+
 func (p *parser) append(text string) {
 	if text == "" {
 		return
 	}
+	textWidth := uniseg.StringWidth(text)
+	lineWidth := uniseg.StringWidth(p.line.plain.String())
+
+	if p.cursor < lineWidth {
+		existing := p.line.plain.String()
+		startByte := displayColToByte(existing, p.cursor)
+		overEndCol := p.cursor + textWidth
+		var endByte int
+
+		if overEndCol >= lineWidth {
+			endByte = len(existing)
+			p.line.plain.Reset()
+			p.line.plain.WriteString(existing[:startByte])
+			p.line.plain.WriteString(text)
+		} else {
+			endByte = displayColToByte(existing, overEndCol)
+			p.line.plain.Reset()
+			p.line.plain.WriteString(existing[:startByte])
+			p.line.plain.WriteString(text)
+			p.line.plain.WriteString(existing[endByte:])
+		}
+
+		newStart := startByte
+		newEnd := startByte + len(text)
+		p.overwriteRuns(startByte, endByte, newStart, newEnd)
+		p.cursor += textWidth
+		return
+	}
+
 	start := p.line.plain.Len()
 	p.line.plain.WriteString(text)
+	end := p.line.plain.Len()
 	if len(p.line.runs) > 0 {
 		last := &p.line.runs[len(p.line.runs)-1]
 		if last.style == p.style && last.end == start {
-			last.end = p.line.plain.Len()
+			last.end = end
 		} else {
-			p.line.runs = append(p.line.runs, styleRun{start: start, end: p.line.plain.Len(), style: p.style})
+			p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
 		}
 	} else {
-		p.line.runs = append(p.line.runs, styleRun{start: start, end: p.line.plain.Len(), style: p.style})
+		p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
 	}
+	p.cursor += textWidth
+}
 
-	graphemes := uniseg.NewGraphemes(text)
-	for graphemes.Next() {
-		width := runewidth.StringWidth(graphemes.Str())
-		if width == 0 && p.line.width > 0 {
+// overwriteRuns replaces style runs covering [oldStart, oldEnd) with a new run
+// covering [newStart, newEnd) using the parser's current style. Runs after the
+// overwritten region are shifted to account for byte-length changes.
+func (p *parser) overwriteRuns(oldStart, oldEnd, newStart, newEnd int) {
+	byteShift := (newEnd - newStart) - (oldEnd - oldStart)
+	var result []styleRun
+	inserted := false
+
+	for _, run := range p.line.runs {
+		if run.end <= oldStart {
+			result = append(result, run)
 			continue
 		}
-		if width <= 0 {
-			width = 1
+		if run.start >= oldEnd {
+			if !inserted {
+				result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+				inserted = true
+			}
+			result = append(result, styleRun{
+				start: run.start + byteShift,
+				end:   run.end + byteShift,
+				style: run.style,
+			})
+			continue
 		}
-		p.line.width += width
+		if run.start < oldStart {
+			result = append(result, styleRun{start: run.start, end: oldStart, style: run.style})
+		}
+		if !inserted {
+			result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+			inserted = true
+		}
+		if run.end > oldEnd {
+			result = append(result, styleRun{
+				start: newEnd,
+				end:   run.end + byteShift,
+				style: run.style,
+			})
+		}
 	}
+	if !inserted {
+		result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+	}
+	p.line.runs = result
 }
 
 func (p *parser) finishLine() {
@@ -159,25 +260,27 @@ func (p *parser) finishLine() {
 		if runIndex < len(p.line.runs) {
 			style = p.line.runs[runIndex].style
 		}
-		width := runewidth.StringWidth(text)
-		if width == 0 && len(data) > 0 {
+		rawWidth := uniseg.StringWidth(text)
+		if rawWidth == 0 && len(data) > 0 {
 			data[len(data)-1].text += text
 			data[len(data)-1].end = end
 			continue
 		}
-		if width <= 0 {
-			width = 1
-		}
+		width := GraphemeWidth(text)
 		data = append(data, cellData{text: text, style: style, width: width, start: start, end: end})
 	}
 
+	finalWidth := 0
+	for _, item := range data {
+		finalWidth += item.width
+	}
 	line := Line{
 		Plain:        plain,
 		Cells:        make([]Cell, 0, len(data)),
-		colToByte:    make([]int, p.line.width+1),
+		colToByte:    make([]int, finalWidth+1),
 		byteToCol:    make([]int, len(plain)+1),
 		byteToEndCol: make([]int, len(plain)+1),
-		Width:        p.line.width,
+		Width:        finalWidth,
 	}
 	col := 0
 	for _, item := range data {
@@ -199,6 +302,7 @@ func (p *parser) finishLine() {
 	}
 	p.lines = append(p.lines, line)
 	p.line = lineBuilder{}
+	p.cursor = 0
 }
 
 func (p *parser) escape(input string, start int) int {

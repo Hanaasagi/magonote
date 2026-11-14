@@ -100,7 +100,10 @@ type State struct {
 	screen   *screen.Screen
 }
 
-func NewState(text string, alphabet string, patterns []string, opts ...Option) *State {
+func NewState(text string, alphabet string, patterns []string, opts ...Option) (*State, error) {
+	if _, err := NewBuiltinAlphabet(alphabet); err != nil {
+		return nil, fmt.Errorf("invalid alphabet %q: %w", alphabet, err)
+	}
 	parsed := screen.Parse(text)
 	state := &State{
 		Lines: parsed.PlainLines(), Alphabet: alphabet, CustomPatterns: patterns,
@@ -109,10 +112,10 @@ func NewState(text string, alphabet string, patterns []string, opts ...Option) *
 	for _, opt := range opts {
 		opt.apply(state)
 	}
-	return state
+	return state, nil
 }
 
-func NewStateFromLines(lines []string, alphabet string, patterns []string, opts ...Option) *State {
+func NewStateFromLines(lines []string, alphabet string, patterns []string, opts ...Option) (*State, error) {
 	return NewState(strings.Join(lines, "\n"), alphabet, patterns, opts...)
 }
 
@@ -152,10 +155,7 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 	if uniqueLevel >= 2 {
 		matches = s.filterSuperUniqueMatches(matches)
 	}
-	alphabet, err := NewBuiltinAlphabet(s.Alphabet)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create alphabet: %v", err))
-	}
+	alphabet, _ := NewBuiltinAlphabet(s.Alphabet)
 	hints := alphabet.Hints(len(matches))
 	s.assignHints(matches, hints, reverse, uniqueLevel)
 	slog.Debug("textdetection completed", "duration_ms", time.Since(start).Milliseconds(), "matches_count", len(matches))

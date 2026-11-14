@@ -1,6 +1,7 @@
 package detect
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
@@ -18,14 +19,22 @@ func markdownCandidates(ctx *Context, line int) []entity.Candidate {
 			continue
 		}
 		text := unescapeMarkdown(plain[start:end])
+		if strings.HasPrefix(text, "#") || strings.HasPrefix(text, "?") {
+			continue
+		}
 		kind := entity.KindPath
 		if strings.Contains(text, "://") || strings.HasPrefix(text, "git@") {
+			kind = entity.KindURL
+		} else if hasURIScheme(text) && !filenameSuffixPattern.MatchString(text) {
 			kind = entity.KindURL
 		}
 		candidate := candidateFromBytes(ctx, kind, line, start, end, entity.ClassSemantic, "regex", 0.95)
 		candidate.Text = text
 		if kind == entity.KindURL {
 			candidate, ok = validURL(ctx, line, start, end, candidate)
+			if ok {
+				candidate.Text = text // Markdown parentheses already delimit the URL; undo trimTrailing.
+			}
 		} else if !strings.Contains(text, "/") {
 			candidate, ok = validFilename(ctx, line, start, end, candidate)
 		} else {
@@ -40,6 +49,11 @@ func markdownCandidates(ctx *Context, line int) []entity.Candidate {
 		candidates = append(candidates, candidate)
 	}
 	return candidates
+}
+
+func hasURIScheme(text string) bool {
+	u, err := url.Parse(text)
+	return err == nil && len(u.Scheme) >= 2
 }
 
 func markdownDestinationEnd(line string, start int) (int, bool) {

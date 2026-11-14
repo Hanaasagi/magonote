@@ -78,6 +78,112 @@ func TestDetectAdjacentMarkdownLinksRemainIndependent(t *testing.T) {
 	}
 }
 
+func TestDetectMarkdownPreservesDestinationPunctuation(t *testing.T) {
+	tests := []struct{ name, input, want string }{
+		{"exclamation", "[x](https://example.com/important!)", "url:https://example.com/important!"},
+		{"question mark", "[x](https://example.com/search?)", "url:https://example.com/search?"},
+		{"period", "[x](https://example.com/file.)", "url:https://example.com/file."},
+		{"prose still trims", "Visit https://example.com/important!", "url:https://example.com/important"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, _ := Detect(test.input, Options{})
+			if got := summaries(result.Entities); !reflect.DeepEqual(got, []string{test.want}) {
+				t.Fatalf("entities = %#v, want %s", got, test.want)
+			}
+		})
+	}
+}
+
+func TestDetectIPv4MappedIPv6(t *testing.T) {
+	tests := []struct {
+		input string
+		kind  entity.Kind
+	}{
+		{input: "::ffff:192.0.2.1", kind: entity.KindIPv6},
+		{input: "[::ffff:192.0.2.1]:443", kind: entity.KindIPv6Port},
+	}
+	for _, test := range tests {
+		result, _ := Detect(test.input, Options{})
+		if len(result.Entities) != 1 || result.Entities[0].Kind != test.kind || result.Entities[0].Text != test.input {
+			t.Errorf("input %q produced %#v", test.input, result.Entities)
+		}
+	}
+}
+
+func TestDetectRejectsPartialDottedIPv6(t *testing.T) {
+	result, _ := Detect("::ffff:192.0.2.1.4", Options{})
+	for _, item := range result.Entities {
+		if item.Kind == entity.KindIPv6 {
+			t.Fatalf("partial IPv6 was accepted: %#v", item)
+		}
+	}
+}
+
+func TestDetectIPv6BeforeSentencePeriod(t *testing.T) {
+	result, _ := Detect("connect to ::1.", Options{})
+	found := false
+	for _, item := range result.Entities {
+		if item.Kind == entity.KindIPv6 && item.Text == "::1" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("::1 before period not detected; entities = %#v", result.Entities)
+	}
+}
+
+func TestDetectFileURLTrimsPunctuation(t *testing.T) {
+	result, _ := Detect("see file:///tmp/report.txt, then", Options{})
+	for _, item := range result.Entities {
+		if item.Kind == entity.KindURL {
+			if item.Text != "file:///tmp/report.txt" {
+				t.Errorf("file URL text = %q, want %q", item.Text, "file:///tmp/report.txt")
+			}
+			return
+		}
+	}
+	t.Fatal("file URL not detected")
+}
+
+func TestDetectEmailWithLongTLD(t *testing.T) {
+	result, _ := Detect("user@example.international", Options{})
+	found := false
+	for _, item := range result.Entities {
+		if item.Kind == entity.KindEmail {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("email with .international TLD not detected")
+	}
+}
+
+func TestDetectRejectsInvalidURLPorts(t *testing.T) {
+	for _, input := range []string{"https://example.com:65536", "http://[::1]:99999/"} {
+		result, _ := Detect(input, Options{})
+		for _, item := range result.Entities {
+			if item.Kind == entity.KindURL {
+				t.Errorf("invalid port accepted for %q: %#v", input, item)
+			}
+		}
+	}
+}
+
+func TestDetectMarkdownNonFileDestinations(t *testing.T) {
+	for _, input := range []string{"[section](#intro)", "[query](?q=1)"} {
+		result, _ := Detect(input, Options{})
+		if len(result.Entities) != 0 {
+			t.Errorf("non-file destination produced entities: %#v", result.Entities)
+		}
+	}
+	result, _ := Detect("[mail](mailto:user@example.com)", Options{})
+	want := []string{"url:mailto:user@example.com"}
+	if got := summaries(result.Entities); !reflect.DeepEqual(got, want) {
+		t.Fatalf("mailto entities = %#v, want %#v", got, want)
+	}
+}
+
 func TestDetectMapsBytesToDisplayColumns(t *testing.T) {
 	result, _ := Detect("中 https://example.com", Options{})
 	if len(result.Entities) != 1 {
@@ -97,6 +203,36 @@ func TestDetectFilenameLocationMetadata(t *testing.T) {
 	}
 	if entity.Location == nil || entity.Location.Path != "main.go" || entity.Location.Line != 12 || entity.Location.Column != 4 {
 		t.Fatalf("structured location = %#v", entity.Location)
+	}
+}
+
+func TestDetectRejectsInvalidFileLocation(t *testing.T) {
+	for _, input := range []string{"/tmp/a.go:999999999999999999999999", "/tmp/a.go:0"} {
+		result, _ := Detect(input, Options{})
+		for _, item := range result.Entities {
+			if item.Location != nil {
+				t.Errorf("invalid location accepted for %q: %#v", input, item.Location)
+			}
+		}
+	}
+}
+
+func TestDetectFileLocationWithInvalidColumn(t *testing.T) {
+	result, _ := Detect("main.go:10:0", Options{})
+	found := false
+	for _, item := range result.Entities {
+		if item.Location != nil && item.Location.Path == "main.go" {
+			found = true
+			if item.Location.Line != 10 {
+				t.Errorf("expected line=10, got %d", item.Location.Line)
+			}
+			if item.Location.Column != 0 {
+				t.Errorf("expected column=0 (ignored), got %d", item.Location.Column)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("main.go:10:0 should still produce a Location with valid path and line")
 	}
 }
 
@@ -158,6 +294,30 @@ func TestDetectStyleAndHyperlink(t *testing.T) {
 	}
 }
 
+func TestDetectOSC8LinkAcrossSpacesAndStyles(t *testing.T) {
+	for _, input := range []string{
+		"\x1b]8;;https://example.com\aexample site\x1b]8;;\a",
+		"\x1b]8;;https://example.com\a\x1b[31mexample\x1b[34m site\x1b[0m\x1b]8;;\a",
+	} {
+		result, _ := Detect(input, Options{Style: true})
+		if len(result.Entities) != 1 || result.Entities[0].Kind != entity.KindURL || result.Entities[0].Text != "https://example.com" {
+			t.Errorf("hyperlink entities = %#v", result.Entities)
+			continue
+		}
+		span := result.Entities[0].Span
+		if span.StartCol != 0 || span.EndCol != 12 {
+			t.Errorf("hyperlink span = %#v, want [0,12)", span)
+		}
+	}
+}
+
+func TestDetectHiddenStyleDoesNotCreateCandidates(t *testing.T) {
+	result, _ := Detect("\x1b[8msecret\x1b[0m", Options{Style: true})
+	if len(result.Entities) != 0 {
+		t.Fatalf("hidden text produced candidates: %#v", result.Entities)
+	}
+}
+
 func TestDetectTableCells(t *testing.T) {
 	data, err := os.ReadFile("testdata/docker_ps.txt")
 	if err != nil {
@@ -200,6 +360,32 @@ func TestDetectKubectlProfile(t *testing.T) {
 	for _, item := range result.Entities {
 		if item.Text == "$" {
 			t.Fatalf("prompt prefix was not excluded: %#v", item)
+		}
+	}
+}
+
+func TestDetectKubectlGetOptions(t *testing.T) {
+	data, err := os.ReadFile("testdata/k8s_pod_list.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, command := range []string{"kubectl get --all-namespaces pods", "kubectl get -o wide pods", "kubectl get -n default pods"} {
+		result, _ := Detect("$ "+command+"\n"+string(data), Options{Table: &table.Options{}, Profiles: &profile.Options{ExcludePrompt: true}})
+		if len(result.Tables) != 1 || result.Tables[0].Columns[0].Semantic != "k8s.pod" {
+			t.Errorf("%s columns = %#v", command, result.Tables)
+		}
+	}
+}
+
+func TestDetectDockerCommandOptions(t *testing.T) {
+	data, err := os.ReadFile("testdata/docker_ps.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, command := range []string{"docker ps", "docker --context prod ps", "env -u FOO docker ps", "nice -n 10 docker ps"} {
+		result, _ := Detect("$ "+command+"\n"+string(data), Options{Table: &table.Options{}, Profiles: &profile.Options{ExcludePrompt: true}})
+		if len(result.Tables) != 1 || result.Tables[0].Columns[0].Semantic != "docker.container" {
+			t.Errorf("%s tables = %#v", command, result.Tables)
 		}
 	}
 }
@@ -250,7 +436,7 @@ func TestDetectGitProfiles(t *testing.T) {
 		t.Fatalf("branches = %#v", got)
 	}
 
-	for _, command := range []string{"git status -sb", "git -C repo status -sb"} {
+	for _, command := range []string{"git status -sb", "git -C repo status -sb", "git status --porcelain", "git status --porcelain=v1"} {
 		result, _ = Detect("$ "+command+"\n?? newdir/", Options{Profiles: &profile.Options{ExcludePrompt: true}})
 		if got := summaries(result.Entities); !containsSummary(got, "path:newdir/") {
 			t.Errorf("%s untracked directory = %#v", command, got)
@@ -305,5 +491,127 @@ func TestResultJSONControlsTimings(t *testing.T) {
 	withTimings, _ := result.JSON(true)
 	if !strings.Contains(string(withTimings), "timings") {
 		t.Fatalf("timings missing: %s", withTimings)
+	}
+}
+
+func TestDetectExcludesHiddenText(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{
+			name:  "hidden URL excluded",
+			input: "\x1b[8mhttps://secret.example.com\x1b[28m",
+			want:  []string{},
+		},
+		{
+			name:  "visible URL kept",
+			input: "before\x1b[8msecret\x1b[28m https://visible.example.com",
+			want:  []string{"url:https://visible.example.com"},
+		},
+		{
+			name:  "hidden path excluded",
+			input: "\x1b[8m/etc/shadow\x1b[28m /tmp/visible.txt",
+			want:  []string{"path:/tmp/visible.txt"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, _ := Detect(tt.input, Options{})
+			got := summaries(result.Entities)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("entities = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDetectMixedCaseUUID(t *testing.T) {
+	input := "550e8400-E29B-41d4-a716-446655440000"
+	result, _ := Detect(input, Options{})
+	found := false
+	for _, item := range result.Entities {
+		if item.Kind == entity.KindUUID {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("mixed-case UUID not detected: %v", summaries(result.Entities))
+	}
+}
+
+func TestDetectEmailBoundary(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{
+			name:  "standalone email",
+			input: "contact user@example.com please",
+			want:  []string{"email:user@example.com"},
+		},
+		{
+			name:  "leading dot rejected",
+			input: ".user@example.com",
+			want:  []string{},
+		},
+		{
+			name:  "leading plus rejected",
+			input: "+user@example.com",
+			want:  []string{},
+		},
+		{
+			name:  "leading hyphen rejected",
+			input: "-user@example.com",
+			want:  []string{},
+		},
+		{
+			name:  "long TLD accepted",
+			input: "user@example.international",
+			want:  []string{"email:user@example.international"},
+		},
+		{
+			name:  "TLD exceeding DNS label limit rejected",
+			input: "user@host." + strings.Repeat("a", 64),
+			want:  []string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, _ := Detect(tt.input, Options{})
+			var got []string
+			for _, item := range result.Entities {
+				if item.Kind == entity.KindEmail {
+					got = append(got, string(item.Kind)+":"+item.Text)
+				}
+			}
+			if got == nil {
+				got = []string{}
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("emails = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDetectCarriageReturnOverwrites(t *testing.T) {
+	input := "loading...\rdone!      "
+	result, _ := Detect(input, Options{})
+	if result.Screen.Lines[0].Plain != "done!      " {
+		t.Errorf("\\r should overwrite: got %q", result.Screen.Lines[0].Plain)
+	}
+}
+
+func TestDetectCarriageReturnNewline(t *testing.T) {
+	input := "line1\r\nline2"
+	result, _ := Detect(input, Options{})
+	if len(result.Screen.Lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d", len(result.Screen.Lines))
+	}
+	if result.Screen.Lines[0].Plain != "line1" || result.Screen.Lines[1].Plain != "line2" {
+		t.Errorf("lines = %q, %q", result.Screen.Lines[0].Plain, result.Screen.Lines[1].Plain)
 	}
 }

@@ -161,6 +161,7 @@ func openFileWithEditor(location entity.FileLocation) error {
 		editor = defaultEditor
 	}
 
+	location.Path = expandEditorPath(location.Path)
 	if _, err := os.Stat(location.Path); os.IsNotExist(err) {
 		return fmt.Errorf("file does not exist: %w", err)
 	}
@@ -176,6 +177,51 @@ func openFileWithEditor(location entity.FileLocation) error {
 	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
+}
+
+func expandEditorPath(path string) string {
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			if path == "~" {
+				return home
+			}
+			return filepath.Join(home, path[2:])
+		}
+		return path
+	}
+	if !strings.HasPrefix(path, "$") {
+		return path
+	}
+	rest := path[1:]
+	var name string
+	if strings.HasPrefix(rest, "{") {
+		close := strings.Index(rest, "}")
+		if close < 0 {
+			return path
+		}
+		name = rest[1:close]
+		rest = rest[close+1:]
+	} else {
+		nameEnd := strings.Index(rest, "/")
+		if nameEnd < 0 {
+			name = rest
+			rest = ""
+		} else {
+			name = rest[:nameEnd]
+			rest = rest[nameEnd:]
+		}
+	}
+	if name == "" {
+		return path
+	}
+	value := os.Getenv(name)
+	if value == "" {
+		return path
+	}
+	if rest == "" || rest == "/" {
+		return value
+	}
+	return filepath.Join(value, strings.TrimPrefix(rest, "/"))
 }
 
 // processResults processes selected items and returns formatted output
@@ -316,8 +362,16 @@ func runApp(config *Config, args *Arguments) error {
 	// Convert include rules to regex patterns list
 	var includePatterns []string
 	for _, r := range config.Rules.Include.Rules {
-		if r.Type == "regex" && r.Pattern != "" {
+		if r.Pattern == "" {
+			continue
+		}
+		switch r.Type {
+		case "regex":
 			includePatterns = append(includePatterns, r.Pattern)
+		case "text":
+			includePatterns = append(includePatterns, regexp.QuoteMeta(r.Pattern))
+		default:
+			slog.Warn("unknown include rule type; skipping", "type", r.Type, "pattern", r.Pattern)
 		}
 	}
 	// Build state options based on configuration
@@ -352,7 +406,10 @@ func runApp(config *Config, args *Arguments) error {
 	}
 
 	// Create state with all configured options
-	state := internal.NewState(text, config.Core.Alphabet, includePatterns, opts...)
+	state, err := internal.NewState(text, config.Core.Alphabet, includePatterns, opts...)
+	if err != nil {
+		return fmt.Errorf("initialize state: %w", err)
+	}
 
 	var selected []internal.ChosenMatch
 

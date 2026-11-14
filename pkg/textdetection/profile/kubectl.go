@@ -15,10 +15,8 @@ func (kubectlProfile) Match(command Command) bool {
 }
 
 func (kubectlProfile) Detect(block Block, ctx *Context) []entity.Candidate {
-	resource := "resource"
-	if len(block.Command.Argv) > 2 {
-		resource = normalizeResource(block.Command.Argv[2])
-	}
+	resource := kubectlResource(block.Command.Argv)
+
 	for _, tableIndex := range tablesInBlock(block, ctx.Tables) {
 		for col := range ctx.Tables[tableIndex].Columns {
 			column := &ctx.Tables[tableIndex].Columns[col]
@@ -35,6 +33,23 @@ func (kubectlProfile) Detect(block Block, ctx *Context) []entity.Candidate {
 		}
 	}
 	return nil
+}
+
+func kubectlResource(argv []string) string {
+	for i := 2; i < len(argv); i++ {
+		arg := argv[i]
+		if strings.HasPrefix(arg, "-") {
+			switch arg {
+			case "-o", "--output", "-l", "--selector", "--field-selector", "--sort-by", "-n", "--namespace", "--context", "--cluster", "--user", "--token", "--server", "--kubeconfig":
+				if i+1 < len(argv) {
+					i++
+				}
+			}
+			continue
+		}
+		return normalizeResource(arg)
+	}
+	return "resource"
 }
 
 func normalizeResource(resource string) string {
