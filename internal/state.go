@@ -136,7 +136,11 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 			opts.Exclusions = append(opts.Exclusions, textdetection.Exclusion{Type: rule.Type, Pattern: rule.Pattern})
 		}
 	}
-	result, _ := textdetection.Detect(s.rawInput, opts)
+	result, err := textdetection.Detect(s.rawInput, opts)
+	if err != nil {
+		slog.Warn("textdetection failed; returning empty matches", "error", err)
+		return nil
+	}
 	s.screen, s.Lines = result.Screen, result.Screen.PlainLines()
 	matches := make([]Match, 0, len(result.Entities))
 	for _, entity := range result.Entities {
