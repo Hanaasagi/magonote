@@ -51,6 +51,7 @@ type ListView struct {
 	// Display configuration
 	maxVisibleItems    int
 	originalTotalWidth int // Width based on original total count for consistent layout
+	renderedLines      int // lines rendered in the most recent frame
 
 	// Terminal state
 	originalState *term.State
@@ -468,10 +469,15 @@ func (lv *ListView) positionCursor() {
 func (lv *ListView) render() {
 	visibleCount, totalLines := lv.calculateDisplayMetrics()
 	lv.ensureSpace(totalLines)
-	lv.clearPopupArea(totalLines)
+	clearLines := totalLines
+	if lv.renderedLines > clearLines {
+		clearLines = lv.renderedLines
+	}
+	lv.clearPopupArea(clearLines)
 	lv.renderPrompt()
 	lv.renderMatches(visibleCount)
 	lv.positionCursor()
+	lv.renderedLines = totalLines
 }
 
 // handleArrowKeys handles arrow key sequences

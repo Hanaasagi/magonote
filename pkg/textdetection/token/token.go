@@ -73,6 +73,7 @@ func Words(chunk Chunk) []Word {
 	}
 
 	graphemes := uniseg.NewGraphemes(chunk.Text)
+	seenGrapheme := false
 	for graphemes.Next() {
 		byteStart, _ := graphemes.Positions()
 		text := graphemes.Str()
@@ -86,7 +87,13 @@ func Words(chunk Chunk) []Word {
 				startCol = chunk.Span.StartCol + col
 			}
 		}
-		col += screen.GraphemeWidth(text)
+		w := uniseg.StringWidth(text)
+		if w == 0 && seenGrapheme {
+			// Zero-width character merged with previous cell; no column advance
+		} else {
+			col += screen.GraphemeWidth(text)
+		}
+		seenGrapheme = true
 	}
 	flush(len(chunk.Text))
 	return words

@@ -78,8 +78,8 @@ func TestParseUnicodeUsesDisplayColumns(t *testing.T) {
 
 func TestParseEmojiUsesGraphemeWidth(t *testing.T) {
 	tests := []struct {
-		prefix     string
-		start      int
+		prefix    string
+		start     int
 		lineWidth int
 	}{
 		{prefix: "🇺🇸", start: 3, lineWidth: 22},
@@ -210,6 +210,18 @@ func TestParseCarriageReturn(t *testing.T) {
 			want:  "ccc",
 			lines: 1,
 		},
+		{
+			name:  "multibyte overwrite",
+			input: "éx\ra",
+			want:  "ax",
+			lines: 1,
+		},
+		{
+			name:  "CJK partial overwrite",
+			input: "中文\rab",
+			want:  "ab文",
+			lines: 1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -221,5 +233,34 @@ func TestParseCarriageReturn(t *testing.T) {
 				t.Errorf("plain = %q, want %q", s.Lines[0].Plain, tt.want)
 			}
 		})
+	}
+}
+
+func TestCROverwriteReplacesStyleRuns(t *testing.T) {
+	s := Parse("abc\r\x1b[8mXYZ")
+	spans := s.HiddenSpans()
+	if len(spans) == 0 {
+		t.Fatal("expected hidden spans after CR + ESC[8m overwrite")
+	}
+	if spans[0] != (Span{Line: 0, StartCol: 0, EndCol: 3}) {
+		t.Errorf("hidden span = %v, want {0 0 3}", spans[0])
+	}
+}
+
+func TestTabAfterCR(t *testing.T) {
+	s := Parse("abcdef\r\tX")
+	plain := s.Lines[0].Plain
+	if plain != "abcdef  X" {
+		t.Fatalf("plain = %q, want %q", plain, "abcdef  X")
+	}
+	if got := s.ColOf(0, 8); got != 8 {
+		t.Errorf("X column = %d, want 8", got)
+	}
+}
+
+func TestZeroWidthBeforeTab(t *testing.T) {
+	s := Parse("a\u200b\tX")
+	if got := s.ColOf(0, len("a\u200b")+7); got != 8 {
+		t.Fatalf("X column = %d, want 8", got)
 	}
 }

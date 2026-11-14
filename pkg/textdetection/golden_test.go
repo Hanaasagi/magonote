@@ -34,6 +34,7 @@ func TestGolden(t *testing.T) {
 		{name: "colored_ls", opts: Options{Style: true}},
 		{name: "commands", opts: Options{Table: &table.Options{}, Profiles: &profile.Options{ExcludePrompt: true}}},
 		{name: "prompts", opts: Options{Profiles: &profile.Options{ExcludePrompt: true}}},
+		{name: "cr_hidden", opts: Options{Style: true}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

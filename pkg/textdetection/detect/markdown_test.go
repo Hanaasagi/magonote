@@ -1,6 +1,10 @@
 package detect
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
+)
 
 func TestHasURISchemeRejectsSingleLetter(t *testing.T) {
 	tests := []struct {
@@ -22,6 +26,32 @@ func TestHasURISchemeRejectsSingleLetter(t *testing.T) {
 				t.Errorf("hasURIScheme(%q) = %v, want %v", tt.text, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestMarkdownFileLocationBeforeScheme(t *testing.T) {
+	ctx := testContext("[source](README:12)")
+	candidates := markdownCandidates(ctx, 0)
+	if len(candidates) == 0 {
+		t.Fatal("expected candidate for README:12")
+	}
+	c := candidates[0]
+	if c.Kind != entity.KindPath {
+		t.Errorf("kind = %v, want KindPath", c.Kind)
+	}
+	if c.Location == nil || c.Location.Line != 12 {
+		t.Errorf("location = %#v, want line 12", c.Location)
+	}
+}
+
+func TestMarkdownRealSchemeStillURL(t *testing.T) {
+	ctx := testContext("[link](mailto:user@example.com)")
+	candidates := markdownCandidates(ctx, 0)
+	if len(candidates) == 0 {
+		t.Fatal("expected candidate for mailto URL")
+	}
+	if candidates[0].Kind != entity.KindURL {
+		t.Errorf("kind = %v, want KindURL", candidates[0].Kind)
 	}
 }
 

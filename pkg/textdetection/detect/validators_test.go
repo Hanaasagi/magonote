@@ -1,6 +1,7 @@
 package detect
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
@@ -34,10 +35,17 @@ func TestValidEmailRejectsBadTLD(t *testing.T) {
 	if _, ok := validEmail(ctx, 0, 0, 11, c); ok {
 		t.Error("1-char TLD should be rejected")
 	}
-	ctx = testContext("user@host.thisiswaytoolongtobearealtld")
-	c.Text = "user@host.thisiswaytoolongtobearealtld"
+	ctx = testContext("user@example.international")
+	c.Text = "user@example.international"
+	if _, ok := validEmail(ctx, 0, 0, len(c.Text), c); !ok {
+		t.Error("13-char TLD (international) should be accepted")
+	}
+
+	longTLD := "user@host." + strings.Repeat("a", 64)
+	ctx = testContext(longTLD)
+	c.Text = longTLD
 	if _, ok := validEmail(ctx, 0, 0, len(c.Text), c); ok {
-		t.Error("TLD > 12 chars should be rejected")
+		t.Error("TLD > 63 chars should be rejected")
 	}
 }
 

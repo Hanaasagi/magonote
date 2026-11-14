@@ -34,7 +34,10 @@ func validURL(ctx *Context, line, start, end int, candidate entity.Candidate) (e
 		return candidate, false
 	}
 	if u.Scheme == "file" {
-		return candidate, u.Path != ""
+		if u.Path == "" {
+			return candidate, false
+		}
+		return editedCandidate(ctx, line, start, start+len(text), candidate, text), true
 	}
 	if u.Host == "" {
 		switch u.Scheme {
@@ -250,7 +253,13 @@ func validPort(port string) bool {
 
 func validIPv6(ctx *Context, line, start, end int, candidate entity.Candidate) (entity.Candidate, bool) {
 	plain := ctx.Screen.Lines[line].Plain
-	if start > 0 && (isASCIIWord(plain[start-1]) || plain[start-1] == '.') || end < len(plain) && (isASCIIWord(plain[end]) || plain[end] == '.') {
+	if start > 0 && (isASCIIWord(plain[start-1]) || plain[start-1] == '.') {
+		return candidate, false
+	}
+	if end < len(plain) && isASCIIWord(plain[end]) {
+		return candidate, false
+	}
+	if end < len(plain) && plain[end] == '.' && end+1 < len(plain) && plain[end+1] >= '0' && plain[end+1] <= '9' {
 		return candidate, false
 	}
 	text := candidate.Text
@@ -301,7 +310,7 @@ func validEmail(ctx *Context, line, start, end int, candidate entity.Candidate) 
 		return candidate, false
 	}
 	tld := domain[lastDot+1:]
-	if len(tld) < 2 || len(tld) > 12 {
+	if len(tld) < 2 || len(tld) > 63 {
 		return candidate, false
 	}
 	return candidate, true

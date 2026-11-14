@@ -73,7 +73,7 @@ type parser struct {
 	tabWidth int
 	line     lineBuilder
 	lines    []Line
-	cursor   int // byte offset into line.plain for CR overwrites
+	cursor   int // display column position for CR/tab handling
 }
 
 func (p *parser) parse(input string) {
@@ -91,8 +91,16 @@ func (p *parser) parse(input string) {
 			p.resetLine()
 			i++
 		case b == '\t':
-			count := p.tabWidth - plainDisplayWidth(p.line.plain.String())%p.tabWidth
-			p.append(strings.Repeat(" ", count))
+			tabStop := p.cursor + (p.tabWidth - p.cursor%p.tabWidth)
+			lineWidth := uniseg.StringWidth(p.line.plain.String())
+			if tabStop > lineWidth {
+				padding := strings.Repeat(" ", tabStop-lineWidth)
+				start := p.line.plain.Len()
+				p.line.plain.WriteString(padding)
+				end := p.line.plain.Len()
+				p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
+			}
+			p.cursor = tabStop
 			i++
 		case b == 0x1b:
 			i = p.escape(input, i)
@@ -116,50 +124,119 @@ func (p *parser) resetLine() {
 	p.cursor = 0
 }
 
+// displayColToByte returns the byte offset in text corresponding to the given
+// display column. If col falls in the middle of a wide character, it rounds up
+// to the next grapheme boundary.
+func displayColToByte(text string, col int) int {
+	if col <= 0 {
+		return 0
+	}
+	pos := 0
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		_, end := graphemes.Positions()
+		w := uniseg.StringWidth(graphemes.Str())
+		pos += w
+		if pos >= col {
+			return end
+		}
+	}
+	return len(text)
+}
+
 func (p *parser) append(text string) {
 	if text == "" {
 		return
 	}
-	lineLen := p.line.plain.Len()
-	if p.cursor < lineLen {
+	textWidth := uniseg.StringWidth(text)
+	lineWidth := uniseg.StringWidth(p.line.plain.String())
+
+	if p.cursor < lineWidth {
 		existing := p.line.plain.String()
-		overEnd := p.cursor + len(text)
-		if overEnd > lineLen {
+		startByte := displayColToByte(existing, p.cursor)
+		overEndCol := p.cursor + textWidth
+		var endByte int
+
+		if overEndCol >= lineWidth {
+			endByte = len(existing)
 			p.line.plain.Reset()
-			p.line.plain.WriteString(existing[:p.cursor])
+			p.line.plain.WriteString(existing[:startByte])
 			p.line.plain.WriteString(text)
 		} else {
+			endByte = displayColToByte(existing, overEndCol)
 			p.line.plain.Reset()
-			p.line.plain.WriteString(existing[:p.cursor])
+			p.line.plain.WriteString(existing[:startByte])
 			p.line.plain.WriteString(text)
-			p.line.plain.WriteString(existing[overEnd:])
+			p.line.plain.WriteString(existing[endByte:])
 		}
-		p.line.runs = append(p.line.runs, styleRun{start: p.cursor, end: p.cursor + len(text), style: p.style})
-		p.cursor += len(text)
+
+		newStart := startByte
+		newEnd := startByte + len(text)
+		p.overwriteRuns(startByte, endByte, newStart, newEnd)
+		p.cursor += textWidth
 		return
 	}
-	start := lineLen
+
+	start := p.line.plain.Len()
 	p.line.plain.WriteString(text)
+	end := p.line.plain.Len()
 	if len(p.line.runs) > 0 {
 		last := &p.line.runs[len(p.line.runs)-1]
 		if last.style == p.style && last.end == start {
-			last.end = p.line.plain.Len()
+			last.end = end
 		} else {
-			p.line.runs = append(p.line.runs, styleRun{start: start, end: p.line.plain.Len(), style: p.style})
+			p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
 		}
 	} else {
-		p.line.runs = append(p.line.runs, styleRun{start: start, end: p.line.plain.Len(), style: p.style})
+		p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
 	}
-	p.cursor = p.line.plain.Len()
+	p.cursor += textWidth
 }
 
-func plainDisplayWidth(plain string) int {
-	width := 0
-	graphemes := uniseg.NewGraphemes(plain)
-	for graphemes.Next() {
-		width += GraphemeWidth(graphemes.Str())
+// overwriteRuns replaces style runs covering [oldStart, oldEnd) with a new run
+// covering [newStart, newEnd) using the parser's current style. Runs after the
+// overwritten region are shifted to account for byte-length changes.
+func (p *parser) overwriteRuns(oldStart, oldEnd, newStart, newEnd int) {
+	byteShift := (newEnd - newStart) - (oldEnd - oldStart)
+	var result []styleRun
+	inserted := false
+
+	for _, run := range p.line.runs {
+		if run.end <= oldStart {
+			result = append(result, run)
+			continue
+		}
+		if run.start >= oldEnd {
+			if !inserted {
+				result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+				inserted = true
+			}
+			result = append(result, styleRun{
+				start: run.start + byteShift,
+				end:   run.end + byteShift,
+				style: run.style,
+			})
+			continue
+		}
+		if run.start < oldStart {
+			result = append(result, styleRun{start: run.start, end: oldStart, style: run.style})
+		}
+		if !inserted {
+			result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+			inserted = true
+		}
+		if run.end > oldEnd {
+			result = append(result, styleRun{
+				start: newEnd,
+				end:   run.end + byteShift,
+				style: run.style,
+			})
+		}
 	}
-	return width
+	if !inserted {
+		result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+	}
+	p.line.runs = result
 }
 
 func (p *parser) finishLine() {

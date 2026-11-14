@@ -1,0 +1,18 @@
+Pulling from library/nginx
+abc123def456: Downloading 52MB/108MB
+abc123def456: Download complete
+Status: Downloaded newer image for nginx:latest
+docker.io/library/nginx:latest
+
+pip install flask
+  Downloading flask-2.3.2.tar.gz (50%)
+  Downloading flask-2.3.2.tar.gz (100%)
+Successfully installed flask==2.3.2 from https://pypi.org/simple/flask/
+
+Server listening on ::1 port 8080.
+Contact admin@example.international for support.
+See file:///usr/local/share/doc/guide.txt, then restart.
+
+[8mhttps://internal.corp/token[28mClick here for access
+
+Build failed at src/main.go:42:10

@@ -23,7 +23,9 @@ func markdownCandidates(ctx *Context, line int) []entity.Candidate {
 			continue
 		}
 		kind := entity.KindPath
-		if strings.Contains(text, "://") || strings.HasPrefix(text, "git@") || hasURIScheme(text) {
+		if strings.Contains(text, "://") || strings.HasPrefix(text, "git@") {
+			kind = entity.KindURL
+		} else if hasURIScheme(text) && !filenameSuffixPattern.MatchString(text) {
 			kind = entity.KindURL
 		}
 		candidate := candidateFromBytes(ctx, kind, line, start, end, entity.ClassSemantic, "regex", 0.95)

@@ -120,6 +120,45 @@ func TestDetectRejectsPartialDottedIPv6(t *testing.T) {
 	}
 }
 
+func TestDetectIPv6BeforeSentencePeriod(t *testing.T) {
+	result, _ := Detect("connect to ::1.", Options{})
+	found := false
+	for _, item := range result.Entities {
+		if item.Kind == entity.KindIPv6 && item.Text == "::1" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("::1 before period not detected; entities = %#v", result.Entities)
+	}
+}
+
+func TestDetectFileURLTrimsPunctuation(t *testing.T) {
+	result, _ := Detect("see file:///tmp/report.txt, then", Options{})
+	for _, item := range result.Entities {
+		if item.Kind == entity.KindURL {
+			if item.Text != "file:///tmp/report.txt" {
+				t.Errorf("file URL text = %q, want %q", item.Text, "file:///tmp/report.txt")
+			}
+			return
+		}
+	}
+	t.Fatal("file URL not detected")
+}
+
+func TestDetectEmailWithLongTLD(t *testing.T) {
+	result, _ := Detect("user@example.international", Options{})
+	found := false
+	for _, item := range result.Entities {
+		if item.Kind == entity.KindEmail {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("email with .international TLD not detected")
+	}
+}
+
 func TestDetectRejectsInvalidURLPorts(t *testing.T) {
 	for _, input := range []string{"https://example.com:65536", "http://[::1]:99999/"} {
 		result, _ := Detect(input, Options{})
@@ -529,8 +568,13 @@ func TestDetectEmailBoundary(t *testing.T) {
 			want:  []string{},
 		},
 		{
-			name:  "TLD too long rejected",
-			input: "user@host.thisiswaytoolongtobearealtld",
+			name:  "long TLD accepted",
+			input: "user@example.international",
+			want:  []string{"email:user@example.international"},
+		},
+		{
+			name:  "TLD exceeding DNS label limit rejected",
+			input: "user@host." + strings.Repeat("a", 64),
 			want:  []string{},
 		},
 	}
