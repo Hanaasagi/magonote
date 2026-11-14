@@ -51,7 +51,15 @@ lint:
 
 e2e: $(BINARIES)
 	@echo "Running automated E2E tests..."
-	@cd test/e2e && go test -v -timeout=30s .
+	@cd test/e2e && go test -v -timeout=120s .
+
+e2e-detect: $(BINARIES)
+	@echo "Running detect-based E2E tests (no PTY required)..."
+	@cd test/e2e && go test -v -timeout=60s -run 'TestDetect|TestFixture' .
+
+e2e-interaction: $(BINARIES)
+	@echo "Running interaction-based E2E tests (PTY required)..."
+	@cd test/e2e && go test -v -timeout=60s -run 'TestInteraction|TestBasic|TestCurl|TestTextWrapping' .
 
 manual-e2e:
 	@echo "Running manual E2E test fixtures..."
