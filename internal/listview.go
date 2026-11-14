@@ -468,7 +468,7 @@ func (lv *ListView) positionCursor() {
 func (lv *ListView) render() {
 	visibleCount, totalLines := lv.calculateDisplayMetrics()
 	lv.ensureSpace(totalLines)
-	lv.clearPopupArea(lv.height)
+	lv.clearPopupArea(totalLines)
 	lv.renderPrompt()
 	lv.renderMatches(visibleCount)
 	lv.positionCursor()
