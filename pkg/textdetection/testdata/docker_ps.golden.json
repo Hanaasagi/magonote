@@ -122,7 +122,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "path",
@@ -136,6 +139,7 @@
       "class": 2,
       "source": "regex",
       "meta": {
+        "column": "IMAGE",
         "tag": "5.1.2"
       }
     },
@@ -209,7 +213,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "path",
@@ -223,6 +230,7 @@
       "class": 2,
       "source": "regex",
       "meta": {
+        "column": "IMAGE",
         "tag": "5.1.2"
       }
     },
@@ -296,7 +304,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "path",
@@ -310,6 +321,7 @@
       "class": 2,
       "source": "regex",
       "meta": {
+        "column": "IMAGE",
         "tag": "5.1.2"
       }
     },
@@ -383,7 +395,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "path",
@@ -397,6 +412,7 @@
       "class": 2,
       "source": "regex",
       "meta": {
+        "column": "IMAGE",
         "tag": "5.1.2"
       }
     },
@@ -467,7 +483,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "path",
@@ -481,6 +500,7 @@
       "class": 2,
       "source": "regex",
       "meta": {
+        "column": "IMAGE",
         "tag": "5.1.2"
       }
     },
@@ -551,7 +571,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "path",
@@ -565,6 +588,7 @@
       "class": 2,
       "source": "regex",
       "meta": {
+        "column": "IMAGE",
         "tag": "5.1.2"
       }
     },
@@ -635,7 +659,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "path",
@@ -649,6 +676,7 @@
       "class": 2,
       "source": "regex",
       "meta": {
+        "column": "IMAGE",
         "tag": "5.1.2"
       }
     },
@@ -719,7 +747,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "path",
@@ -733,6 +764,7 @@
       "class": 2,
       "source": "regex",
       "meta": {
+        "column": "IMAGE",
         "tag": "bullseye-fat"
       }
     },
@@ -803,7 +835,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "cell",
@@ -890,7 +925,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "sha",
@@ -902,7 +940,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "IMAGE"
+      }
     },
     {
       "kind": "filename",
@@ -971,7 +1012,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "sha",
@@ -983,7 +1027,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "IMAGE"
+      }
     },
     {
       "kind": "path",
@@ -1052,7 +1099,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "CONTAINER ID"
+      }
     },
     {
       "kind": "cell",

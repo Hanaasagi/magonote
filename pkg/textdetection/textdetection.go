@@ -109,7 +109,8 @@ func Detect(input string, opts Options) (*Result, error) {
 	timings["detect"] = time.Since(phase)
 
 	phase = time.Now()
-	exclusions := exclusionSpans(parsed, opts.Exclusions)
+	exclusions := parsed.HiddenSpans()
+	exclusions = append(exclusions, exclusionSpans(parsed, opts.Exclusions)...)
 	if opts.Profiles != nil && opts.Profiles.ExcludePrompt {
 		for _, prompt := range prompts {
 			exclusions = append(exclusions, screen.Span{Line: prompt.Line, StartCol: 0, EndCol: prompt.PrefixEnd})

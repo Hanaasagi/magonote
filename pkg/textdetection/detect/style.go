@@ -18,21 +18,16 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 	var candidates []entity.Candidate
 	for line := range ctx.Screen.Lines {
 		cells := ctx.Screen.Lines[line].Cells
+		candidates = append(candidates, hyperlinkCandidates(cells, line)...)
 		for start, col := 0, 0; start < len(cells); {
 			style := cells[start].Style
 			end := start + 1
 			for end < len(cells) && cells[end].Style == style {
 				end++
 			}
-			if style != (screen.Style{}) {
+			if style != (screen.Style{}) && style.Attr&screen.AttrHidden == 0 {
 				chunks := styledChunks(cells[start:end], line, col)
 				for _, chunk := range chunks {
-					if style.Hyperlink != "" {
-						candidates = append(candidates, entity.Candidate{
-							Kind: entity.KindURL, Text: style.Hyperlink, Span: chunk.span,
-							Class: entity.ClassSemantic, Source: "style", Confidence: 0.95,
-						})
-					}
 					if validStyledChunk(chunk.text, chunk.span, len(chunks)) {
 						candidates = append(candidates, entity.Candidate{
 							Kind: entity.KindStyled, Text: chunk.text, Span: chunk.span,
@@ -48,6 +43,48 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 		}
 	}
 	return candidates
+}
+
+func hyperlinkCandidates(cells []screen.Cell, line int) []entity.Candidate {
+	var candidates []entity.Candidate
+	for start, col := 0, 0; start < len(cells); {
+		link := cells[start].Style.Hyperlink
+		end := start + 1
+		for end < len(cells) && cells[end].Style.Hyperlink == link {
+			end++
+		}
+		if link != "" && cells[start].Style.Attr&screen.AttrHidden == 0 {
+			startCol, endCol := col, col
+			for _, cell := range cells[start:end] {
+				endCol += int(cell.Width)
+			}
+			first, last := start, end
+			for first < last && isSpaceCell(cells[first]) {
+				startCol += int(cells[first].Width)
+				first++
+			}
+			for last > first && isSpaceCell(cells[last-1]) {
+				endCol -= int(cells[last-1].Width)
+				last--
+			}
+			if endCol > startCol {
+				candidates = append(candidates, entity.Candidate{
+					Kind: entity.KindURL, Text: link, Span: screen.Span{Line: line, StartCol: startCol, EndCol: endCol},
+					Class: entity.ClassSemantic, Source: "style", Confidence: 0.95,
+				})
+			}
+		}
+		for _, cell := range cells[start:end] {
+			col += int(cell.Width)
+		}
+		start = end
+	}
+	return candidates
+}
+
+func isSpaceCell(cell screen.Cell) bool {
+	r, _ := utf8.DecodeRuneInString(cell.Grapheme)
+	return unicode.IsSpace(r)
 }
 
 type styledChunk struct {
@@ -67,8 +104,7 @@ func styledChunks(cells []screen.Cell, line, offset int) []styledChunk {
 		}
 	}
 	for _, cell := range cells {
-		r, _ := utf8.DecodeRuneInString(cell.Grapheme)
-		if unicode.IsSpace(r) {
+		if isSpaceCell(cell) {
 			flush()
 		} else {
 			if start < 0 {

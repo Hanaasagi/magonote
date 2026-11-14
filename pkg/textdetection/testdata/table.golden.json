@@ -89,7 +89,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -146,7 +149,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -203,7 +209,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -260,7 +269,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -317,7 +329,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -374,7 +389,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -431,7 +449,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -488,7 +509,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -545,7 +569,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
@@ -602,7 +629,10 @@
       },
       "confidence": 0.9,
       "class": 2,
-      "source": "regex"
+      "source": "regex",
+      "meta": {
+        "column": "Email"
+      }
     },
     {
       "kind": "cell",
