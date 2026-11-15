@@ -173,7 +173,7 @@ func (p *parser) append(text string) {
 		newStart := startByte
 		newEnd := startByte + len(text)
 		p.overwriteRuns(startByte, endByte, newStart, newEnd)
-		p.cursor += textWidth
+		p.cursor = cursorAfterInsert(p.line.plain.String(), newEnd)
 		return
 	}
 
@@ -190,7 +190,30 @@ func (p *parser) append(text string) {
 	} else {
 		p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
 	}
-	p.cursor += textWidth
+	// Appended fragments can merge with the preceding grapheme across style
+	// boundaries (variation selectors, ZWJ sequences), changing its width.
+	// Track the combined line width rather than the fragment's standalone
+	// width so the cursor neither lags behind nor runs ahead of the line.
+	p.cursor = uniseg.StringWidth(p.line.plain.String())
+}
+
+// cursorAfterInsert returns the display column just after byteOff in text. If
+// byteOff falls inside a grapheme because inserted fragments merged with
+// neighboring text, it rounds up to that grapheme's end column.
+func cursorAfterInsert(text string, byteOff int) int {
+	col := 0
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		start, end := graphemes.Positions()
+		if byteOff <= start {
+			break
+		}
+		col += uniseg.StringWidth(graphemes.Str())
+		if byteOff <= end {
+			break
+		}
+	}
+	return col
 }
 
 // overwriteRuns replaces style runs covering [oldStart, oldEnd) with a new run

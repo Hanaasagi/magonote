@@ -49,11 +49,18 @@ func hyperlinkCandidates(cells []screen.Cell, line int) []entity.Candidate {
 	var candidates []entity.Candidate
 	for start, col := 0, 0; start < len(cells); {
 		link := cells[start].Style.Hyperlink
+		hidden := cells[start].Style.Attr&screen.AttrHidden != 0
 		end := start + 1
-		for end < len(cells) && cells[end].Style.Hyperlink == link {
+		// Split runs at hidden-attribute boundaries so a link label mixing
+		// hidden and visible text still offers its visible portion: a run
+		// starting hidden would suppress the visible cells, while a run
+		// starting visible would span hidden cells and be discarded by the
+		// exclusion pipeline.
+		for end < len(cells) && cells[end].Style.Hyperlink == link &&
+			(cells[end].Style.Attr&screen.AttrHidden != 0) == hidden {
 			end++
 		}
-		if link != "" && cells[start].Style.Attr&screen.AttrHidden == 0 {
+		if link != "" && !hidden {
 			startCol, endCol := col, col
 			for _, cell := range cells[start:end] {
 				endCol += int(cell.Width)

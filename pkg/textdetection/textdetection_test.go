@@ -311,6 +311,43 @@ func TestDetectOSC8LinkAcrossSpacesAndStyles(t *testing.T) {
 	}
 }
 
+func TestDetectHyperlinkSplitAtHiddenBoundary(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantStart int
+		wantEnd   int
+	}{
+		{
+			name:      "hidden then visible",
+			input:     "\x1b]8;;https://example.com\a\x1b[8mhidden\x1b[28mdocs\x1b]8;;\a",
+			wantStart: 6,
+			wantEnd:   10,
+		},
+		{
+			name:      "visible then hidden",
+			input:     "\x1b]8;;https://example.com\adocs\x1b[8mhidden\x1b[28m\x1b]8;;\a",
+			wantStart: 0,
+			wantEnd:   4,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, _ := Detect(tt.input, Options{Style: true})
+			for _, item := range result.Entities {
+				if item.Kind != entity.KindURL || item.Text != "https://example.com" {
+					continue
+				}
+				if item.Span.StartCol != tt.wantStart || item.Span.EndCol != tt.wantEnd {
+					t.Fatalf("URL span = [%d,%d), want [%d,%d)", item.Span.StartCol, item.Span.EndCol, tt.wantStart, tt.wantEnd)
+				}
+				return
+			}
+			t.Fatalf("hyperlink URL missing: %#v", result.Entities)
+		})
+	}
+}
+
 func TestDetectHiddenStyleDoesNotCreateCandidates(t *testing.T) {
 	result, _ := Detect("\x1b[8msecret\x1b[0m", Options{Style: true})
 	if len(result.Entities) != 0 {

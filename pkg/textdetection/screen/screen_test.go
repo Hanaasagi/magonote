@@ -118,6 +118,49 @@ func TestANSISplitGraphemeBeforeTabUsesFinalWidth(t *testing.T) {
 	}
 }
 
+func TestANSISplitGraphemeCursorUsesCombinedWidth(t *testing.T) {
+	// The variation selector widens ❤ after the fact; the cursor must track
+	// the combined width or the next append overwrites X.
+	s := Parse("❤\x1b[31m\ufe0fX\x1b[0mY")
+	line := s.Lines[0]
+	if line.Plain != "❤\ufe0fXY" {
+		t.Fatalf("plain = %q, want %q", line.Plain, "❤\ufe0fXY")
+	}
+	if line.Width != 4 {
+		t.Fatalf("width = %d, want 4", line.Width)
+	}
+	if got := s.ColOf(0, len(line.Plain)-1); got != 3 {
+		t.Fatalf("Y column = %d, want 3", got)
+	}
+}
+
+func TestANSISplitGraphemeCursorDoesNotRunAhead(t *testing.T) {
+	// The ZWJ sequence narrows the combined width; the cursor must not run
+	// ahead of the line or the tab overshoots its stop.
+	s := Parse("👩\x1b[31m\u200d💻\x1b[0m\tX", 4)
+	line := s.Lines[0]
+	if line.Plain != "👩\u200d💻  X" {
+		t.Fatalf("plain = %q, want %q", line.Plain, "👩\u200d💻  X")
+	}
+	if got := s.ColOf(0, len(line.Plain)-1); got != 4 {
+		t.Fatalf("X column = %d, want 4", got)
+	}
+}
+
+func TestCROverwriteCursorAfterGraphemeMerge(t *testing.T) {
+	// CR + tab positions the cursor mid-line; the inserted variation selector
+	// merges with the preceding grapheme, so the cursor must land after the
+	// widened grapheme instead of overwriting Y.
+	s := Parse("a❤b\r\t\ufe0fY\x1b[31mZ\x1b[0mW", 2)
+	line := s.Lines[0]
+	if line.Plain != "a❤\ufe0fYZW" {
+		t.Fatalf("plain = %q, want %q", line.Plain, "a❤\ufe0fYZW")
+	}
+	if got := s.ColOf(0, len("a❤\ufe0fY")); got != 4 {
+		t.Fatalf("Z column = %d, want 4", got)
+	}
+}
+
 func TestParseTabsExpandsAtDisplayColumn(t *testing.T) {
 	s := Parse("中\tX")
 	if got := s.Lines[0].Plain; got != "中      X" {
