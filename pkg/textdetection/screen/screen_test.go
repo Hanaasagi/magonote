@@ -2,6 +2,7 @@ package screen
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -158,6 +159,74 @@ func TestCROverwriteCursorAfterGraphemeMerge(t *testing.T) {
 	}
 	if got := s.ColOf(0, len("a❤\ufe0fY")); got != 4 {
 		t.Fatalf("Z column = %d, want 4", got)
+	}
+}
+
+func TestCROverwritePartialWideGrapheme(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		want     string
+		wantCol  int // display column of the final rune
+		tabWidth int
+	}{
+		{"pad remaining column", "界x\ra", "a x", 2, 8},
+		{"styled append hits padding", "界x\ra\x1b[31mb\x1b[0m", "abx", 2, 8},
+		{"pad before retained wide grapheme", "中中x\ra", "a 中x", 4, 8},
+		{"boundary needs no padding", "界x\rab", "abx", 2, 8},
+		{"zero-width insertion does not pad", "界x\r\t\ufe0f", "界\ufe0fx", 2, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Parse(tt.input, tt.tabWidth)
+			line := s.Lines[0]
+			if line.Plain != tt.want {
+				t.Fatalf("plain = %q, want %q", line.Plain, tt.want)
+			}
+			if got := s.ColOf(0, len(line.Plain)-1); got != tt.wantCol {
+				t.Fatalf("final rune column = %d, want %d", got, tt.wantCol)
+			}
+		})
+	}
+}
+
+func TestANSISplitGraphemeWidthCache(t *testing.T) {
+	// Splitting graphemes with ANSI codes must not change the parsed content
+	// or width: the cached line width has to track every merge at the append
+	// boundary (variation selectors, ZWJ sequences, regional indicators).
+	for _, base := range []string{
+		"❤️X", "👩‍💻Y", "🇨🇳🇺🇸Z", "1️⃣2️⃣", "a\u200bb", "éx", "👨‍👩‍👧‍👦!", "🏳️‍🌈", "abc",
+	} {
+		want := Parse(base)
+		var split strings.Builder
+		for i, r := range base {
+			if i > 0 {
+				split.WriteString("\x1b[31m")
+			}
+			split.WriteRune(r)
+		}
+		got := Parse(split.String())
+		wl, gl := want.Lines[0], got.Lines[0]
+		if gl.Plain != wl.Plain || gl.Width != wl.Width || len(gl.Cells) != len(wl.Cells) {
+			t.Errorf("%q split: plain/width/cells = %q/%d/%d, want %q/%d/%d",
+				base, gl.Plain, gl.Width, len(gl.Cells), wl.Plain, wl.Width, len(wl.Cells))
+			continue
+		}
+		for i := range wl.Cells {
+			if gl.Cells[i].Grapheme != wl.Cells[i].Grapheme || gl.Cells[i].Width != wl.Cells[i].Width {
+				t.Errorf("%q split cell %d = %q/%d, want %q/%d", base, i,
+					gl.Cells[i].Grapheme, gl.Cells[i].Width, wl.Cells[i].Grapheme, wl.Cells[i].Width)
+			}
+		}
+	}
+}
+
+func BenchmarkParseStyledFragments(b *testing.B) {
+	input := strings.Repeat("\x1b[31ma\x1b[0m", 2000)
+	b.SetBytes(int64(len(input)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Parse(input)
 	}
 }
 
