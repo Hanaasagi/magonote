@@ -190,12 +190,80 @@ func TestCROverwritePartialWideGrapheme(t *testing.T) {
 	}
 }
 
+func TestCROverwriteStartsInsideWideGrapheme(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		want     string
+		wantCol  int // display column of the final rune
+		tabWidth int
+	}{
+		{"pad leading columns", "1234567界x\r\tA", "1234567 Ax", 9, 8},
+		{"styled append after straddle", "1234567界x\r\tA\x1b[31mB\x1b[0m", "1234567 AB", 9, 8},
+		{"straddle both ends", "界界x\r\tab", " ab x", 4, 1},
+		{"zero-width insertion keeps grapheme", "1234567界x\r\t\ufe0f", "1234567界\ufe0fx", 9, 8},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Parse(tt.input, tt.tabWidth)
+			line := s.Lines[0]
+			if line.Plain != tt.want {
+				t.Fatalf("plain = %q, want %q", line.Plain, tt.want)
+			}
+			if got := s.ColOf(0, len(line.Plain)-1); got != tt.wantCol {
+				t.Fatalf("final rune column = %d, want %d", got, tt.wantCol)
+			}
+			if line.Width != 10 && tt.name != "straddle both ends" {
+				t.Fatalf("width = %d, want 10", line.Width)
+			}
+		})
+	}
+}
+
+func TestLeadingZeroWidthFallback(t *testing.T) {
+	// The cached width must agree with finishLine's fallback column for a
+	// standalone zero-width grapheme at the start of the line, so tab
+	// expansion lands on the stop the screen mappings report.
+	s := Parse("\u200b\tX")
+	line := s.Lines[0]
+	if line.Plain != "\u200b       X" {
+		t.Fatalf("plain = %q, want %q", line.Plain, "\u200b       X")
+	}
+	if got := s.ColOf(0, len(line.Plain)-1); got != 8 {
+		t.Fatalf("X column = %d, want 8", got)
+	}
+	if line.Width != 9 {
+		t.Fatalf("width = %d, want 9", line.Width)
+	}
+
+	if got := Parse("\u200b").Lines[0].Width; got != 1 {
+		t.Fatalf("leading zero-width line width = %d, want 1", got)
+	}
+
+	// CR overwrite consumes the fallback column like any other cell.
+	if got := Parse("\u200bab\rX").Lines[0].Plain; got != "Xab" {
+		t.Fatalf("CR overwrite plain = %q, want %q", got, "Xab")
+	}
+
+	// A fragment becoming the line start gains the fallback column when
+	// measuring the overwrite range.
+	s = Parse("ab\r\u200bX")
+	line = s.Lines[0]
+	if line.Plain != "\u200bX" || line.Width != 2 {
+		t.Fatalf("plain/width = %q/%d, want %q/2", line.Plain, line.Width, "\u200bX")
+	}
+	if got := s.ColOf(0, len(line.Plain)-1); got != 1 {
+		t.Fatalf("X column = %d, want 1", got)
+	}
+}
+
 func TestANSISplitGraphemeWidthCache(t *testing.T) {
 	// Splitting graphemes with ANSI codes must not change the parsed content
 	// or width: the cached line width has to track every merge at the append
 	// boundary (variation selectors, ZWJ sequences, regional indicators).
 	for _, base := range []string{
 		"❤️X", "👩‍💻Y", "🇨🇳🇺🇸Z", "1️⃣2️⃣", "a\u200bb", "éx", "👨‍👩‍👧‍👦!", "🏳️‍🌈", "abc",
+		"\u200bX", "\ufe0f👩",
 	} {
 		want := Parse(base)
 		var split strings.Builder

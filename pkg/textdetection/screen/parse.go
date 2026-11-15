@@ -131,22 +131,60 @@ func (p *parser) resetLine() {
 
 // displayColToByte returns the byte offset in text corresponding to the given
 // display column. If col falls in the middle of a wide character, it rounds up
-// to the next grapheme boundary.
+// to the next grapheme boundary. Widths follow the contextual rule used by
+// finishLine: a standalone zero-width grapheme at the start of the line
+// occupies one fallback column; later zero-width graphemes merge into the
+// preceding cell.
 func displayColToByte(text string, col int) int {
 	if col <= 0 {
 		return 0
 	}
 	pos := 0
+	first := true
 	graphemes := uniseg.NewGraphemes(text)
 	for graphemes.Next() {
 		_, end := graphemes.Positions()
-		w := uniseg.StringWidth(graphemes.Str())
+		w := graphemes.Width()
+		if first && w == 0 {
+			w = 1
+		}
+		first = false
 		pos += w
 		if pos >= col {
 			return end
 		}
 	}
 	return len(text)
+}
+
+// overwriteStart returns the byte offset where a replacement at col begins and
+// the number of leading columns to pad. When col falls inside a grapheme, the
+// whole grapheme is replaced and its columns before col become padding so
+// retained text keeps its display coordinates; on a boundary the padding is
+// zero.
+func overwriteStart(text string, col int) (byteOff, pad int) {
+	if col <= 0 {
+		return 0, 0
+	}
+	pos := 0
+	first := true
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		start, end := graphemes.Positions()
+		w := graphemes.Width()
+		if first && w == 0 {
+			w = 1
+		}
+		first = false
+		if pos+w >= col {
+			if pos+w == col {
+				return end, 0
+			}
+			return start, col - pos
+		}
+		pos += w
+	}
+	return len(text), 0
 }
 
 func (p *parser) append(text string) {
@@ -158,37 +196,50 @@ func (p *parser) append(text string) {
 
 	if p.cursor < lineWidth {
 		existing := p.line.plain.String()
-		startByte := displayColToByte(existing, p.cursor)
+		var startByte, leftPad int
+		if textWidth > 0 {
+			startByte, leftPad = overwriteStart(existing, p.cursor)
+		} else {
+			// Zero-width fragments insert at the rounded boundary without
+			// consuming columns.
+			startByte = displayColToByte(existing, p.cursor)
+		}
 		overEndCol := p.cursor + textWidth
-		var endByte, pad int
+		if textWidth > 0 && startByte == 0 && leftPad == 0 {
+			// The fragment becomes the start of the line; a leading
+			// zero-width grapheme gains the fallback column there.
+			if _, _, w, _ := uniseg.FirstGraphemeClusterInString(text, -1); w == 0 {
+				overEndCol++
+			}
+		}
+		var endByte, rightPad int
 
 		if overEndCol >= lineWidth {
 			endByte = len(existing)
-			p.line.plain.Reset()
-			p.line.plain.WriteString(existing[:startByte])
-			p.line.plain.WriteString(text)
 		} else {
 			endByte = displayColToByte(existing, overEndCol)
 			if textWidth > 0 {
-				pad = partialPad(existing, endByte, overEndCol)
+				rightPad = partialPad(existing, endByte, overEndCol)
 			}
-			p.line.plain.Reset()
-			p.line.plain.WriteString(existing[:startByte])
-			p.line.plain.WriteString(text)
-			if pad > 0 {
-				p.line.plain.WriteString(strings.Repeat(" ", pad))
-			}
-			p.line.plain.WriteString(existing[endByte:])
 		}
 
-		newStart := startByte
-		newEnd := startByte + len(text)
-		p.overwriteRuns(startByte, endByte, newStart, newEnd+pad)
+		p.line.plain.Reset()
+		p.line.plain.WriteString(existing[:startByte])
+		if leftPad > 0 {
+			p.line.plain.WriteString(strings.Repeat(" ", leftPad))
+		}
+		p.line.plain.WriteString(text)
+		if rightPad > 0 {
+			p.line.plain.WriteString(strings.Repeat(" ", rightPad))
+		}
+		p.line.plain.WriteString(existing[endByte:])
+
+		textEnd := startByte + leftPad + len(text)
+		p.overwriteRuns(startByte, endByte, startByte, textEnd+rightPad)
 		p.line.width, p.line.last, p.line.lastWidth = measureLine(p.line.plain.String())
 		// The cursor sits after the written text; padding that preserves the
-		// remaining columns of a partially overwritten grapheme does not
-		// advance it.
-		p.cursor = cursorAfterInsert(p.line.plain.String(), newEnd)
+		// columns of partially overwritten graphemes does not advance it.
+		p.cursor = cursorAfterInsert(p.line.plain.String(), textEnd)
 		return
 	}
 
@@ -221,11 +272,19 @@ func appendWidth(width, lastWidth int, last, text string) (int, string, int) {
 	newWidth := width - lastWidth
 	var newLast string
 	var newLastWidth int
+	first := true
 	graphemes := uniseg.NewGraphemes(last + text)
 	for graphemes.Next() {
+		w := graphemes.Width()
+		if first && last == "" && w == 0 {
+			// Standalone zero-width grapheme at the start of the line:
+			// finishLine gives it one fallback column.
+			newWidth++
+		}
+		first = false
 		newLast = graphemes.Str()
-		newLastWidth = graphemes.Width()
-		newWidth += newLastWidth
+		newLastWidth = w
+		newWidth += w
 	}
 	return newWidth, newLast, newLastWidth
 }
@@ -233,9 +292,14 @@ func appendWidth(width, lastWidth int, last, text string) (int, string, int) {
 // measureLine recomputes the cached width and trailing grapheme after an
 // overwrite rebuilt the line content.
 func measureLine(plain string) (width int, last string, lastWidth int) {
+	first := true
 	graphemes := uniseg.NewGraphemes(plain)
 	for graphemes.Next() {
 		w := graphemes.Width()
+		if first && w == 0 {
+			width++
+		}
+		first = false
 		width += w
 		last, lastWidth = graphemes.Str(), w
 	}
@@ -247,10 +311,16 @@ func measureLine(plain string) (width int, last string, lastWidth int) {
 // columns become spaces so retained text keeps its display coordinates.
 func partialPad(text string, byteOff, col int) int {
 	pos := 0
+	first := true
 	graphemes := uniseg.NewGraphemes(text)
 	for graphemes.Next() {
 		_, end := graphemes.Positions()
-		pos += graphemes.Width()
+		w := graphemes.Width()
+		if first && w == 0 {
+			w = 1
+		}
+		first = false
+		pos += w
 		if end >= byteOff {
 			return pos - col
 		}
@@ -263,13 +333,19 @@ func partialPad(text string, byteOff, col int) int {
 // neighboring text, it rounds up to that grapheme's end column.
 func cursorAfterInsert(text string, byteOff int) int {
 	col := 0
+	first := true
 	graphemes := uniseg.NewGraphemes(text)
 	for graphemes.Next() {
 		start, end := graphemes.Positions()
 		if byteOff <= start {
 			break
 		}
-		col += uniseg.StringWidth(graphemes.Str())
+		w := graphemes.Width()
+		if first && w == 0 {
+			w = 1
+		}
+		first = false
+		col += w
 		if byteOff <= end {
 			break
 		}
