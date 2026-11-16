@@ -1,20 +1,17 @@
 package internal
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	tdscreen "github.com/Hanaasagi/magonote/pkg/textdetection/screen"
-	"github.com/adrg/xdg"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/uniseg"
 )
 
 const extraCapacity = 16
 
+// TextCell is one logical display cell: a base rune, optional combining runes,
+// its display width, and its style.
 type TextCell struct {
 	Rune  rune
 	Comb  []rune
@@ -22,6 +19,9 @@ type TextCell struct {
 	Style tcell.Style
 }
 
+// TextBuffer is a logical framebuffer. Rows may be wider than the screen;
+// WriteToScreen projects (wraps) them onto a tcell screen at grapheme
+// boundaries. It carries no I/O concerns — callers own any snapshot output.
 type TextBuffer struct {
 	content [][]TextCell
 	width   int
@@ -67,6 +67,23 @@ func (tb *TextBuffer) Clear() {
 	}
 }
 
+// CopyFrom resets tb to src's contents, reusing row storage. Combining slices
+// are shared safely: cells are replaced wholesale, never mutated in place, so
+// src stays pristine. A steady-state copy allocates nothing.
+func (tb *TextBuffer) CopyFrom(src *TextBuffer) {
+	if len(tb.content) != len(src.content) {
+		tb.content = make([][]TextCell, len(src.content))
+	}
+	for y, srcRow := range src.content {
+		if cap(tb.content[y]) < len(srcRow) {
+			tb.content[y] = make([]TextCell, len(srcRow))
+		}
+		tb.content[y] = tb.content[y][:len(srcRow)]
+		copy(tb.content[y], srcRow)
+	}
+	tb.width, tb.height, tb.maxX = src.width, src.height, src.maxX
+}
+
 func (tb *TextBuffer) SetCell(x, y int, r rune, style tcell.Style) {
 	width := tdscreen.GraphemeWidth(string(r))
 	tb.SetGrapheme(x, y, string(r), width, style)
@@ -97,6 +114,23 @@ func (tb *TextBuffer) SetGrapheme(x, y int, text string, width int, style tcell.
 	tb.content[y][x] = TextCell{Rune: main, Comb: comb, Width: width, Style: style}
 }
 
+// Put writes a precomputed cell without re-measuring its grapheme. This is the
+// allocation-free hot path the renderer uses for cached glyphs.
+func (tb *TextBuffer) Put(x, y int, cell TextCell) {
+	if y < 0 || y >= len(tb.content) || x < 0 {
+		return
+	}
+	if len(tb.content[y]) <= x {
+		newRow := make([]TextCell, x+extraCapacity)
+		copy(newRow, tb.content[y])
+		tb.content[y] = newRow
+		if x+extraCapacity > tb.maxX {
+			tb.maxX = x + extraCapacity
+		}
+	}
+	tb.content[y][x] = cell
+}
+
 func (tb *TextBuffer) SetString(x, y int, text string, style tcell.Style) {
 	currentX := x
 	graphemes := uniseg.NewGraphemes(text)
@@ -110,27 +144,11 @@ func (tb *TextBuffer) SetString(x, y int, text string, style tcell.Style) {
 	}
 }
 
-func (tb *TextBuffer) dumpSnapshot() error {
-	unixMilli := time.Now().UnixMilli()
-	appDir := filepath.Join(xdg.StateHome, "magonote")
-	filePath := filepath.Join(appDir, fmt.Sprintf("snapshot-%d.txt", unixMilli))
-	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close() // nolint: errcheck
-	_, err = f.WriteString(tb.String())
-	return err
-}
-
 // WriteToScreen wraps logical rows at grapheme boundaries. A wide grapheme
 // that cannot fit in the remaining columns moves to the next screen row.
 func (tb *TextBuffer) WriteToScreen(screen tcell.Screen) {
 	if tb.width <= 0 {
 		return
-	}
-	if IsDebugMode() {
-		tb.dumpSnapshot() // nolint: errcheck
 	}
 	screenY := 0
 	for y := 0; y < len(tb.content); y++ {
