@@ -92,16 +92,46 @@ func TestTextBufferWritesStyledSpaces(t *testing.T) {
 	}
 }
 
+func TestTextBufferCopyFromKeepsBasePristine(t *testing.T) {
+	base := NewTextBuffer([]string{"abc"}, 4, 1)
+	base.SetString(0, 0, "abc", tcell.StyleDefault)
+	frame := NewTextBuffer([]string{"abc"}, 4, 1)
+
+	frame.CopyFrom(base)
+	frame.SetGrapheme(0, 0, "X", 1, tcell.StyleDefault)
+
+	if base.content[0][0].Rune != 'a' {
+		t.Fatalf("base mutated by frame overlay: %q", base.content[0][0].Rune)
+	}
+	frame.CopyFrom(base)
+	if frame.content[0][0].Rune != 'a' {
+		t.Fatalf("CopyFrom did not restore base cell: %q", frame.content[0][0].Rune)
+	}
+}
+
+func TestTextBufferPutWritesPrecomputedCell(t *testing.T) {
+	screen := simulationScreen(t, 4, 1)
+	buffer := NewTextBuffer([]string{""}, 4, 1)
+	buffer.Put(0, 0, TextCell{Rune: '中', Width: 2, Style: tcell.StyleDefault})
+	buffer.Put(2, 0, TextCell{Rune: 'x', Width: 1, Style: tcell.StyleDefault})
+	buffer.WriteToScreen(screen)
+	main, _, _, _ := screen.GetContent(0, 0)
+	if main != '中' {
+		t.Fatalf("cell 0 = %q, want 中", main)
+	}
+	main, _, _, _ = screen.GetContent(2, 0)
+	if main != 'x' {
+		t.Fatalf("cell 2 = %q, want x", main)
+	}
+}
+
 func TestViewHyperlinkKeepsVisibleLabel(t *testing.T) {
 	state := mustNewState(t, "\x1b]8;;https://example.com\adocs\x1b]8;;\a", "abcd", nil, WithColorDetection())
 	matches := state.Matches(false, 0)
 	matches[0].Hint = nil
 	screen := simulationScreen(t, 20, 1)
-	view := &View{state: state, screen: screen, matches: matches, position: "left", colors: ViewColors{hintForeground: GetColor("yellow"), hintBackground: GetColor("black")}}
-	view.textBuffer = NewTextBuffer(state.Lines, 20, 1)
-	view.renderTextLines()
-	view.renderSingleMatch(&matches[0], tcell.StyleDefault, "")
-	view.textBuffer.WriteToScreen(screen)
+	r := newRenderer(state, matches, ViewColors{hintForeground: GetColor("yellow"), hintBackground: GetColor("black")}, false, "left")
+	r.render(screen, nil, nil, "")
 	for x, want := range []rune("docs") {
 		main, _, _, _ := screen.GetContent(x, 0)
 		if main != want {
@@ -134,10 +164,8 @@ func TestViewSelectionPreservesFileLocation(t *testing.T) {
 func TestViewConcealsHiddenText(t *testing.T) {
 	state := mustNewState(t, "\x1b[8msecret\x1b[0m", "abcd", nil)
 	screen := simulationScreen(t, 8, 1)
-	view := &View{state: state, screen: screen}
-	view.textBuffer = NewTextBuffer(state.Lines, 8, 1)
-	view.renderTextLines()
-	view.textBuffer.WriteToScreen(screen)
+	r := newRenderer(state, nil, ViewColors{}, false, "")
+	r.render(screen, nil, nil, "")
 	for x := 0; x < len("secret"); x++ {
 		main, _, _, _ := screen.GetContent(x, 0)
 		if main != ' ' {
@@ -149,13 +177,38 @@ func TestViewConcealsHiddenText(t *testing.T) {
 func TestViewRestoresANSIColor(t *testing.T) {
 	state := mustNewState(t, "\x1b[31mred\x1b[0m", "abcd", nil)
 	screen := simulationScreen(t, 8, 1)
-	view := &View{state: state, screen: screen}
-	view.textBuffer = NewTextBuffer(state.Lines, 8, 1)
-	view.renderTextLines()
-	view.textBuffer.WriteToScreen(screen)
+	r := newRenderer(state, nil, ViewColors{}, false, "")
+	r.render(screen, nil, nil, "")
 	_, _, style, _ := screen.GetContent(0, 0)
 	foreground, _, _ := style.Decompose()
 	if foreground != tcell.PaletteColor(1) {
 		t.Fatalf("foreground = %v, want ANSI red", foreground)
+	}
+}
+
+func TestRendererReusesBaseAcrossFrames(t *testing.T) {
+	state := mustNewState(t, "192.168.1.1 10.0.0.1", "abcd", nil)
+	matches := state.Matches(false, 0)
+	screen := simulationScreen(t, 40, 2)
+	r := newRenderer(state, matches, ViewColors{}, false, "left")
+
+	r.render(screen, nil, nil, "")
+	base := r.base
+	r.render(screen, nil, nil, "a")
+	if r.base != base {
+		t.Fatalf("base rebuilt on same-size frame; want cached")
+	}
+}
+
+func TestRendererComposeIsAllocFree(t *testing.T) {
+	state := mustNewState(t, "192.168.1.1 10.0.0.1 https://example.com/path main.go:12", "abcd", nil)
+	matches := state.Matches(false, 0)
+	r := newRenderer(state, matches, ViewColors{}, false, "left")
+	r.ensureBase(80, 3)
+	r.compose(nil, nil, "")
+
+	allocs := testing.AllocsPerRun(200, func() { r.compose(nil, nil, "a") })
+	if allocs != 0 {
+		t.Fatalf("compose allocs/op = %v, want 0", allocs)
 	}
 }
