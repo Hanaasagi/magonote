@@ -667,17 +667,18 @@ func TestDetectURLTrimsTrailingPunctuation(t *testing.T) {
 	}
 }
 
-func TestDetectRejectsMixedCaseUUID(t *testing.T) {
+func TestDetectAcceptsMixedCaseUUID(t *testing.T) {
 	f := newFramework(t)
 
-	// UUIDs with mixed case (both upper and lower hex) should be rejected
+	// RFC 4122 hex digits are case-insensitive on input, so mixed-case
+	// UUIDs are valid and must be detected.
 	input := "id 550e8400-E29B-41d4-a716-446655440000"
 	result, err := f.RunDetect(input)
 	if err != nil {
 		t.Fatalf("detect: %v", err)
 	}
-	if result.HasEntity("uuid", "550e8400-E29B-41d4-a716-446655440000") {
-		t.Error("mixed-case UUID should be rejected by validator")
+	if !result.HasEntity("uuid", "550e8400-E29B-41d4-a716-446655440000") {
+		t.Errorf("mixed-case UUID should be accepted per RFC 4122; got %v", result.EntityTexts())
 	}
 }
 
