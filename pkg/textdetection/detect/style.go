@@ -21,6 +21,7 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 		cells := ctx.Screen.Lines[line].Cells
 		candidates = append(candidates, hyperlinkCandidates(cells, line)...)
 		words := lineWords(ctx, line)
+		visRuns := visibleRuns(cells, line)
 		for start, col := 0, 0; start < len(cells); {
 			style := cells[start].Style
 			end := start + 1
@@ -35,6 +36,7 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 					// colored sub-token fragment (e.g. a grep match inside a pod
 					// name) selects the whole token instead of suppressing it.
 					span := expandToWords(words, chunk.span)
+					span = clampToVisible(visRuns, chunk.span, span)
 					text := spanText(ctx, line, span)
 					if validStyledChunk(text, span, len(chunks)) {
 						candidates = append(candidates, entity.Candidate{
@@ -82,6 +84,48 @@ func expandToWords(words []token.Word, span screen.Span) screen.Span {
 		}
 	}
 	return out
+}
+
+// visibleRuns returns the contiguous non-hidden column intervals of a line. It
+// is the exact dual of screen.HiddenSpans, so its boundaries align with the
+// hidden-span exclusions applied during resolution.
+func visibleRuns(cells []screen.Cell, line int) []screen.Span {
+	var runs []screen.Span
+	col, startCol := 0, 0
+	inVisible := false
+	for _, cell := range cells {
+		visible := cell.Style.Attr&screen.AttrHidden == 0
+		if visible && !inVisible {
+			startCol, inVisible = col, true
+		} else if !visible && inVisible {
+			runs = append(runs, screen.Span{Line: line, StartCol: startCol, EndCol: col})
+			inVisible = false
+		}
+		col += int(cell.Width)
+	}
+	if inVisible {
+		runs = append(runs, screen.Span{Line: line, StartCol: startCol, EndCol: col})
+	}
+	return runs
+}
+
+// clampToVisible limits expanded to the visible run containing chunk, so word
+// expansion never crosses into hidden text. Without this, a visible highlight
+// adjoining concealed text (e.g. "docs" + hidden "secret") would expand over the
+// hidden cells and be discarded wholesale by the hidden-span exclusion.
+func clampToVisible(runs []screen.Span, chunk, expanded screen.Span) screen.Span {
+	for _, r := range runs {
+		if r.StartCol <= chunk.StartCol && chunk.StartCol < r.EndCol {
+			if r.StartCol > expanded.StartCol {
+				expanded.StartCol = r.StartCol
+			}
+			if r.EndCol < expanded.EndCol {
+				expanded.EndCol = r.EndCol
+			}
+			return expanded
+		}
+	}
+	return expanded
 }
 
 func spanText(ctx *Context, line int, span screen.Span) string {

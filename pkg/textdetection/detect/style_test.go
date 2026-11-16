@@ -95,3 +95,12 @@ func TestStylePreservesShortPlusToken(t *testing.T) {
 		t.Fatalf("styled = %v, want [C++]", got)
 	}
 }
+
+func TestStyleExpansionStopsAtHiddenText(t *testing.T) {
+	// A visible highlight adjoining hidden text must not expand over the hidden
+	// cells (which would get the whole candidate excluded during resolution).
+	got := styledTexts("\x1b[31mdocs\x1b[8msecret\x1b[0m")
+	if !slices.Equal(got, []string{"docs"}) {
+		t.Fatalf("styled = %v, want [docs]", got)
+	}
+}
