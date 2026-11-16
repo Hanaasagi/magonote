@@ -32,6 +32,7 @@
 - **Editor Integration**: Automatically open files in your preferred editor
 - **Contrast Mode**: Enhanced visibility with bracketed hints
 - **Unique Filtering**: Options to handle duplicate matches intelligently
+- **System Clipboard Sync**: OSC 52 via tmux (`--osc52`), works on macOS/Linux and over SSH
 
 ## 📸 Screenshots
 
@@ -43,7 +44,7 @@
 
 ### Prerequisites
 
-- **tmux** version 3.1 or higher
+- **tmux** version 3.2 or higher
 - **Go** 1.24 or higher (for building from source)
 
 ### Quick Install
@@ -262,6 +263,39 @@ tmux capture-pane -p -e | magonote detect --json --config NONE
 ```
 
 Use a configuration file to enable table, style, or command-profile detection in this mode.
+
+### Clipboard & OSC 52
+
+By default a selection is stored in the tmux paste buffer (paste with `prefix + ]`).
+Pass `--osc52` to `magonote-tmux` to additionally sync the **system clipboard**:
+
+```bash
+magonote-tmux --osc52
+```
+
+magonote uses tmux's own `load-buffer -w` (tmux ≥ 3.2), which emits OSC 52 on
+tmux's output channel. This works on macOS and Linux, and across SSH (the
+sequence travels back through the SSH channel to your local terminal) — no
+`allow-passthrough` or `set-clipboard` configuration is required.
+
+Notes:
+- On local sessions a native clipboard tool (`pbcopy` / `wl-copy` / `xclip` /
+  `xsel`) is also used, so terminals without OSC 52 (Terminal.app, GNOME
+  Terminal/VTE) still reach the system clipboard. Over SSH only OSC 52 is used.
+- Your terminal must allow OSC 52 clipboard writes (e.g. iTerm2: *Allow
+  clipboard access to terminal apps*). If copying fails, run `magonote doctor`.
+- Nested tmux (tmux inside tmux) is best-effort: for reliable system-clipboard
+  sync, set `set-clipboard on` in the **outer** tmux.
+- mosh does not forward OSC 52; use plain SSH or a native clipboard tool.
+
+### Diagnostics
+
+```bash
+magonote doctor
+```
+
+Reports the tmux version, attached client, terminal OSC 52 capability, native
+clipboard tools, SSH/nesting status, and what `--osc52` would do for a selection.
 
 ### Keyboard Layout Options
 

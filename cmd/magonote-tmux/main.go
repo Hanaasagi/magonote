@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,8 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Hanaasagi/magonote/internal/clipboard"
 	"github.com/Hanaasagi/magonote/internal/logger"
-	"github.com/Hanaasagi/magonote/pkg/clipboard"
+	"github.com/Hanaasagi/magonote/internal/tmux"
 	"github.com/adrg/xdg"
 	"github.com/spf13/cobra"
 )
@@ -26,10 +28,6 @@ var (
 )
 
 func init() {
-	if err := os.MkdirAll(appDir, 0755); err != nil {
-		panic(fmt.Sprintf("Error creating log directory: %v\n", err))
-	}
-
 	logFilePath := filepath.Join(appDir, appName+".log")
 
 	logLevel := os.Getenv("MAGONOTE_LOG")
@@ -71,6 +69,8 @@ type Magonote struct {
 	// Runtime state
 	activePaneInfo *PaneInfo
 	magonotePaneID string
+	client         *tmux.Client
+	facts          clipboard.Facts
 }
 
 // New creates a new Magonote instance with the given configuration
@@ -81,12 +81,22 @@ func New(config Config) *Magonote {
 	return &Magonote{
 		config: config,
 		signal: signal,
+		client: tmux.NewClient(),
 	}
 }
 
 // Run executes the complete magonote workflow
 func (m *Magonote) Run() error {
 	slog.Debug("Starting magonote workflow")
+
+	ctx := context.Background()
+	if v, err := m.client.Version(ctx); err != nil {
+		slog.Warn("Could not determine tmux version; proceeding", "error", err)
+	} else if !v.AtLeast(tmux.MinMajor, tmux.MinMinor) {
+		return fmt.Errorf("magonote requires tmux >= %d.%d, found %s; please upgrade tmux",
+			tmux.MinMajor, tmux.MinMinor, v.Raw)
+	}
+	m.facts = clipboard.Probe(ctx, m.client)
 
 	if err := m.captureActivePane(); err != nil {
 		return fmt.Errorf("capturing active pane: %w", err)
@@ -425,9 +435,7 @@ func (m *Magonote) handleMultipleSelection(items []string) error {
 	text := strings.Join(textParts, " ")
 
 	if m.config.OSC52 {
-		if err := m.sendOSC52Sequence(text); err != nil {
-			slog.Warn("Failed to send OSC52 sequence", "error", err)
-		}
+		m.syncClipboard(text)
 	}
 
 	return m.executeFinalCommand(strings.TrimRight(text, " "), m.config.MultiCommand)
@@ -443,10 +451,7 @@ func (m *Magonote) handleSingleSelection(item string) error {
 	upcase, text := parts[0], parts[1]
 
 	if m.config.OSC52 {
-		time.Sleep(100 * time.Millisecond) // Wait for redraw
-		if err := m.sendOSC52Sequence(text); err != nil {
-			slog.Warn("Failed to send OSC52 sequence", "error", err)
-		}
+		m.syncClipboard(text)
 	}
 
 	command := m.config.Command
@@ -457,24 +462,20 @@ func (m *Magonote) handleSingleSelection(item string) error {
 	return m.executeFinalCommand(strings.TrimRight(text, " "), command)
 }
 
-// sendOSC52Sequence sends an OSC52 escape sequence for clipboard integration
-func (m *Magonote) sendOSC52Sequence(text string) error {
-	pidOutput, err := m.tmuxCommand("display-message", "-p", "#{pane_pid}")
-	if err != nil {
-		return fmt.Errorf("getting tmux pane PID: %w", err)
+// syncClipboard copies the selected text to the tmux buffer and (via tmux -w)
+// the system clipboard. Routing policy lives in internal/clipboard; this is
+// gated by --osc52 so the default command flow is otherwise unchanged.
+func (m *Magonote) syncClipboard(text string) {
+	rep, err := clipboard.Execute(context.Background(), m.client, m.facts,
+		clipboard.Prefs{OSC52: true}, text)
+	for _, w := range rep.Warnings {
+		slog.Warn("Clipboard warning", "warning", w)
 	}
-
-	pid := strings.TrimSpace(pidOutput)
-	targetFdPath := fmt.Sprintf("/proc/%s/fd/1", pid)
-
-	file, err := os.OpenFile(targetFdPath, os.O_WRONLY|os.O_APPEND, 0)
 	if err != nil {
-		return fmt.Errorf("opening tmux pane fd: %w", err)
+		slog.Warn("Clipboard sync failed", "error", err)
 	}
-	defer file.Close() // nolint: errcheck
-
-	osc52Writer := clipboard.NewOSC52Writer(file)
-	return osc52Writer.Write(text)
+	slog.Debug("Clipboard sync", "bufferSet", rep.BufferSet,
+		"osc52Sent", rep.OSC52Sent, "nativeDone", rep.NativeDone)
 }
 
 // executeFinalCommand executes the final command with the selected text
@@ -552,15 +553,7 @@ func (m *Magonote) killPane(paneID string) error {
 
 // tmuxCommand executes a tmux command and returns its output
 func (m *Magonote) tmuxCommand(args ...string) (string, error) {
-	fullArgs := append([]string{"tmux"}, args...)
-	cmd := exec.Command(fullArgs[0], fullArgs[1:]...)
-
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("tmux command failed: %w", err)
-	}
-
-	return strings.TrimRight(string(output), "\n"), nil
+	return m.client.Run(context.Background(), args, nil)
 }
 
 // parseCommandLineArgs parses command line arguments and returns configuration

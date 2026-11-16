@@ -64,10 +64,6 @@ type Arguments struct {
 
 func init() {
 	// Initialize logging
-	if err := os.MkdirAll(appDir, 0755); err != nil {
-		panic(fmt.Sprintf("Error creating log directory: %v", err))
-	}
-
 	logFilePath := filepath.Join(appDir, appName+".log")
 
 	logLevel := os.Getenv("MAGONOTE_LOG")
@@ -538,6 +534,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&args.listView, "list", false, "Enable list view")
 	rootCmd.Flags().BoolVar(&args.words, "words", false, "Enable fallback word candidates")
 	rootCmd.AddCommand(newDetectCommand(&configPath, args))
+	rootCmd.AddCommand(newDoctorCommand())
 
 	rootCmd.SetHelpTemplate(cmd.HelpTemplate)
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {

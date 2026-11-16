@@ -1,24 +1,31 @@
+// Package clipboard copies text to terminal, tmux, and native clipboards.
+//
+// It is a reusable, stdlib-only library. The low-level mechanisms are:
+//   - EncodeOSC52: pure OSC 52 sequence encoding (no tmux knowledge)
+//   - LoadBuffer: tmux paste buffer (+ optional OSC 52 via -w) over a TmuxRunner
+//   - CopyNative / NativeTool: platform clipboard tools
+//
+// Application-specific routing policy (which mechanism to use when) lives
+// outside this package, in the host application.
 package clipboard
 
 import (
-	"encoding/base64"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
-	"runtime"
-	"strings"
 )
 
-// Writer represents a clipboard destination
+// Writer represents a clipboard destination.
 type Writer interface {
 	Write(text string) error
 }
 
-// Option configures a Clipboard
+// Option configures a Clipboard.
 type Option func(*Clipboard)
 
-// Clipboard provides unified access to multiple clipboard targets
+// Clipboard provides unified access to multiple clipboard targets.
 type Clipboard struct {
 	tmux   bool
 	system bool
@@ -26,7 +33,7 @@ type Clipboard struct {
 	output io.Writer
 }
 
-// New creates a new Clipboard with default settings
+// New creates a Clipboard with all targets enabled and OSC 52 output on stderr.
 func New(opts ...Option) *Clipboard {
 	c := &Clipboard{
 		tmux:   true,
@@ -34,251 +41,133 @@ func New(opts ...Option) *Clipboard {
 		osc52:  true,
 		output: os.Stderr,
 	}
-
 	for _, opt := range opts {
 		opt(c)
 	}
-
 	return c
 }
 
-// WithTmux enables/disables tmux buffer copying
+// WithTmux enables/disables tmux buffer copying.
 func WithTmux(enabled bool) Option {
-	return func(c *Clipboard) {
-		c.tmux = enabled
-	}
+	return func(c *Clipboard) { c.tmux = enabled }
 }
 
-// WithSystem enables/disables system clipboard copying
+// WithSystem enables/disables system clipboard copying.
 func WithSystem(enabled bool) Option {
-	return func(c *Clipboard) {
-		c.system = enabled
-	}
+	return func(c *Clipboard) { c.system = enabled }
 }
 
-// WithOSC52 enables/disables OSC52 terminal copying
+// WithOSC52 enables/disables OSC 52 terminal copying.
 func WithOSC52(enabled bool) Option {
-	return func(c *Clipboard) {
-		c.osc52 = enabled
-	}
+	return func(c *Clipboard) { c.osc52 = enabled }
 }
 
-// WithOutput sets the output destination for OSC52 sequences
+// WithOutput sets the output destination for OSC 52 sequences.
 func WithOutput(w io.Writer) Option {
-	return func(c *Clipboard) {
-		c.output = w
-	}
+	return func(c *Clipboard) { c.output = w }
 }
 
-// Copy writes text to all enabled clipboard targets
+// Copy writes text to all enabled clipboard targets. Empty text is a no-op.
+// Errors from individual targets are aggregated (errors.Join) rather than
+// swallowed, so a partial failure still reports what went wrong.
 func (c *Clipboard) Copy(text string) error {
-	var lastErr error
+	if text == "" {
+		return nil
+	}
+	ctx := context.Background()
+	var errs []error
 
 	if c.tmux && isTmuxSession() {
-		if err := c.copyToTmux(text); err != nil {
-			lastErr = err
+		if err := LoadBuffer(ctx, execRunner{}, text, false, ""); err != nil {
+			errs = append(errs, fmt.Errorf("tmux buffer: %w", err))
 		}
 	}
-
 	if c.system {
-		if err := c.copyToSystem(text); err != nil {
-			lastErr = err
+		if err := CopyNative(ctx, text); err != nil {
+			errs = append(errs, fmt.Errorf("system clipboard: %w", err))
 		}
 	}
-
 	if c.osc52 {
-		if err := c.copyWithOSC52(text); err != nil {
-			lastErr = err
+		if _, err := c.output.Write(EncodeOSC52(text)); err != nil {
+			errs = append(errs, fmt.Errorf("osc52: %w", err))
 		}
 	}
-
-	return lastErr
+	return errors.Join(errs...)
 }
 
-// copyToTmux copies text to tmux buffer
-func (c *Clipboard) copyToTmux(text string) error {
-	if text == "" {
-		return exec.Command("tmux", "delete-buffer").Run()
-	}
-
-	cmd := exec.Command("tmux", "load-buffer", "-")
-	cmd.Stdin = strings.NewReader(text)
-	return cmd.Run()
-}
-
-// copyToSystem copies text to system clipboard
-func (c *Clipboard) copyToSystem(text string) error {
-	tool := findSystemClipboardTool()
-	if tool == "" {
-		return fmt.Errorf("no system clipboard tool available")
-	}
-
-	cmd := exec.Command(tool)
-	cmd.Stdin = strings.NewReader(text)
-	return cmd.Run()
-}
-
-// copyWithOSC52 copies text using OSC52 escape sequence
-func (c *Clipboard) copyWithOSC52(text string) error {
-	if text == "" {
-		_, err := c.output.Write([]byte("\033]52;c;\007"))
-		return err
-	}
-
-	encoded := base64.StdEncoding.EncodeToString([]byte(text))
-
-	var sequence string
-	if isTmuxSession() {
-		// Wrap OSC52 in tmux DCS passthrough
-		sequence = fmt.Sprintf("\033Ptmux;\033\033]52;c;%s\007\033\\", encoded)
-	} else {
-		sequence = fmt.Sprintf("\033]52;c;%s\007", encoded)
-	}
-
-	_, err := c.output.Write([]byte(sequence))
-	return err
-}
-
-// isTmuxSession checks if running inside tmux
-func isTmuxSession() bool {
-	return os.Getenv("TMUX") != ""
-}
-
-// findSystemClipboardTool finds available system clipboard tool
-func findSystemClipboardTool() string {
-	tools := getClipboardTools()
-
-	for _, tool := range tools {
-		if _, err := exec.LookPath(tool); err == nil {
-			return tool
-		}
-	}
-
-	return ""
-}
-
-// getClipboardTools returns platform-specific clipboard tools
-func getClipboardTools() []string {
-	switch runtime.GOOS {
-	case "darwin":
-		return []string{"pbcopy"}
-	case "linux":
-		return []string{"wl-copy", "xclip", "xsel"}
-	case "windows":
-		return []string{"clip"}
-	default:
-		return []string{}
-	}
-}
-
-// TmuxWriter provides tmux-only clipboard access
+// TmuxWriter provides tmux-only clipboard access.
 type TmuxWriter struct{}
 
-// NewTmuxWriter creates a tmux-only clipboard writer
-func NewTmuxWriter() *TmuxWriter {
-	return &TmuxWriter{}
-}
+// NewTmuxWriter creates a tmux-only clipboard writer.
+func NewTmuxWriter() *TmuxWriter { return &TmuxWriter{} }
 
-// Write copies text to tmux buffer
+// Write copies text to the tmux buffer. Empty text is a no-op (it does not
+// delete the buffer). Returns an error when not inside tmux.
 func (t *TmuxWriter) Write(text string) error {
 	if !isTmuxSession() {
 		return fmt.Errorf("not in tmux session")
 	}
-
-	if text == "" {
-		return exec.Command("tmux", "delete-buffer").Run()
-	}
-
-	cmd := exec.Command("tmux", "load-buffer", "-")
-	cmd.Stdin = strings.NewReader(text)
-	return cmd.Run()
+	return LoadBuffer(context.Background(), execRunner{}, text, false, "")
 }
 
-// SystemWriter provides system-only clipboard access
+// SystemWriter provides system-only clipboard access.
 type SystemWriter struct{}
 
-// NewSystemWriter creates a system-only clipboard writer
-func NewSystemWriter() *SystemWriter {
-	return &SystemWriter{}
-}
+// NewSystemWriter creates a system-only clipboard writer.
+func NewSystemWriter() *SystemWriter { return &SystemWriter{} }
 
-// Write copies text to system clipboard
+// Write copies text to the system clipboard via the platform tool.
 func (s *SystemWriter) Write(text string) error {
-	tool := findSystemClipboardTool()
-	if tool == "" {
-		return fmt.Errorf("no system clipboard tool available")
-	}
-
-	cmd := exec.Command(tool)
-	cmd.Stdin = strings.NewReader(text)
-	return cmd.Run()
+	return CopyNative(context.Background(), text)
 }
 
-// OSC52Writer provides OSC52-only clipboard access
+// OSC52Writer provides OSC 52-only clipboard access to a caller-supplied writer.
+// It emits a raw OSC 52 sequence with no tmux DCS wrapping; the caller is
+// responsible for choosing an appropriate transport. Empty text is a no-op.
 type OSC52Writer struct {
 	output io.Writer
 }
 
-// NewOSC52Writer creates an OSC52-only clipboard writer
+// NewOSC52Writer creates an OSC 52-only clipboard writer.
 func NewOSC52Writer(output io.Writer) *OSC52Writer {
 	return &OSC52Writer{output: output}
 }
 
-// Write copies text using OSC52 escape sequence
+// Write emits the OSC 52 sequence for text. Empty text writes nothing.
 func (o *OSC52Writer) Write(text string) error {
-	if text == "" {
-		_, err := o.output.Write([]byte("\033]52;c;\007"))
-		return err
+	seq := EncodeOSC52(text)
+	if seq == nil {
+		return nil
 	}
-
-	encoded := base64.StdEncoding.EncodeToString([]byte(text))
-
-	var sequence string
-	if isTmuxSession() {
-		sequence = fmt.Sprintf("\033Ptmux;\033\033]52;c;%s\007\033\\", encoded)
-	} else {
-		sequence = fmt.Sprintf("\033]52;c;%s\007", encoded)
-	}
-
-	_, err := o.output.Write([]byte(sequence))
+	_, err := o.output.Write(seq)
 	return err
 }
 
-// Copy is a convenience function for quick clipboard operations
-func Copy(text string) error {
-	return New().Copy(text)
-}
+// Copy is a convenience function for quick clipboard operations.
+func Copy(text string) error { return New().Copy(text) }
 
-// CopyToTmux is a convenience function for tmux-only copying
-func CopyToTmux(text string) error {
-	return NewTmuxWriter().Write(text)
-}
+// CopyToTmux is a convenience function for tmux-only copying.
+func CopyToTmux(text string) error { return NewTmuxWriter().Write(text) }
 
-// CopyToSystem is a convenience function for system-only copying
-func CopyToSystem(text string) error {
-	return NewSystemWriter().Write(text)
-}
+// CopyToSystem is a convenience function for system-only copying.
+func CopyToSystem(text string) error { return NewSystemWriter().Write(text) }
 
-// CopyWithOSC52 is a convenience function for OSC52-only copying
-func CopyWithOSC52(text string) error {
-	return NewOSC52Writer(os.Stderr).Write(text)
-}
+// CopyWithOSC52 is a convenience function for OSC 52-only copying to stderr.
+func CopyWithOSC52(text string) error { return NewOSC52Writer(os.Stderr).Write(text) }
 
-// IsTmuxSession returns true if running inside tmux
-func IsTmuxSession() bool {
-	return isTmuxSession()
-}
+// IsTmuxSession returns true if running inside tmux.
+func IsTmuxSession() bool { return isTmuxSession() }
 
-// HasSystemClipboard returns true if system clipboard tools are available
-func HasSystemClipboard() bool {
-	return findSystemClipboardTool() != ""
-}
+func isTmuxSession() bool { return os.Getenv("TMUX") != "" }
 
-// Available returns which clipboard targets are available
+// HasSystemClipboard returns true if a system clipboard tool is available.
+func HasSystemClipboard() bool { return NativeTool() != "" }
+
+// Available reports which clipboard targets are available.
 func Available() map[string]bool {
 	return map[string]bool{
 		"tmux":   isTmuxSession(),
-		"system": findSystemClipboardTool() != "",
-		"osc52":  true, // OSC52 is always available
+		"system": NativeTool() != "",
+		"osc52":  true,
 	}
 }
