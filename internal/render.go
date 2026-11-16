@@ -143,13 +143,23 @@ func (r *renderer) compose(selected *Match, chosen []ChosenMatch, typedHint stri
 
 func (r *renderer) composeOverlays(selected *Match, chosen []ChosenMatch, typedHint string) {
 	prefixLen := utf8.RuneCountInString(typedHint)
+	filtering := typedHint != ""
 	for i := range r.matches {
 		mat := &r.matches[i]
 		g := &r.glyphs[i]
 
+		isChosen := chosenContains(chosen, mat.Text)
+		// Progressive filtering: once a hint prefix is typed, hide every
+		// non-matching match (revert to the base screen) so the visual field
+		// narrows instead of staying cluttered. Already-chosen matches stay
+		// visible to preserve multi-select progress.
+		if filtering && !isChosen && !isActive(mat, typedHint) {
+			continue
+		}
+
 		style := r.styles.normal
 		switch {
-		case chosenContains(chosen, mat.Text):
+		case isChosen:
 			style = r.styles.chosen
 		case selected != nil && mat.Equals(*selected):
 			style = r.styles.selected

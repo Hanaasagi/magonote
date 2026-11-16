@@ -82,17 +82,48 @@ func NewView(
 	}
 }
 
-// Prev moves the selection to the previous match.
-func (v *View) Prev() {
-	if v.skip > 0 {
-		v.skip--
+// isActive reports whether a match remains selectable under the typed hint
+// prefix. An empty prefix keeps every match active. It is the single predicate
+// shared by rendering (which matches to show) and interaction (which matches
+// navigation and Enter may select), so the two never disagree.
+func isActive(mat *Match, typedHint string) bool {
+	return typedHint == "" || (mat.Hint != nil && strings.HasPrefix(*mat.Hint, typedHint))
+}
+
+// clampSkipToActive keeps the selection cursor on a visible match once a prefix
+// filters the current one out, so Enter and arrows never act on a hidden match.
+func (v *View) clampSkipToActive(typedHint string) {
+	if typedHint == "" {
+		return
+	}
+	if v.skip < len(v.matches) && isActive(&v.matches[v.skip], typedHint) {
+		return
+	}
+	for i := range v.matches {
+		if isActive(&v.matches[i], typedHint) {
+			v.skip = i
+			return
+		}
 	}
 }
 
-// Next moves the selection to the next match.
-func (v *View) Next() {
-	if v.skip < len(v.matches)-1 {
-		v.skip++
+// Prev moves the selection to the previous active match.
+func (v *View) Prev(typedHint string) {
+	for i := v.skip - 1; i >= 0; i-- {
+		if isActive(&v.matches[i], typedHint) {
+			v.skip = i
+			return
+		}
+	}
+}
+
+// Next moves the selection to the next active match.
+func (v *View) Next(typedHint string) {
+	for i := v.skip + 1; i < len(v.matches); i++ {
+		if isActive(&v.matches[i], typedHint) {
+			v.skip = i
+			return
+		}
 	}
 }
 
@@ -180,13 +211,13 @@ func (v *View) handleKeyEvent(ev *tcell.EventKey, typedHint *string, hasUppercas
 	case tcell.KeyEscape, tcell.KeyCtrlC:
 		return v.handleEscapeKey(typedHint, hasUppercase)
 	case tcell.KeyUp, tcell.KeyLeft:
-		v.Prev()
+		v.Prev(*typedHint)
 	case tcell.KeyDown, tcell.KeyRight:
-		v.Next()
+		v.Next(*typedHint)
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		return v.handleBackspace(typedHint, hasUppercase)
 	case tcell.KeyEnter:
-		return v.handleEnter()
+		return v.handleEnter(*typedHint)
 	case tcell.KeyRune:
 		return v.handleRuneKey(ev, typedHint, hasUppercase, longestHint)
 	}
@@ -209,13 +240,15 @@ func (v *View) handleBackspace(typedHint *string, hasUppercase *bool) *CaptureEv
 	if len(*typedHint) > 0 {
 		*typedHint = (*typedHint)[:len(*typedHint)-1]
 		*hasUppercase = false
+		v.clampSkipToActive(*typedHint)
 	}
 	return nil
 }
 
-// handleEnter handles enter key press.
-func (v *View) handleEnter() *CaptureEvent {
-	if v.skip < len(v.matches) {
+// handleEnter handles enter key press, selecting only within the active field.
+func (v *View) handleEnter(typedHint string) *CaptureEvent {
+	v.clampSkipToActive(typedHint)
+	if v.skip < len(v.matches) && isActive(&v.matches[v.skip], typedHint) {
 		v.chosen = append(v.chosen, ChosenMatch{
 			Text:           v.matches[v.skip].Text,
 			Uppercase:      false,
@@ -272,6 +305,7 @@ func (v *View) handleRuneKey(ev *tcell.EventKey, typedHint *string, hasUppercase
 		return &action
 	}
 
+	v.clampSkipToActive(*typedHint)
 	return nil
 }
 
