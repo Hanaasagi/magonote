@@ -6,7 +6,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -119,5 +122,54 @@ func TestCopyAggregatesErrors(t *testing.T) {
 	}
 	if !errors.Is(err, err) || err.Error() == "" {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestNativeToolArgs(t *testing.T) {
+	cases := []struct {
+		tool string
+		want []string
+	}{
+		{"xclip", []string{"-selection", "clipboard", "-i"}},
+		{"xsel", []string{"--clipboard", "--input"}},
+		{"pbcopy", nil},
+		{"wl-copy", nil},
+		{"clip", nil},
+	}
+	for _, tc := range cases {
+		got := nativeToolArgs(tc.tool)
+		if !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("nativeToolArgs(%q) = %v, want %v", tc.tool, got, tc.want)
+		}
+	}
+}
+
+// TestCopyNativeInvokesTool verifies CopyNative feeds stdin and passes the
+// clipboard-selection args, using a fake tool standing in for the platform's
+// first-choice helper.
+func TestCopyNativeInvokesTool(t *testing.T) {
+	tools := getClipboardTools()
+	if len(tools) == 0 {
+		t.Skip("no clipboard tools for this platform")
+	}
+	tool := tools[0]
+	dir := t.TempDir()
+	argsFile := filepath.Join(dir, "args")
+	stdinFile := filepath.Join(dir, "stdin")
+	script := "#!/bin/sh\nprintf '%s' \"$*\" > " + argsFile + "\ncat > " + stdinFile + "\n"
+	if err := os.WriteFile(filepath.Join(dir, tool), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	if err := CopyNative(context.Background(), "payload"); err != nil {
+		t.Fatalf("CopyNative: %v", err)
+	}
+	if got, _ := os.ReadFile(stdinFile); string(got) != "payload" {
+		t.Errorf("stdin = %q, want payload", got)
+	}
+	gotArgs, _ := os.ReadFile(argsFile)
+	if want := strings.Join(nativeToolArgs(tool), " "); string(gotArgs) != want {
+		t.Errorf("tool args = %q, want %q", gotArgs, want)
 	}
 }

@@ -33,9 +33,25 @@ func CopyNative(ctx context.Context, text string) error {
 	if tool == "" {
 		return ErrNoNativeTool
 	}
-	cmd := exec.CommandContext(ctx, tool)
+	cmd := exec.CommandContext(ctx, tool, nativeToolArgs(tool)...)
 	cmd.Stdin = strings.NewReader(text)
 	return cmd.Run()
+}
+
+// nativeToolArgs returns arguments that target the regular CLIPBOARD selection
+// and read text from stdin. xclip and xsel default to the PRIMARY selection;
+// without these flags the fallback would clobber the user's primary selection
+// and leave the system clipboard unchanged. pbcopy, wl-copy and clip already
+// target the system clipboard by default.
+func nativeToolArgs(tool string) []string {
+	switch tool {
+	case "xclip":
+		return []string{"-selection", "clipboard", "-i"}
+	case "xsel":
+		return []string{"--clipboard", "--input"}
+	default:
+		return nil
+	}
 }
 
 // getClipboardTools returns platform-specific clipboard tools in priority order.
