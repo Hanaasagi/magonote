@@ -37,7 +37,15 @@ func NewTmuxServer(t *testing.T) *TmuxServer {
 	if _, err := exec.LookPath("tmux"); err != nil {
 		t.Skip("tmux not available")
 	}
-	dir := t.TempDir()
+	// macOS caps Unix-domain socket paths at ~103 bytes (sockaddr_un.sun_path).
+	// t.TempDir() embeds the test name, which for long names (e.g.
+	// TestMagonoteTmuxRepeatedSelections) overflows that limit and tmux fails
+	// with "File name too long". Use a short-named temp dir for the socket.
+	dir, err := os.MkdirTemp("", "mg-e2e-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	socket := filepath.Join(dir, "s.sock")
 	conf := filepath.Join(dir, "tmux.conf")
 	if err := os.WriteFile(conf, []byte(tmuxTestConf), 0o644); err != nil {
