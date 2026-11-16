@@ -9,7 +9,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 
 	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
@@ -165,7 +164,11 @@ func (v *View) renderTextLines() {
 	for y, line := range v.state.Screen().Lines {
 		x := 0
 		for _, cell := range line.Cells {
-			v.textBuffer.SetGrapheme(x, y, cell.Grapheme, int(cell.Width), screenStyleToTcell(cell.Style))
+			grapheme := cell.Grapheme
+			if cell.Style.Attr&tdscreen.AttrHidden != 0 {
+				grapheme = " "
+			}
+			v.textBuffer.SetGrapheme(x, y, grapheme, int(cell.Width), screenStyleToTcell(cell.Style))
 			x += int(cell.Width)
 		}
 	}
@@ -216,7 +219,7 @@ func (v *View) renderSingleMatch(mat *Match, style tcell.Style, typedHint string
 	currentX := mat.X
 	graphemes := uniseg.NewGraphemes(text)
 	for graphemes.Next() {
-		width := runewidth.StringWidth(graphemes.Str())
+		width := tdscreen.GraphemeWidth(graphemes.Str())
 		if width <= 0 {
 			width = 1
 		}
@@ -243,7 +246,7 @@ func (v *View) renderHint(mat *Match, offset int, text string, typedHint string)
 	charIndex := 0
 	for graphemes.Next() {
 		hintStyle := v.getHintStyle(hint, typedHint, charIndex)
-		width := runewidth.StringWidth(graphemes.Str())
+		width := tdscreen.GraphemeWidth(graphemes.Str())
 		if width <= 0 {
 			width = 1
 		}
@@ -255,16 +258,13 @@ func (v *View) renderHint(mat *Match, offset int, text string, typedHint string)
 
 // calculateHintPosition calculates where to position the hint
 func (v *View) calculateHintPosition(text, hint string) int {
-	textWidth := runewidth.StringWidth(text)
+	textWidth := tdscreen.GraphemeWidth(text)
+	hintWidth := tdscreen.GraphemeWidth(v.makeHintText(hint))
 	switch v.position {
 	case "right":
-		return textWidth - len([]rune(hint))
+		return textWidth - hintWidth
 	case "off_left":
-		offset := -len([]rune(hint))
-		if v.contrast {
-			offset -= 2
-		}
-		return offset
+		return -hintWidth
 	case "off_right":
 		return textWidth
 	default: // "left"

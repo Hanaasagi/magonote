@@ -3,7 +3,6 @@ package screen
 import (
 	"strings"
 
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
@@ -50,9 +49,11 @@ type styleRun struct {
 }
 
 type lineBuilder struct {
-	plain strings.Builder
-	runs  []styleRun
-	width int
+	plain     strings.Builder
+	runs      []styleRun
+	width     int    // cached display width of plain
+	last      string // trailing grapheme cluster; may merge with the next append
+	lastWidth int
 }
 
 // Parse converts captured terminal text into a display-column grid. Invalid
@@ -75,6 +76,7 @@ type parser struct {
 	tabWidth int
 	line     lineBuilder
 	lines    []Line
+	cursor   int // display column position for CR/tab handling
 }
 
 func (p *parser) parse(input string) {
@@ -85,10 +87,25 @@ func (p *parser) parse(input string) {
 			p.finishLine()
 			i++
 		case b == '\r':
+			if i+1 < len(input) && input[i+1] == '\n' {
+				i++
+				continue
+			}
+			p.resetLine()
 			i++
 		case b == '\t':
-			count := p.tabWidth - p.line.width%p.tabWidth
-			p.append(strings.Repeat(" ", count))
+			tabStop := p.cursor + (p.tabWidth - p.cursor%p.tabWidth)
+			lineWidth := p.line.width
+			if tabStop > lineWidth {
+				padding := strings.Repeat(" ", tabStop-lineWidth)
+				start := p.line.plain.Len()
+				p.line.plain.WriteString(padding)
+				end := p.line.plain.Len()
+				p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
+				p.line.width = tabStop
+				p.line.last, p.line.lastWidth = " ", 1
+			}
+			p.cursor = tabStop
 			i++
 		case b == 0x1b:
 			i = p.escape(input, i)
@@ -108,34 +125,290 @@ func (p *parser) parse(input string) {
 	}
 }
 
+func (p *parser) resetLine() {
+	p.cursor = 0
+}
+
+// displayColToByte returns the byte offset in text corresponding to the given
+// display column. If col falls in the middle of a wide character, it rounds up
+// to the next grapheme boundary. Widths follow the contextual rule used by
+// finishLine: a standalone zero-width grapheme at the start of the line
+// occupies one fallback column; later zero-width graphemes merge into the
+// preceding cell.
+func displayColToByte(text string, col int) int {
+	if col <= 0 {
+		return 0
+	}
+	pos := 0
+	first := true
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		_, end := graphemes.Positions()
+		w := graphemes.Width()
+		if first && w == 0 {
+			w = 1
+		}
+		first = false
+		pos += w
+		if pos >= col {
+			return end
+		}
+	}
+	return len(text)
+}
+
+// overwriteStart returns the byte offset where a replacement at col begins and
+// the number of leading columns to pad. When col falls inside a grapheme, the
+// whole grapheme is replaced and its columns before col become padding so
+// retained text keeps its display coordinates; on a boundary the padding is
+// zero. On a boundary it also reports the retained prefix's trailing grapheme
+// and its standalone width, which the replacement may merge with.
+func overwriteStart(text string, col int) (byteOff, pad int, last string, lastWidth int) {
+	if col <= 0 {
+		return 0, 0, "", 0
+	}
+	pos := 0
+	first := true
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		start, end := graphemes.Positions()
+		raw := graphemes.Width()
+		w := raw
+		if first && w == 0 {
+			w = 1
+		}
+		first = false
+		if pos+w >= col {
+			if pos+w == col {
+				return end, 0, graphemes.Str(), raw
+			}
+			return start, col - pos, "", 0
+		}
+		pos += w
+	}
+	return len(text), 0, "", 0
+}
+
 func (p *parser) append(text string) {
 	if text == "" {
 		return
 	}
+	textWidth := uniseg.StringWidth(text)
+	lineWidth := p.line.width
+
+	if p.cursor < lineWidth {
+		existing := p.line.plain.String()
+		var startByte, leftPad int
+		var prevLast string
+		var prevLastWidth int
+		if textWidth > 0 {
+			startByte, leftPad, prevLast, prevLastWidth = overwriteStart(existing, p.cursor)
+		} else {
+			// Zero-width fragments insert at the rounded boundary without
+			// consuming columns.
+			startByte = displayColToByte(existing, p.cursor)
+		}
+		overEndCol := p.cursor + textWidth
+		if textWidth > 0 && leftPad == 0 {
+			if startByte == 0 {
+				// The fragment becomes the start of the line; a leading
+				// zero-width grapheme gains the fallback column there.
+				if _, _, w, _ := uniseg.FirstGraphemeClusterInString(text, -1); w == 0 {
+					overEndCol++
+				}
+			} else if prevLast != "" {
+				// The fragment may merge with the retained prefix's trailing
+				// grapheme (variation selectors, ZWJ sequences), widening or
+				// narrowing it. Measure the combined boundary so the range
+				// consumes exactly the columns the replacement occupies.
+				overEndCol = p.cursor + uniseg.StringWidth(prevLast+text) - prevLastWidth
+			}
+		}
+		var endByte, rightPad int
+
+		if overEndCol >= lineWidth {
+			endByte = len(existing)
+		} else {
+			endByte = displayColToByte(existing, overEndCol)
+			if textWidth > 0 {
+				rightPad = partialPad(existing, endByte, overEndCol)
+			}
+		}
+
+		p.line.plain.Reset()
+		p.line.plain.WriteString(existing[:startByte])
+		if leftPad > 0 {
+			p.line.plain.WriteString(strings.Repeat(" ", leftPad))
+		}
+		p.line.plain.WriteString(text)
+		if rightPad > 0 {
+			p.line.plain.WriteString(strings.Repeat(" ", rightPad))
+		}
+		p.line.plain.WriteString(existing[endByte:])
+
+		textEnd := startByte + leftPad + len(text)
+		p.overwriteRuns(startByte, endByte, startByte, textEnd+rightPad)
+		p.line.width, p.line.last, p.line.lastWidth = measureLine(p.line.plain.String())
+		// The cursor sits after the written text; padding that preserves the
+		// columns of partially overwritten graphemes does not advance it.
+		p.cursor = cursorAfterInsert(p.line.plain.String(), textEnd)
+		return
+	}
+
 	start := p.line.plain.Len()
 	p.line.plain.WriteString(text)
+	end := p.line.plain.Len()
 	if len(p.line.runs) > 0 {
 		last := &p.line.runs[len(p.line.runs)-1]
 		if last.style == p.style && last.end == start {
-			last.end = p.line.plain.Len()
+			last.end = end
 		} else {
-			p.line.runs = append(p.line.runs, styleRun{start: start, end: p.line.plain.Len(), style: p.style})
+			p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
 		}
 	} else {
-		p.line.runs = append(p.line.runs, styleRun{start: start, end: p.line.plain.Len(), style: p.style})
+		p.line.runs = append(p.line.runs, styleRun{start: start, end: end, style: p.style})
 	}
+	// Appended fragments can merge with the preceding grapheme across style
+	// boundaries (variation selectors, ZWJ sequences), changing its width.
+	// Fold the fragment into the cached width so the cursor neither lags
+	// behind nor runs ahead of the line without rescanning the whole line.
+	p.line.width, p.line.last, p.line.lastWidth = appendWidth(p.line.width, p.line.lastWidth, p.line.last, text)
+	p.cursor = p.line.width
+}
 
+// appendWidth folds an appended fragment into the cached line width. Only the
+// trailing grapheme can merge with the fragment, so remeasure just that
+// boundary instead of the whole line. It returns the updated width and
+// trailing grapheme.
+func appendWidth(width, lastWidth int, last, text string) (int, string, int) {
+	newWidth := width - lastWidth
+	var newLast string
+	var newLastWidth int
+	first := true
+	graphemes := uniseg.NewGraphemes(last + text)
+	for graphemes.Next() {
+		w := graphemes.Width()
+		if first && last == "" && w == 0 {
+			// Standalone zero-width grapheme at the start of the line:
+			// finishLine gives it one fallback column.
+			newWidth++
+		}
+		first = false
+		newLast = graphemes.Str()
+		newLastWidth = w
+		newWidth += w
+	}
+	return newWidth, newLast, newLastWidth
+}
+
+// measureLine recomputes the cached width and trailing grapheme after an
+// overwrite rebuilt the line content.
+func measureLine(plain string) (width int, last string, lastWidth int) {
+	first := true
+	graphemes := uniseg.NewGraphemes(plain)
+	for graphemes.Next() {
+		w := graphemes.Width()
+		if first && w == 0 {
+			width++
+		}
+		first = false
+		width += w
+		last, lastWidth = graphemes.Str(), w
+	}
+	return
+}
+
+// partialPad returns how many columns the grapheme ending at byteOff extends
+// past col. When a replacement ends inside a wide grapheme, those remaining
+// columns become spaces so retained text keeps its display coordinates.
+func partialPad(text string, byteOff, col int) int {
+	pos := 0
+	first := true
 	graphemes := uniseg.NewGraphemes(text)
 	for graphemes.Next() {
-		width := runewidth.StringWidth(graphemes.Str())
-		if width == 0 && p.line.width > 0 {
+		_, end := graphemes.Positions()
+		w := graphemes.Width()
+		if first && w == 0 {
+			w = 1
+		}
+		first = false
+		pos += w
+		if end >= byteOff {
+			return pos - col
+		}
+	}
+	return 0
+}
+
+// cursorAfterInsert returns the display column just after byteOff in text. If
+// byteOff falls inside a grapheme because inserted fragments merged with
+// neighboring text, it rounds up to that grapheme's end column.
+func cursorAfterInsert(text string, byteOff int) int {
+	col := 0
+	first := true
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		start, end := graphemes.Positions()
+		if byteOff <= start {
+			break
+		}
+		w := graphemes.Width()
+		if first && w == 0 {
+			w = 1
+		}
+		first = false
+		col += w
+		if byteOff <= end {
+			break
+		}
+	}
+	return col
+}
+
+// overwriteRuns replaces style runs covering [oldStart, oldEnd) with a new run
+// covering [newStart, newEnd) using the parser's current style. Runs after the
+// overwritten region are shifted to account for byte-length changes.
+func (p *parser) overwriteRuns(oldStart, oldEnd, newStart, newEnd int) {
+	byteShift := (newEnd - newStart) - (oldEnd - oldStart)
+	var result []styleRun
+	inserted := false
+
+	for _, run := range p.line.runs {
+		if run.end <= oldStart {
+			result = append(result, run)
 			continue
 		}
-		if width <= 0 {
-			width = 1
+		if run.start >= oldEnd {
+			if !inserted {
+				result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+				inserted = true
+			}
+			result = append(result, styleRun{
+				start: run.start + byteShift,
+				end:   run.end + byteShift,
+				style: run.style,
+			})
+			continue
 		}
-		p.line.width += width
+		if run.start < oldStart {
+			result = append(result, styleRun{start: run.start, end: oldStart, style: run.style})
+		}
+		if !inserted {
+			result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+			inserted = true
+		}
+		if run.end > oldEnd {
+			result = append(result, styleRun{
+				start: newEnd,
+				end:   run.end + byteShift,
+				style: run.style,
+			})
+		}
 	}
+	if !inserted {
+		result = append(result, styleRun{start: newStart, end: newEnd, style: p.style})
+	}
+	p.line.runs = result
 }
 
 func (p *parser) finishLine() {
@@ -159,25 +432,27 @@ func (p *parser) finishLine() {
 		if runIndex < len(p.line.runs) {
 			style = p.line.runs[runIndex].style
 		}
-		width := runewidth.StringWidth(text)
-		if width == 0 && len(data) > 0 {
+		rawWidth := uniseg.StringWidth(text)
+		if rawWidth == 0 && len(data) > 0 {
 			data[len(data)-1].text += text
 			data[len(data)-1].end = end
 			continue
 		}
-		if width <= 0 {
-			width = 1
-		}
+		width := GraphemeWidth(text)
 		data = append(data, cellData{text: text, style: style, width: width, start: start, end: end})
 	}
 
+	finalWidth := 0
+	for _, item := range data {
+		finalWidth += item.width
+	}
 	line := Line{
 		Plain:        plain,
 		Cells:        make([]Cell, 0, len(data)),
-		colToByte:    make([]int, p.line.width+1),
+		colToByte:    make([]int, finalWidth+1),
 		byteToCol:    make([]int, len(plain)+1),
 		byteToEndCol: make([]int, len(plain)+1),
-		Width:        p.line.width,
+		Width:        finalWidth,
 	}
 	col := 0
 	for _, item := range data {
@@ -199,6 +474,7 @@ func (p *parser) finishLine() {
 	}
 	p.lines = append(p.lines, line)
 	p.line = lineBuilder{}
+	p.cursor = 0
 }
 
 func (p *parser) escape(input string, start int) int {

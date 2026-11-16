@@ -30,11 +30,24 @@ func validURL(ctx *Context, line, start, end int, candidate entity.Candidate) (e
 	if err != nil || u.Scheme == "" {
 		return candidate, false
 	}
-	if u.Scheme != "file" && u.Host == "" {
+	if u.Port() != "" && !validPort(u.Port()) {
 		return candidate, false
 	}
-	if u.Scheme == "file" && u.Path == "" {
-		return candidate, false
+	if u.Scheme == "file" {
+		if u.Path == "" {
+			return candidate, false
+		}
+		return editedCandidate(ctx, line, start, start+len(text), candidate, text), true
+	}
+	if u.Host == "" {
+		switch u.Scheme {
+		case "mailto", "tel", "data", "news", "urn", "sms":
+			if u.Opaque == "" {
+				return candidate, false
+			}
+		default:
+			return candidate, false
+		}
 	}
 	return editedCandidate(ctx, line, start, start+len(text), candidate, text), true
 }
@@ -73,9 +86,22 @@ var pathSuffixPattern = regexp.MustCompile(`:([\w][\w.\-]*)(?::(\d+))?$`)
 var versionPattern = regexp.MustCompile(`^\d+(?:\.\d+)*$`)
 
 func fileLocation(path, lineText, columnText string) *entity.FileLocation {
-	line, _ := strconv.Atoi(lineText)
-	column, _ := strconv.Atoi(columnText)
-	return &entity.FileLocation{Path: path, Line: line, Column: column}
+	location := &entity.FileLocation{Path: path}
+	if lineText != "" {
+		line, err := strconv.Atoi(lineText)
+		if err != nil || line <= 0 {
+			return nil
+		}
+		location.Line = line
+	}
+	if columnText != "" {
+		column, err := strconv.Atoi(columnText)
+		if err == nil && column > 0 {
+			location.Column = column
+		}
+		// Invalid column is silently ignored; the path and line remain usable.
+	}
+	return location
 }
 
 func validPath(ctx *Context, line, start, end int, candidate entity.Candidate) (entity.Candidate, bool) {
@@ -169,7 +195,7 @@ func validDigest(ctx *Context, line, start, end int, candidate entity.Candidate)
 }
 
 func validUUID(ctx *Context, line, start, end int, candidate entity.Candidate) (entity.Candidate, bool) {
-	return candidate, uniformHexCase(candidate.Text)
+	return candidate, true
 }
 
 func uniformHexCase(text string) bool {
@@ -227,7 +253,13 @@ func validPort(port string) bool {
 
 func validIPv6(ctx *Context, line, start, end int, candidate entity.Candidate) (entity.Candidate, bool) {
 	plain := ctx.Screen.Lines[line].Plain
-	if start > 0 && isASCIIWord(plain[start-1]) || end < len(plain) && isASCIIWord(plain[end]) {
+	if start > 0 && (isASCIIWord(plain[start-1]) || plain[start-1] == '.') {
+		return candidate, false
+	}
+	if end < len(plain) && isASCIIWord(plain[end]) {
+		return candidate, false
+	}
+	if end < len(plain) && plain[end] == '.' && end+1 < len(plain) && plain[end+1] >= '0' && plain[end+1] <= '9' {
 		return candidate, false
 	}
 	text := candidate.Text
@@ -261,6 +293,27 @@ func isASCIIWord(b byte) bool {
 
 func validMAC(ctx *Context, line, start, end int, candidate entity.Candidate) (entity.Candidate, bool) {
 	return candidate, strings.Count(candidate.Text, ":") == 5 || strings.Count(candidate.Text, "-") == 5
+}
+
+func validEmail(ctx *Context, line, start, end int, candidate entity.Candidate) (entity.Candidate, bool) {
+	text := candidate.Text
+	if len(text) == 0 || text[0] == '.' || text[0] == '+' || text[0] == '-' {
+		return candidate, false
+	}
+	at := strings.IndexByte(text, '@')
+	if at < 0 {
+		return candidate, false
+	}
+	domain := text[at+1:]
+	lastDot := strings.LastIndexByte(domain, '.')
+	if lastDot < 0 {
+		return candidate, false
+	}
+	tld := domain[lastDot+1:]
+	if len(tld) < 2 || len(tld) > 63 {
+		return candidate, false
+	}
+	return candidate, true
 }
 
 func validHexAddress(ctx *Context, line, start, end int, candidate entity.Candidate) (entity.Candidate, bool) {

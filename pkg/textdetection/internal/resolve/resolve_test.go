@@ -48,6 +48,19 @@ func TestResolveExcludesOverlapsAndReturnsDocumentOrder(t *testing.T) {
 	}
 }
 
+func TestResolveMergesCellMetadataIntoSemanticWinner(t *testing.T) {
+	cell := candidate(entity.KindCell, "registry/repo", 0, 13, entity.ClassStructure, 0.8)
+	cell.Meta = map[string]string{"column": "IMAGE", "semantic": "docker.image"}
+	semantic := candidate(entity.KindPath, "registry/repo", 0, 13, entity.ClassSemantic, 0.9)
+	got := Candidates([]entity.Candidate{cell, semantic}, nil)
+	if len(got) != 1 || got[0].Kind != entity.KindPath {
+		t.Fatalf("resolved entities = %#v", got)
+	}
+	if got[0].Meta["column"] != "IMAGE" || got[0].Meta["semantic"] != "docker.image" {
+		t.Fatalf("cell metadata was lost: %#v", got[0].Meta)
+	}
+}
+
 func TestResolveDeduplicatesIdenticalSpans(t *testing.T) {
 	a := candidate(entity.KindURL, "a", 1, 4, entity.ClassSemantic, 0.9)
 	b := candidate(entity.KindURL, "b", 1, 4, entity.ClassSemantic, 0.9)

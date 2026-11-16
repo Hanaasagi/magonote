@@ -1,5 +1,16 @@
 package screen
 
+import "github.com/rivo/uniseg"
+
+// GraphemeWidth returns a deterministic terminal width for a grapheme or text
+// sequence. Standalone zero-width graphemes occupy one fallback column.
+func GraphemeWidth(text string) int {
+	if width := uniseg.StringWidth(text); width > 0 {
+		return width
+	}
+	return 1
+}
+
 // Span identifies a half-open range on one logical line, in display columns.
 type Span struct {
 	Line     int `json:"line"`
@@ -73,6 +84,33 @@ func (s *Screen) SpanOf(line, byteStart, byteEnd int) Span {
 		byteEnd = byteStart
 	}
 	return Span{Line: line, StartCol: s.ColOf(line, byteStart), EndCol: s.EndColOf(line, byteEnd)}
+}
+
+// HiddenSpans returns display-column spans where the hidden attribute is set.
+// Callers can pass these to the exclusion pipeline so detectors skip invisible
+// terminal content.
+func (s *Screen) HiddenSpans() []Span {
+	var spans []Span
+	for lineIdx, line := range s.Lines {
+		col := 0
+		inHidden := false
+		startCol := 0
+		for _, cell := range line.Cells {
+			hidden := cell.Style.Attr&AttrHidden != 0
+			if hidden && !inHidden {
+				startCol = col
+				inHidden = true
+			} else if !hidden && inHidden {
+				spans = append(spans, Span{Line: lineIdx, StartCol: startCol, EndCol: col})
+				inHidden = false
+			}
+			col += int(cell.Width)
+		}
+		if inHidden {
+			spans = append(spans, Span{Line: lineIdx, StartCol: startCol, EndCol: col})
+		}
+	}
+	return spans
 }
 
 func (s *Screen) line(line int) *Line {

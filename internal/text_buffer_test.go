@@ -232,3 +232,11 @@ func TestTextBuffer_MultipleLines(t *testing.T) {
 		}
 	}
 }
+
+func TestTextBuffer_SetGraphemeOutOfBoundsY(t *testing.T) {
+	buffer := NewTextBuffer([]string{"hello"}, 10, 1)
+	// Should not panic
+	buffer.SetGrapheme(0, -1, "x", 1, tcell.StyleDefault)
+	buffer.SetGrapheme(0, 5, "x", 1, tcell.StyleDefault)
+	buffer.SetGrapheme(0, 100, "x", 1, tcell.StyleDefault)
+}

@@ -26,7 +26,7 @@ func (gitProfile) Detect(block Block, ctx *Context) []entity.Candidate {
 	}
 	short := false
 	for _, arg := range args {
-		short = short || arg == "-s" || arg == "--short" || strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") && strings.Contains(arg[1:], "s")
+		short = short || arg == "-s" || arg == "--short" || arg == "--porcelain" || arg == "--porcelain=v1" || hasBundledFlag(arg, 's')
 	}
 	var candidates []entity.Candidate
 	untracked := false
@@ -85,6 +85,18 @@ func gitPathCandidates(ctx *Context, line int, indices []int) []entity.Candidate
 		}
 	}
 	return candidates
+}
+
+func hasBundledFlag(arg string, flag byte) bool {
+	if len(arg) < 2 || arg[0] != '-' || arg[1] == '-' {
+		return false
+	}
+	for i := 1; i < len(arg); i++ {
+		if arg[i] == flag {
+			return true
+		}
+	}
+	return false
 }
 
 func gitBranches(block Block, ctx *Context) []entity.Candidate {

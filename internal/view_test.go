@@ -13,7 +13,7 @@ func split(output string) []string {
 func TestHintText(t *testing.T) {
 	lines := split("lorem 127.0.0.1 lorem")
 	custom := []string{}
-	state := NewStateFromLines(lines, "abcd", custom)
+	state := mustNewStateFromLines(t, lines, "abcd", custom)
 
 	view := NewView(
 		state,
