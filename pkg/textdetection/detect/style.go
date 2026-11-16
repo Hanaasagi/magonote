@@ -7,6 +7,7 @@ import (
 
 	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
 	"github.com/Hanaasagi/magonote/pkg/textdetection/screen"
+	"github.com/Hanaasagi/magonote/pkg/textdetection/token"
 )
 
 type styleDetector struct{}
@@ -19,6 +20,8 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 	for line := range ctx.Screen.Lines {
 		cells := ctx.Screen.Lines[line].Cells
 		candidates = append(candidates, hyperlinkCandidates(cells, line)...)
+		words := lineWords(ctx, line)
+		visRuns := visibleRuns(cells, line)
 		for start, col := 0, 0; start < len(cells); {
 			style := cells[start].Style
 			end := start + 1
@@ -28,9 +31,16 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 			if style != (screen.Style{}) && style.Attr&screen.AttrHidden == 0 {
 				chunks := styledChunks(cells[start:end], line, col)
 				for _, chunk := range chunks {
-					if validStyledChunk(chunk.text, chunk.span, len(chunks)) {
+					// A highlight is a relevance signal, not a selection boundary:
+					// snap the styled run outward to the words it covers so a
+					// colored sub-token fragment (e.g. a grep match inside a pod
+					// name) selects the whole token instead of suppressing it.
+					span := expandToWords(words, chunk.span)
+					span = clampToVisible(visRuns, chunk.span, span)
+					text := spanText(ctx, line, span)
+					if validStyledChunk(text, span, len(chunks)) {
 						candidates = append(candidates, entity.Candidate{
-							Kind: entity.KindStyled, Text: chunk.text, Span: chunk.span,
+							Kind: entity.KindStyled, Text: text, Span: span,
 							Class: entity.ClassStructure, Source: "style", Confidence: styleConfidence(style),
 						})
 					}
@@ -43,6 +53,85 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 		}
 	}
 	return candidates
+}
+
+// lineWords collects the word tokens of a line, used to snap styled runs to
+// token boundaries.
+func lineWords(ctx *Context, line int) []token.Word {
+	var words []token.Word
+	for _, chunk := range ctx.Chunks[line] {
+		words = append(words, token.Words(chunk)...)
+	}
+	return words
+}
+
+// expandToWords extends span outward to cover every word it intersects, starting
+// from the original styled bounds. It only ever grows the span: a run may include
+// punctuation that token.Words excludes (e.g. "foo(bar)", "C++"), which must stay
+// selectable rather than being shrunk away. A run equal to a token is unchanged;
+// a run spanning several words keeps them together.
+func expandToWords(words []token.Word, span screen.Span) screen.Span {
+	out := span
+	for _, w := range words {
+		if w.Span.Line != span.Line || w.Span.StartCol >= span.EndCol || span.StartCol >= w.Span.EndCol {
+			continue
+		}
+		if w.Span.StartCol < out.StartCol {
+			out.StartCol = w.Span.StartCol
+		}
+		if w.Span.EndCol > out.EndCol {
+			out.EndCol = w.Span.EndCol
+		}
+	}
+	return out
+}
+
+// visibleRuns returns the contiguous non-hidden column intervals of a line. It
+// is the exact dual of screen.HiddenSpans, so its boundaries align with the
+// hidden-span exclusions applied during resolution.
+func visibleRuns(cells []screen.Cell, line int) []screen.Span {
+	var runs []screen.Span
+	col, startCol := 0, 0
+	inVisible := false
+	for _, cell := range cells {
+		visible := cell.Style.Attr&screen.AttrHidden == 0
+		if visible && !inVisible {
+			startCol, inVisible = col, true
+		} else if !visible && inVisible {
+			runs = append(runs, screen.Span{Line: line, StartCol: startCol, EndCol: col})
+			inVisible = false
+		}
+		col += int(cell.Width)
+	}
+	if inVisible {
+		runs = append(runs, screen.Span{Line: line, StartCol: startCol, EndCol: col})
+	}
+	return runs
+}
+
+// clampToVisible limits expanded to the visible run containing chunk, so word
+// expansion never crosses into hidden text. Without this, a visible highlight
+// adjoining concealed text (e.g. "docs" + hidden "secret") would expand over the
+// hidden cells and be discarded wholesale by the hidden-span exclusion.
+func clampToVisible(runs []screen.Span, chunk, expanded screen.Span) screen.Span {
+	for _, r := range runs {
+		if r.StartCol <= chunk.StartCol && chunk.StartCol < r.EndCol {
+			if r.StartCol > expanded.StartCol {
+				expanded.StartCol = r.StartCol
+			}
+			if r.EndCol < expanded.EndCol {
+				expanded.EndCol = r.EndCol
+			}
+			return expanded
+		}
+	}
+	return expanded
+}
+
+func spanText(ctx *Context, line int, span screen.Span) string {
+	byteStart := ctx.Screen.ByteOf(line, span.StartCol)
+	byteEnd := ctx.Screen.ByteOf(line, span.EndCol)
+	return ctx.Screen.Lines[line].Plain[byteStart:byteEnd]
 }
 
 func hyperlinkCandidates(cells []screen.Cell, line int) []entity.Candidate {
