@@ -77,3 +77,21 @@ func TestStyleShortFragmentExpandsToValidToken(t *testing.T) {
 		t.Fatalf("styled = %v, want [nginx-deployment]", got)
 	}
 }
+
+func TestStylePreservesPunctuationBoundaries(t *testing.T) {
+	// token.Words excludes '(' and ')'; expanding to words must not shrink the
+	// colored run and drop the closing parenthesis.
+	got := styledTexts("\x1b[31mfoo(bar)\x1b[0m")
+	if !slices.Equal(got, []string{"foo(bar)"}) {
+		t.Fatalf("styled = %v, want [foo(bar)]", got)
+	}
+}
+
+func TestStylePreservesShortPlusToken(t *testing.T) {
+	// "C++" is one colored run whose only word is "C"; snapping must not shrink
+	// it below the minimum length and drop the selection entirely.
+	got := styledTexts("\x1b[31mC++\x1b[0m")
+	if !slices.Equal(got, []string{"C++"}) {
+		t.Fatalf("styled = %v, want [C++]", got)
+	}
+}

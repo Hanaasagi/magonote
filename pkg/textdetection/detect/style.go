@@ -63,18 +63,15 @@ func lineWords(ctx *Context, line int) []token.Word {
 	return words
 }
 
-// expandToWords snaps span outward to the minimal range covering every word it
-// intersects. A run equal to a token is unchanged; a run spanning several words
-// keeps them together; a run with no intersecting word is returned as-is.
+// expandToWords extends span outward to cover every word it intersects, starting
+// from the original styled bounds. It only ever grows the span: a run may include
+// punctuation that token.Words excludes (e.g. "foo(bar)", "C++"), which must stay
+// selectable rather than being shrunk away. A run equal to a token is unchanged;
+// a run spanning several words keeps them together.
 func expandToWords(words []token.Word, span screen.Span) screen.Span {
 	out := span
-	found := false
 	for _, w := range words {
 		if w.Span.Line != span.Line || w.Span.StartCol >= span.EndCol || span.StartCol >= w.Span.EndCol {
-			continue
-		}
-		if !found {
-			out, found = w.Span, true
 			continue
 		}
 		if w.Span.StartCol < out.StartCol {
