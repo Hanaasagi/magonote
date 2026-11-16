@@ -153,7 +153,7 @@ func (r *renderer) composeOverlays(selected *Match, chosen []ChosenMatch, typedH
 		// non-matching match (revert to the base screen) so the visual field
 		// narrows instead of staying cluttered. Already-chosen matches stay
 		// visible to preserve multi-select progress.
-		if filtering && !isChosen && (mat.Hint == nil || !strings.HasPrefix(g.hintStr, typedHint)) {
+		if filtering && !isChosen && !isActive(mat, typedHint) {
 			continue
 		}
 
