@@ -220,6 +220,40 @@ func TestCROverwriteStartsInsideWideGrapheme(t *testing.T) {
 	}
 }
 
+func TestCROverwriteRangeGraphemeMerge(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		want      string
+		wantWidth int
+		tabWidth  int
+	}{
+		{"widening variation selector", "abcd\r❤\x1b[31m\ufe0fX", "❤\ufe0fXd", 4, 8},
+		{"narrowing ZWJ sequence", "👩abc\r\t\u200d💻", "👩\u200d💻abc", 5, 2},
+		{"regional indicator pair", "abcd\r🇨\x1b[31m🇳X", "🇨🇳Xd", 4, 8},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Parse(tt.input, tt.tabWidth)
+			line := s.Lines[0]
+			if line.Plain != tt.want {
+				t.Fatalf("plain = %q, want %q", line.Plain, tt.want)
+			}
+			if line.Width != tt.wantWidth {
+				t.Fatalf("width = %d, want %d", line.Width, tt.wantWidth)
+			}
+		})
+	}
+
+	// A replacement split by ANSI styling must match its unsplit equivalent.
+	split := Parse("abcd\r❤\x1b[31m\ufe0fX")
+	unsplit := Parse("abcd\r❤️X")
+	sl, ul := split.Lines[0], unsplit.Lines[0]
+	if sl.Plain != ul.Plain || sl.Width != ul.Width {
+		t.Fatalf("split = %q/%d, unsplit = %q/%d", sl.Plain, sl.Width, ul.Plain, ul.Width)
+	}
+}
+
 func TestLeadingZeroWidthFallback(t *testing.T) {
 	// The cached width must agree with finishLine's fallback column for a
 	// standalone zero-width grapheme at the start of the line, so tab

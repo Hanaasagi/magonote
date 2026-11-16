@@ -161,30 +161,32 @@ func displayColToByte(text string, col int) int {
 // the number of leading columns to pad. When col falls inside a grapheme, the
 // whole grapheme is replaced and its columns before col become padding so
 // retained text keeps its display coordinates; on a boundary the padding is
-// zero.
-func overwriteStart(text string, col int) (byteOff, pad int) {
+// zero. On a boundary it also reports the retained prefix's trailing grapheme
+// and its standalone width, which the replacement may merge with.
+func overwriteStart(text string, col int) (byteOff, pad int, last string, lastWidth int) {
 	if col <= 0 {
-		return 0, 0
+		return 0, 0, "", 0
 	}
 	pos := 0
 	first := true
 	graphemes := uniseg.NewGraphemes(text)
 	for graphemes.Next() {
 		start, end := graphemes.Positions()
-		w := graphemes.Width()
+		raw := graphemes.Width()
+		w := raw
 		if first && w == 0 {
 			w = 1
 		}
 		first = false
 		if pos+w >= col {
 			if pos+w == col {
-				return end, 0
+				return end, 0, graphemes.Str(), raw
 			}
-			return start, col - pos
+			return start, col - pos, "", 0
 		}
 		pos += w
 	}
-	return len(text), 0
+	return len(text), 0, "", 0
 }
 
 func (p *parser) append(text string) {
@@ -197,19 +199,29 @@ func (p *parser) append(text string) {
 	if p.cursor < lineWidth {
 		existing := p.line.plain.String()
 		var startByte, leftPad int
+		var prevLast string
+		var prevLastWidth int
 		if textWidth > 0 {
-			startByte, leftPad = overwriteStart(existing, p.cursor)
+			startByte, leftPad, prevLast, prevLastWidth = overwriteStart(existing, p.cursor)
 		} else {
 			// Zero-width fragments insert at the rounded boundary without
 			// consuming columns.
 			startByte = displayColToByte(existing, p.cursor)
 		}
 		overEndCol := p.cursor + textWidth
-		if textWidth > 0 && startByte == 0 && leftPad == 0 {
-			// The fragment becomes the start of the line; a leading
-			// zero-width grapheme gains the fallback column there.
-			if _, _, w, _ := uniseg.FirstGraphemeClusterInString(text, -1); w == 0 {
-				overEndCol++
+		if textWidth > 0 && leftPad == 0 {
+			if startByte == 0 {
+				// The fragment becomes the start of the line; a leading
+				// zero-width grapheme gains the fallback column there.
+				if _, _, w, _ := uniseg.FirstGraphemeClusterInString(text, -1); w == 0 {
+					overEndCol++
+				}
+			} else if prevLast != "" {
+				// The fragment may merge with the retained prefix's trailing
+				// grapheme (variation selectors, ZWJ sequences), widening or
+				// narrowing it. Measure the combined boundary so the range
+				// consumes exactly the columns the replacement occupies.
+				overEndCol = p.cursor + uniseg.StringWidth(prevLast+text) - prevLastWidth
 			}
 		}
 		var endByte, rightPad int
