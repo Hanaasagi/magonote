@@ -105,16 +105,16 @@ func TestOSC52Writer(t *testing.T) {
 	var buf bytes.Buffer
 	writer := NewOSC52Writer(&buf)
 
-	// Test empty text (clear clipboard)
+	// Test empty text (no-op: must NOT clear the clipboard)
 	err := writer.Write("")
 	if err != nil {
 		t.Fatalf("Write empty string failed: %v", err)
 	}
 
 	output := buf.String()
-	expected := "\033]52;c;\007"
+	expected := ""
 	if output != expected {
-		t.Errorf("Expected %q, got %q", expected, output)
+		t.Errorf("empty text should write nothing, got %q", output)
 	}
 
 	// Test with text
@@ -132,7 +132,7 @@ func TestOSC52Writer(t *testing.T) {
 	}
 }
 
-func TestOSC52WriterWithTmux(t *testing.T) {
+func TestOSC52WriterIgnoresTmuxEnv(t *testing.T) {
 	// Save original value
 	original := os.Getenv("TMUX")
 	defer func() {
@@ -155,8 +155,9 @@ func TestOSC52WriterWithTmux(t *testing.T) {
 	}
 
 	output := buf.String()
-	// Should be wrapped in tmux DCS passthrough
-	expected := "\033Ptmux;\033\033]52;c;aGVsbG8=\007\033\\"
+	// Raw OSC52 regardless of $TMUX: DCS wrapping was removed. Inside tmux
+	// use LoadBuffer with -w so tmux emits the sequence itself.
+	expected := "\033]52;c;aGVsbG8=\007"
 	if output != expected {
 		t.Errorf("Expected %q, got %q", expected, output)
 	}
