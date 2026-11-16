@@ -7,6 +7,7 @@ import (
 
 	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
 	"github.com/Hanaasagi/magonote/pkg/textdetection/screen"
+	"github.com/Hanaasagi/magonote/pkg/textdetection/token"
 )
 
 type styleDetector struct{}
@@ -19,6 +20,7 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 	for line := range ctx.Screen.Lines {
 		cells := ctx.Screen.Lines[line].Cells
 		candidates = append(candidates, hyperlinkCandidates(cells, line)...)
+		words := lineWords(ctx, line)
 		for start, col := 0, 0; start < len(cells); {
 			style := cells[start].Style
 			end := start + 1
@@ -28,9 +30,15 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 			if style != (screen.Style{}) && style.Attr&screen.AttrHidden == 0 {
 				chunks := styledChunks(cells[start:end], line, col)
 				for _, chunk := range chunks {
-					if validStyledChunk(chunk.text, chunk.span, len(chunks)) {
+					// A highlight is a relevance signal, not a selection boundary:
+					// snap the styled run outward to the words it covers so a
+					// colored sub-token fragment (e.g. a grep match inside a pod
+					// name) selects the whole token instead of suppressing it.
+					span := expandToWords(words, chunk.span)
+					text := spanText(ctx, line, span)
+					if validStyledChunk(text, span, len(chunks)) {
 						candidates = append(candidates, entity.Candidate{
-							Kind: entity.KindStyled, Text: chunk.text, Span: chunk.span,
+							Kind: entity.KindStyled, Text: text, Span: span,
 							Class: entity.ClassStructure, Source: "style", Confidence: styleConfidence(style),
 						})
 					}
@@ -43,6 +51,46 @@ func (styleDetector) Detect(ctx *Context) []entity.Candidate {
 		}
 	}
 	return candidates
+}
+
+// lineWords collects the word tokens of a line, used to snap styled runs to
+// token boundaries.
+func lineWords(ctx *Context, line int) []token.Word {
+	var words []token.Word
+	for _, chunk := range ctx.Chunks[line] {
+		words = append(words, token.Words(chunk)...)
+	}
+	return words
+}
+
+// expandToWords snaps span outward to the minimal range covering every word it
+// intersects. A run equal to a token is unchanged; a run spanning several words
+// keeps them together; a run with no intersecting word is returned as-is.
+func expandToWords(words []token.Word, span screen.Span) screen.Span {
+	out := span
+	found := false
+	for _, w := range words {
+		if w.Span.Line != span.Line || w.Span.StartCol >= span.EndCol || span.StartCol >= w.Span.EndCol {
+			continue
+		}
+		if !found {
+			out, found = w.Span, true
+			continue
+		}
+		if w.Span.StartCol < out.StartCol {
+			out.StartCol = w.Span.StartCol
+		}
+		if w.Span.EndCol > out.EndCol {
+			out.EndCol = w.Span.EndCol
+		}
+	}
+	return out
+}
+
+func spanText(ctx *Context, line int, span screen.Span) string {
+	byteStart := ctx.Screen.ByteOf(line, span.StartCol)
+	byteEnd := ctx.Screen.ByteOf(line, span.EndCol)
+	return ctx.Screen.Lines[line].Plain[byteStart:byteEnd]
 }
 
 func hyperlinkCandidates(cells []screen.Cell, line int) []entity.Candidate {
