@@ -41,6 +41,23 @@ func writeFixture(t *testing.T, content string) string {
 // windows, so neither the [magonote] window name nor pane_current_command (the
 // "zsh -c" wrapper) identifies it reliably. Pane IDs are stable: the magonote
 // pane is the one that is not the original fixture pane.
+// stubNativeTools places no-op clipboard helpers first on PATH so the real
+// magonote-tmux child cannot overwrite the host's system clipboard. The OSC 52
+// tests run locally (non-SSH) with a native tool present, so Decide schedules
+// StepNative; without stubbing, every run would clobber the developer's
+// clipboard with the fixture URL. tmux/sh/cat/sleep still resolve from the
+// original PATH appended after the stub dir.
+func stubNativeTools(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	for _, tool := range []string{"pbcopy", "wl-copy", "xclip", "xsel", "clip"} {
+		if err := os.WriteFile(filepath.Join(dir, tool), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
+}
+
 func waitMagonotePane(t *testing.T, s *framework.TmuxServer, originalPane string) string {
 	t.Helper()
 	deadline := time.Now().Add(6 * time.Second)
@@ -90,6 +107,7 @@ func runPick(t *testing.T, s *framework.TmuxServer, ft *framework.FakeTerminal, 
 		"XDG_STATE_HOME="+t.TempDir(),
 		"XDG_CONFIG_HOME="+t.TempDir(),
 		"TERM=xterm-256color",
+		"PATH="+stubNativeTools(t)+string(os.PathListSeparator)+os.Getenv("PATH"),
 	)
 	args := []string{"--dir", bindir}
 	if osc52 {
