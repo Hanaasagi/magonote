@@ -7,27 +7,32 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 
+	"github.com/Hanaasagi/magonote/internal/action"
 	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
 )
 
 // View is the interaction layer: it owns the input state machine and
 // orchestrates the event loop. Presentation is delegated to the renderer.
 type View struct {
-	state    *State
-	skip     int
-	multi    bool
-	matches  []Match
-	chosen   []ChosenMatch
-	screen   tcell.Screen
-	renderer *renderer
+	state        *State
+	skip         int
+	multi        bool
+	matches      []Match
+	chosen       []ChosenMatch
+	screen       tcell.Screen
+	renderer     *renderer
+	registry     *action.Registry
+	pendingGroup *action.Group
 }
 
-// ChosenMatch represents a match that has been selected by the user.
+// ChosenMatch is a selected entity tagged with the action group chosen by the
+// user. The core only selects; the tmux adapter resolves Group+Kind to a command
+// and executes it (the Act stage).
 type ChosenMatch struct {
-	Text           string
-	Uppercase      bool
-	ShouldOpenFile bool
-	Location       *entity.FileLocation
+	Text     string
+	Kind     string
+	Group    string
+	Location *entity.FileLocation
 }
 
 // CaptureEvent represents the result of the user interaction.
@@ -38,54 +43,61 @@ const (
 	HintEvent
 )
 
+// ViewOptions groups the view configuration, replacing a long positional
+// parameter list.
+type ViewOptions struct {
+	Multi       bool
+	Reverse     bool
+	UniqueLevel int
+	Contrast    bool
+	Position    string
+	Colors      ViewColors
+	Actions     *action.Registry
+}
+
+// NewViewColors builds a ViewColors from individual color values, keeping the
+// struct's fields encapsulated.
+func NewViewColors(selectFg, selectBg, multiFg, multiBg, fg, bg, hintFg, hintBg Color) ViewColors {
+	return ViewColors{
+		selectForeground: selectFg,
+		selectBackground: selectBg,
+		multiForeground:  multiFg,
+		multiBackground:  multiBg,
+		foreground:       fg,
+		background:       bg,
+		hintForeground:   hintFg,
+		hintBackground:   hintBg,
+	}
+}
+
 // NewView creates a new View instance.
-func NewView(
-	state *State,
-	multi bool,
-	reverse bool,
-	uniqueLevel int,
-	contrast bool,
-	position string,
-	selectForegroundColor Color,
-	selectBackgroundColor Color,
-	multiForegroundColor Color,
-	multiBackgroundColor Color,
-	foregroundColor Color,
-	backgroundColor Color,
-	hintForegroundColor Color,
-	hintBackgroundColor Color,
-) *View {
-	matches := state.Matches(reverse, uniqueLevel)
+func NewView(state *State, opts ViewOptions) *View {
+	matches := state.Matches(opts.Reverse, opts.UniqueLevel)
 	skip := 0
-	if reverse {
+	if opts.Reverse {
 		skip = len(matches) - 1
 	}
 
-	theme := ViewColors{
-		selectForeground: selectForegroundColor,
-		selectBackground: selectBackgroundColor,
-		multiForeground:  multiForegroundColor,
-		multiBackground:  multiBackgroundColor,
-		foreground:       foregroundColor,
-		background:       backgroundColor,
-		hintForeground:   hintForegroundColor,
-		hintBackground:   hintBackgroundColor,
+	registry := opts.Actions
+	if registry == nil {
+		registry = action.NewRegistry(action.DefaultGroups()...)
 	}
 
 	return &View{
-		state:    state,
-		skip:     skip,
-		multi:    multi,
-		matches:  matches,
-		chosen:   make([]ChosenMatch, 0),
-		renderer: newRenderer(state, matches, theme, contrast, position),
+		state:        state,
+		skip:         skip,
+		multi:        opts.Multi,
+		matches:      matches,
+		chosen:       make([]ChosenMatch, 0),
+		renderer:     newRenderer(state, matches, opts.Colors, opts.Contrast, opts.Position),
+		registry:     registry,
+		pendingGroup: registry.Default(),
 	}
 }
 
 // isActive reports whether a match remains selectable under the typed hint
 // prefix. An empty prefix keeps every match active. It is the single predicate
-// shared by rendering (which matches to show) and interaction (which matches
-// navigation and Enter may select), so the two never disagree.
+// shared by rendering and interaction so the two never disagree.
 func isActive(mat *Match, typedHint string) bool {
 	return typedHint == "" || (mat.Hint != nil && strings.HasPrefix(*mat.Hint, typedHint))
 }
@@ -127,33 +139,41 @@ func (v *View) Next(typedHint string) {
 	}
 }
 
+// statusLabel is shown only when a non-default group is pending, so the user
+// knows what a completed hint will do.
+func (v *View) statusLabel() string {
+	if v.pendingGroup == v.registry.Default() {
+		return ""
+	}
+	return v.pendingGroup.Name
+}
+
 // render delegates one frame to the renderer using the current visual state.
 func (v *View) render(typedHint string) {
 	var selected *Match
 	if v.skip < len(v.matches) {
 		selected = &v.matches[v.skip]
 	}
-	v.renderer.render(v.screen, selected, v.chosen, typedHint)
+	v.renderer.render(v.screen, selected, v.chosen, typedHint, v.statusLabel())
 }
 
 // visualState captures the fields that affect the rendered frame. Comparing
-// snapshots lets the event loop redraw only when something actually changed,
-// without threading dirty flags through the input handlers.
+// snapshots lets the event loop redraw only when something actually changed.
 type visualState struct {
-	typedHint    string
-	hasUppercase bool
-	skip         int
-	chosenCount  int
-	multi        bool
+	typedHint   string
+	group       string
+	skip        int
+	chosenCount int
+	multi       bool
 }
 
-func (v *View) visualState(typedHint string, hasUppercase bool) visualState {
+func (v *View) visualState(typedHint string) visualState {
 	return visualState{
-		typedHint:    typedHint,
-		hasUppercase: hasUppercase,
-		skip:         v.skip,
-		chosenCount:  len(v.chosen),
-		multi:        v.multi,
+		typedHint:   typedHint,
+		group:       v.pendingGroup.Name,
+		skip:        v.skip,
+		chosenCount: len(v.chosen),
+		multi:       v.multi,
 	}
 }
 
@@ -165,7 +185,6 @@ func (v *View) listen() CaptureEvent {
 	}
 
 	typedHint := ""
-	hasUppercase := false
 	longestHint := v.findLongestHint()
 
 	renderStart := time.Now()
@@ -177,12 +196,12 @@ func (v *View) listen() CaptureEvent {
 
 		switch ev := ev.(type) {
 		case *tcell.EventKey:
-			before := v.visualState(typedHint, hasUppercase)
-			action := v.handleKeyEvent(ev, &typedHint, &hasUppercase, longestHint)
+			before := v.visualState(typedHint)
+			action := v.handleKeyEvent(ev, &typedHint, longestHint)
 			if action != nil {
 				return *action
 			}
-			if v.visualState(typedHint, hasUppercase) != before {
+			if v.visualState(typedHint) != before {
 				v.render(typedHint)
 			}
 		case *tcell.EventResize:
@@ -206,56 +225,52 @@ func (v *View) findLongestHint() string {
 }
 
 // handleKeyEvent processes a key event and returns an action if needed.
-func (v *View) handleKeyEvent(ev *tcell.EventKey, typedHint *string, hasUppercase *bool, longestHint string) *CaptureEvent {
+func (v *View) handleKeyEvent(ev *tcell.EventKey, typedHint *string, longestHint string) *CaptureEvent {
 	switch ev.Key() {
 	case tcell.KeyEscape, tcell.KeyCtrlC:
-		return v.handleEscapeKey(typedHint, hasUppercase)
+		return v.handleEscapeKey(typedHint)
 	case tcell.KeyUp, tcell.KeyLeft:
 		v.Prev(*typedHint)
 	case tcell.KeyDown, tcell.KeyRight:
 		v.Next(*typedHint)
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		return v.handleBackspace(typedHint, hasUppercase)
+		return v.handleBackspace(typedHint)
 	case tcell.KeyEnter:
 		return v.handleEnter(*typedHint)
 	case tcell.KeyRune:
-		return v.handleRuneKey(ev, typedHint, hasUppercase, longestHint)
+		return v.handleRuneKey(ev, typedHint, longestHint)
 	}
 	return nil
 }
 
-// handleEscapeKey handles escape key press.
-func (v *View) handleEscapeKey(typedHint *string, hasUppercase *bool) *CaptureEvent {
-	if v.multi && *typedHint != "" {
+// handleEscapeKey clears pending input/group in multi mode, otherwise exits.
+func (v *View) handleEscapeKey(typedHint *string) *CaptureEvent {
+	if v.multi && (*typedHint != "" || v.pendingGroup != v.registry.Default()) {
 		*typedHint = ""
-		*hasUppercase = false
+		v.pendingGroup = v.registry.Default()
 		return nil
 	}
 	action := ExitEvent
 	return &action
 }
 
-// handleBackspace handles backspace key press.
-func (v *View) handleBackspace(typedHint *string, hasUppercase *bool) *CaptureEvent {
+// handleBackspace removes a hint character, or resets the pending group when no
+// hint characters remain.
+func (v *View) handleBackspace(typedHint *string) *CaptureEvent {
 	if len(*typedHint) > 0 {
 		*typedHint = (*typedHint)[:len(*typedHint)-1]
-		*hasUppercase = false
 		v.clampSkipToActive(*typedHint)
+	} else if v.pendingGroup != v.registry.Default() {
+		v.pendingGroup = v.registry.Default()
 	}
 	return nil
 }
 
-// handleEnter handles enter key press, selecting only within the active field.
+// handleEnter selects the active match under the pending group.
 func (v *View) handleEnter(typedHint string) *CaptureEvent {
 	v.clampSkipToActive(typedHint)
 	if v.skip < len(v.matches) && isActive(&v.matches[v.skip], typedHint) {
-		v.chosen = append(v.chosen, ChosenMatch{
-			Text:           v.matches[v.skip].Text,
-			Uppercase:      false,
-			ShouldOpenFile: false,
-			Location:       v.matches[v.skip].Location,
-		})
-
+		v.choose(&v.matches[v.skip])
 		if !v.multi {
 			action := HintEvent
 			return &action
@@ -264,33 +279,47 @@ func (v *View) handleEnter(typedHint string) *CaptureEvent {
 	return nil
 }
 
-// handleRuneKey handles character input.
-func (v *View) handleRuneKey(ev *tcell.EventKey, typedHint *string, hasUppercase *bool, longestHint string) *CaptureEvent {
+// choose records a selection tagged with the pending group and entity kind.
+func (v *View) choose(mat *Match) {
+	v.chosen = append(v.chosen, ChosenMatch{
+		Text:     mat.Text,
+		Kind:     mat.Pattern,
+		Group:    v.pendingGroup.Name,
+		Location: mat.Location,
+	})
+}
+
+// handleRuneKey handles group prefix keys and hint characters.
+func (v *View) handleRuneKey(ev *tcell.EventKey, typedHint *string, longestHint string) *CaptureEvent {
 	ch := string(ev.Rune())
 
 	if ch == " " {
 		return v.handleSpaceKey()
 	}
 
+	// A reserved group key switches the pending action and resets hint input.
+	if g, ok := v.registry.ByKey(ch); ok {
+		v.pendingGroup = g
+		*typedHint = ""
+		return nil
+	}
+
 	lowerCh := strings.ToLower(ch)
 	if ch != lowerCh {
-		*hasUppercase = true
+		// Uppercase is a backward-compatible alias for the open group.
+		if g, ok := v.registry.ByName("open"); ok {
+			v.pendingGroup = g
+		}
 	}
 	*typedHint += lowerCh
 
-	// Check for hint match
-	for _, mat := range v.matches {
+	for i := range v.matches {
+		mat := &v.matches[i]
 		if mat.Hint != nil && *mat.Hint == *typedHint {
-			v.chosen = append(v.chosen, ChosenMatch{
-				Text:           mat.Text,
-				Uppercase:      *hasUppercase,
-				ShouldOpenFile: *hasUppercase && (mat.Location != nil || isLikelyFilePath(mat.Text)),
-				Location:       mat.Location,
-			})
-
+			v.choose(mat)
 			if v.multi {
 				*typedHint = ""
-				*hasUppercase = false
+				v.pendingGroup = v.registry.Default()
 			} else {
 				action := HintEvent
 				return &action
@@ -299,7 +328,6 @@ func (v *View) handleRuneKey(ev *tcell.EventKey, typedHint *string, hasUppercase
 		}
 	}
 
-	// Exit if typed too much in single mode
 	if !v.multi && len(*typedHint) >= len(longestHint) {
 		action := ExitEvent
 		return &action
@@ -321,7 +349,6 @@ func (v *View) handleSpaceKey() *CaptureEvent {
 
 // Present displays the UI and returns the chosen matches.
 func (v *View) Present() []ChosenMatch {
-	// fast path
 	if len(v.matches) == 0 {
 		return []ChosenMatch{}
 	}

@@ -42,6 +42,7 @@ add_param() {
   fi
 }
 
+add_param config         string
 add_param command        string
 add_param upcase-command string
 add_param multi-command  string

@@ -121,3 +121,15 @@ func TestNewStateRejectsInvalidAlphabet(t *testing.T) {
 		t.Fatal("expected error for invalid alphabet")
 	}
 }
+
+func TestNewStateRejectsOverReservedAlphabet(t *testing.T) {
+	if _, err := NewState("alpha beta", "abcd", nil, WithReservedKeys([]string{"a", "b", "c"})); err == nil {
+		t.Fatal("expected error when only one hint character remains")
+	}
+	if _, err := NewState("alpha beta", "abcd", nil, WithReservedKeys([]string{"a", "b", "c", "d"})); err == nil {
+		t.Fatal("expected error when no hint characters remain")
+	}
+	if _, err := NewState("alpha beta", "abcd", nil, WithReservedKeys([]string{"a", "b"})); err != nil {
+		t.Fatalf("two remaining characters should be usable: %v", err)
+	}
+}

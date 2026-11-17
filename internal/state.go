@@ -82,6 +82,11 @@ func WithWords() Option {
 	return optionFunc(func(s *State) { s.WordDetection = true })
 }
 
+// WithReservedKeys excludes action-group prefix keys from the hint alphabet.
+func WithReservedKeys(keys []string) Option {
+	return optionFunc(func(s *State) { s.reservedKeys = keys })
+}
+
 func WithExclusionRules(rules []ExclusionRule) Option {
 	return optionFunc(func(s *State) { s.ExclusionConfig = &ExclusionConfig{Rules: rules} })
 }
@@ -95,6 +100,7 @@ type State struct {
 	ProfilesConfig       *ProfilesDetectionConfig
 	ExclusionConfig      *ExclusionConfig
 	WordDetection        bool
+	reservedKeys         []string
 
 	rawInput string
 	screen   *screen.Screen
@@ -111,6 +117,11 @@ func NewState(text string, alphabet string, patterns []string, opts ...Option) (
 	}
 	for _, opt := range opts {
 		opt.apply(state)
+	}
+	usable, _ := NewBuiltinAlphabet(alphabet)
+	usable = usable.Exclude(state.reservedKeys)
+	if usable.Len() < 2 {
+		return nil, fmt.Errorf("alphabet %q has fewer than 2 usable characters after reserving action-group keys %v; use a larger alphabet or fewer reserved keys", alphabet, state.reservedKeys)
 	}
 	return state, nil
 }
@@ -156,6 +167,7 @@ func (s *State) Matches(reverse bool, uniqueLevel int) []Match {
 		matches = s.filterSuperUniqueMatches(matches)
 	}
 	alphabet, _ := NewBuiltinAlphabet(s.Alphabet)
+	alphabet = alphabet.Exclude(s.reservedKeys)
 	hints := alphabet.Hints(len(matches))
 	s.assignHints(matches, hints, reverse, uniqueLevel)
 	slog.Debug("textdetection completed", "duration_ms", time.Since(start).Milliseconds(), "matches_count", len(matches))

@@ -40,3 +40,19 @@ func TestComposedMatchesMax(t *testing.T) {
 		t.Errorf("ComposedMatchesMax = %v; want %v", got, want)
 	}
 }
+
+func TestAlphabetExcludeReservedKeys(t *testing.T) {
+	a, err := NewBuiltinAlphabet("qwerty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := a.Exclude([]string{"o", "i"})
+	for _, l := range e.letters {
+		if l == "o" || l == "i" {
+			t.Fatalf("reserved key %q not excluded", l)
+		}
+	}
+	if len(e.letters) != len(a.letters)-2 {
+		t.Fatalf("letters = %d, want %d", len(e.letters), len(a.letters)-2)
+	}
+}

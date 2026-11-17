@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Hanaasagi/magonote/internal/action"
 	fz "github.com/Hanaasagi/magonote/pkg/fuzzymatch"
 	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
 	"github.com/fatih/color"
@@ -40,12 +41,14 @@ type ListView struct {
 	state           *State
 	candidates      []string
 	locations       []*entity.FileLocation
+	kinds           []string
 	filteredMatches []fz.FuzzyMatch
 	selectedIndex   int
 	scrollOffset    int
 	query           string
 	fuzzyMatcher    *fz.FuzzyMatcher
 	multi           bool
+	group           string
 	chosen          []ChosenMatch
 
 	// Display configuration
@@ -73,54 +76,51 @@ type ListView struct {
 	normalColor *color.Color
 }
 
-// NewListView creates a new direct terminal ListView instance
-func NewListView(
-	state *State,
-	multi bool,
-	selectForegroundColor Color,
-	selectBackgroundColor Color,
-	multiForegroundColor Color,
-	multiBackgroundColor Color,
-	foregroundColor Color,
-	backgroundColor Color,
-	hintForegroundColor Color,
-	hintBackgroundColor Color,
-) *ListView {
+// ListViewOptions groups the list view configuration.
+type ListViewOptions struct {
+	Multi   bool
+	Colors  ViewColors
+	Actions *action.Registry
+}
+
+// NewListView creates a new direct terminal ListView instance. The list view is
+// copy-only: selections are tagged with the default action group.
+func NewListView(state *State, opts ListViewOptions) *ListView {
+	registry := opts.Actions
+	if registry == nil {
+		registry = action.NewRegistry(action.DefaultGroups()...)
+	}
+
 	// Extract candidate texts from matches
 	matches := state.Matches(false, 2) // list view should only show unique matches
 	candidates := make([]string, len(matches))
 	locations := make([]*entity.FileLocation, len(matches))
+	kinds := make([]string, len(matches))
 	for i, match := range matches {
 		candidates[i] = match.Text
 		locations[i] = match.Location
+		kinds[i] = match.Pattern
 	}
 
 	lv := &ListView{
 		state:              state,
 		candidates:         candidates,
 		locations:          locations,
+		kinds:              kinds,
 		filteredMatches:    []fz.FuzzyMatch{},
 		selectedIndex:      0,
 		scrollOffset:       0,
 		query:              "",
 		fuzzyMatcher:       fz.NewFuzzyMatcher(false),
 		maxVisibleItems:    defaultMaxVisibleItems,
-		multi:              multi,
+		multi:              opts.Multi,
+		group:              registry.Default().Name,
 		chosen:             make([]ChosenMatch, 0),
 		originalTotalWidth: len(fmt.Sprintf("%d", len(candidates))),
-		colors: ViewColors{
-			selectForeground: selectForegroundColor,
-			selectBackground: selectBackgroundColor,
-			multiForeground:  multiForegroundColor,
-			multiBackground:  multiBackgroundColor,
-			foreground:       foregroundColor,
-			background:       backgroundColor,
-			hintForeground:   hintForegroundColor,
-			hintBackground:   hintBackgroundColor,
-		},
-		selectColor: color.New(color.BgCyan, color.FgBlack),
-		chosenColor: color.New(color.FgGreen, color.Bold),
-		normalColor: color.New(color.Reset),
+		colors:             opts.Colors,
+		selectColor:        color.New(color.BgCyan, color.FgBlack),
+		chosenColor:        color.New(color.FgGreen, color.Bold),
+		normalColor:        color.New(color.Reset),
 	}
 
 	return lv
@@ -554,10 +554,10 @@ func (lv *ListView) selectCurrentItem() bool {
 	if lv.selectedIndex < len(lv.filteredMatches) {
 		match := lv.filteredMatches[lv.selectedIndex]
 		lv.chosen = append(lv.chosen, ChosenMatch{
-			Text:           match.Text,
-			Uppercase:      false,
-			ShouldOpenFile: false,
-			Location:       lv.locations[match.Original],
+			Text:     match.Text,
+			Kind:     lv.kinds[match.Original],
+			Group:    lv.group,
+			Location: lv.locations[match.Original],
 		})
 
 		if !lv.multi {
@@ -573,10 +573,10 @@ func (lv *ListView) getDefaultSelection() []ChosenMatch {
 		match := lv.filteredMatches[lv.selectedIndex]
 		return []ChosenMatch{
 			{
-				Text:           match.Text,
-				Uppercase:      false,
-				ShouldOpenFile: false,
-				Location:       lv.locations[match.Original],
+				Text:     match.Text,
+				Kind:     lv.kinds[match.Original],
+				Group:    lv.group,
+				Location: lv.locations[match.Original],
 			},
 		}
 	}

@@ -2,20 +2,21 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime/debug"
+	"strconv"
 	"strings"
 
 	"github.com/Hanaasagi/magonote/cmd"
 	"github.com/Hanaasagi/magonote/internal"
+	"github.com/Hanaasagi/magonote/internal/action"
 	"github.com/Hanaasagi/magonote/internal/logger"
-	"github.com/Hanaasagi/magonote/pkg/textdetection/entity"
 	"github.com/adrg/xdg"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -24,7 +25,6 @@ import (
 const (
 	appName       = "magonote"
 	defaultSize   = 4096
-	defaultEditor = "vi"
 )
 
 var (
@@ -150,104 +150,64 @@ func writeOutput(target, content string) error {
 	return nil
 }
 
-// openFileWithEditor opens the real path from a structured file location.
-func openFileWithEditor(location entity.FileLocation) error {
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = defaultEditor
-	}
-
-	location.Path = expandEditorPath(location.Path)
-	if _, err := os.Stat(location.Path); os.IsNotExist(err) {
-		return fmt.Errorf("file does not exist: %w", err)
-	}
-
-	args := make([]string, 0, 2)
-	if location.Line > 0 {
-		args = append(args, fmt.Sprintf("+%d", location.Line))
-	}
-	args = append(args, location.Path)
-	cmd := exec.Command(editor, args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
-}
-
-func expandEditorPath(path string) string {
-	if path == "~" || strings.HasPrefix(path, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			if path == "~" {
-				return home
-			}
-			return filepath.Join(home, path[2:])
-		}
-		return path
-	}
-	if !strings.HasPrefix(path, "$") {
-		return path
-	}
-	rest := path[1:]
-	var name string
-	if strings.HasPrefix(rest, "{") {
-		close := strings.Index(rest, "}")
-		if close < 0 {
-			return path
-		}
-		name = rest[1:close]
-		rest = rest[close+1:]
-	} else {
-		nameEnd := strings.Index(rest, "/")
-		if nameEnd < 0 {
-			name = rest
-			rest = ""
-		} else {
-			name = rest[:nameEnd]
-			rest = rest[nameEnd:]
-		}
-	}
-	if name == "" {
-		return path
-	}
-	value := os.Getenv(name)
-	if value == "" {
-		return path
-	}
-	if rest == "" || rest == "/" {
-		return value
-	}
-	return filepath.Join(value, strings.TrimPrefix(rest, "/"))
-}
-
 // processResults processes selected items and returns formatted output
+// selectionJSON is the structured core->adapter protocol (format "json"),
+// carrying the typed selection plus its structured file location.
+type selectionJSON struct {
+	Group  string `json:"group"`
+	Kind   string `json:"kind"`
+	Text   string `json:"text"`
+	Path   string `json:"path"`
+	Line   int    `json:"line"`
+	Column int    `json:"column"`
+}
+
+func locationFields(item internal.ChosenMatch) (path string, line, column int) {
+	path = item.Text
+	if item.Location != nil {
+		if item.Location.Path != "" {
+			path = item.Location.Path
+		}
+		line = item.Location.Line
+		column = item.Location.Column
+	}
+	return path, line, column
+}
+
 func processResults(selected []internal.ChosenMatch, format string) (string, error) {
 	if len(selected) == 0 {
 		return "", nil
 	}
 
 	results := make([]string, 0, len(selected))
-
 	for _, item := range selected {
-		if item.ShouldOpenFile {
-			location := entity.FileLocation{Path: item.Text}
-			if item.Location != nil {
-				location = *item.Location
+		if format == "json" {
+			path, line, column := locationFields(item)
+			data, err := json.Marshal(selectionJSON{
+				Group: item.Group, Kind: item.Kind, Text: item.Text,
+				Path: path, Line: line, Column: column,
+			})
+			if err != nil {
+				return "", err
 			}
-			slog.Info("Opening file with editor", "file", location.Path, "editor", os.Getenv("EDITOR"))
-			if err := openFileWithEditor(location); err != nil {
-				return "", fmt.Errorf("opening file with editor: %w", err)
-			}
-			os.Exit(0)
+			results = append(results, string(data))
+			continue
 		}
 
-		result := strings.ReplaceAll(format, "%H", item.Text)
+		path, line, column := locationFields(item)
+		r := strings.ReplaceAll(format, "%G", item.Group)
+		r = strings.ReplaceAll(r, "%K", item.Kind)
+		r = strings.ReplaceAll(r, "%P", path)
+		r = strings.ReplaceAll(r, "%L", strconv.Itoa(line))
+		r = strings.ReplaceAll(r, "%C", strconv.Itoa(column))
+		r = strings.ReplaceAll(r, "%H", item.Text)
+		// Legacy %U alias: a non-default group reads as "uppercase".
 		upcase := "false"
-		if item.Uppercase {
+		if item.Group != "copy" {
 			upcase = "true"
 		}
-		result = strings.ReplaceAll(result, "%U", upcase)
-		results = append(results, result)
+		r = strings.ReplaceAll(r, "%U", upcase)
+		results = append(results, r)
 	}
 
 	return strings.Join(results, "\n"), nil
@@ -347,8 +307,20 @@ func applyCliOverrides(cmd *cobra.Command, config *Config, args *Arguments) {
 	}
 }
 
+// registryPath resolves the config file used for action groups, mirroring the
+// core config resolution ("NONE" disables file loading).
+func registryPath(configPath string) string {
+	if configPath == "NONE" {
+		return ""
+	}
+	if configPath != "" {
+		return configPath
+	}
+	return action.DefaultConfigPath()
+}
+
 // runApp runs the main application logic
-func runApp(config *Config, args *Arguments) error {
+func runApp(config *Config, args *Arguments, registry *action.Registry) error {
 
 	text, err := readInput(args.inputFile)
 	if err != nil {
@@ -402,45 +374,41 @@ func runApp(config *Config, args *Arguments) error {
 	}
 
 	// Create state with all configured options
+	opts = append(opts, internal.WithReservedKeys(registry.Keys()))
 	state, err := internal.NewState(text, config.Core.Alphabet, includePatterns, opts...)
 	if err != nil {
 		return fmt.Errorf("initialize state: %w", err)
 	}
 
-	var selected []internal.ChosenMatch
+	colors := internal.NewViewColors(
+		internal.GetColor(config.Colors.Select.Foreground),
+		internal.GetColor(config.Colors.Select.Background),
+		internal.GetColor(config.Colors.Multi.Foreground),
+		internal.GetColor(config.Colors.Multi.Background),
+		internal.GetColor(config.Colors.Match.Foreground),
+		internal.GetColor(config.Colors.Match.Background),
+		internal.GetColor(config.Colors.Hint.Foreground),
+		internal.GetColor(config.Colors.Hint.Background),
+	)
 
+	var selected []internal.ChosenMatch
 	if args.listView {
-		listView := internal.NewListView(
-			state,
-			config.Core.Multi,
-			internal.GetColor(config.Colors.Select.Foreground),
-			internal.GetColor(config.Colors.Select.Background),
-			internal.GetColor(config.Colors.Multi.Foreground),
-			internal.GetColor(config.Colors.Multi.Background),
-			internal.GetColor(config.Colors.Match.Foreground),
-			internal.GetColor(config.Colors.Match.Background),
-			internal.GetColor(config.Colors.Hint.Foreground),
-			internal.GetColor(config.Colors.Hint.Background),
-		)
+		listView := internal.NewListView(state, internal.ListViewOptions{
+			Multi:   config.Core.Multi,
+			Colors:  colors,
+			Actions: registry,
+		})
 		selected = listView.Present()
 	} else {
-		// Use full screen view
-		viewbox := internal.NewView(
-			state,
-			config.Core.Multi,
-			config.Core.Reverse,
-			config.Core.UniqueLevel,
-			config.Core.Contrast,
-			config.Core.Position,
-			internal.GetColor(config.Colors.Select.Foreground),
-			internal.GetColor(config.Colors.Select.Background),
-			internal.GetColor(config.Colors.Multi.Foreground),
-			internal.GetColor(config.Colors.Multi.Background),
-			internal.GetColor(config.Colors.Match.Foreground),
-			internal.GetColor(config.Colors.Match.Background),
-			internal.GetColor(config.Colors.Hint.Foreground),
-			internal.GetColor(config.Colors.Hint.Background),
-		)
+		viewbox := internal.NewView(state, internal.ViewOptions{
+			Multi:       config.Core.Multi,
+			Reverse:     config.Core.Reverse,
+			UniqueLevel: config.Core.UniqueLevel,
+			Contrast:    config.Core.Contrast,
+			Position:    config.Core.Position,
+			Colors:      colors,
+			Actions:     registry,
+		})
 		selected = viewbox.Present()
 	}
 
@@ -496,7 +464,11 @@ func main() {
 			// Apply CLI overrides
 			applyCliOverrides(cmd, config, args)
 
-			return runApp(config, args)
+			registry, err := action.LoadRegistry(registryPath(configPath))
+			if err != nil {
+				return fmt.Errorf("loading action groups: %w", err)
+			}
+			return runApp(config, args, registry)
 		},
 	}
 

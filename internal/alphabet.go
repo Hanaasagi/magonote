@@ -50,6 +50,28 @@ func NewBuiltinAlphabet(name string) (*Alphabet, error) {
 	return nil, fmt.Errorf("unknown alphabet: %s", name)
 }
 
+// Len returns the number of usable hint characters.
+func (a *Alphabet) Len() int { return len(a.letters) }
+
+// Exclude returns an alphabet with the given keys removed, so action-group
+// prefix keys can never appear as hint characters.
+func (a *Alphabet) Exclude(keys []string) *Alphabet {
+	if len(keys) == 0 {
+		return a
+	}
+	drop := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		drop[k] = true
+	}
+	var letters []string
+	for _, l := range a.letters {
+		if !drop[l] {
+			letters = append(letters, l)
+		}
+	}
+	return &Alphabet{letters: letters}
+}
+
 func (a *Alphabet) Hints(matches int) []string {
 	if matches <= 0 {
 		return nil

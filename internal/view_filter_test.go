@@ -4,7 +4,23 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+
+	"github.com/Hanaasagi/magonote/internal/action"
 )
+
+
+// newTestView builds a View with a default action registry for input tests.
+func newTestView(matches []Match, skip int, multi bool) *View {
+	reg := action.NewRegistry(action.DefaultGroups()...)
+	return &View{
+		matches:      matches,
+		skip:         skip,
+		multi:        multi,
+		registry:     reg,
+		pendingGroup: reg.Default(),
+		chosen:       make([]ChosenMatch, 0),
+	}
+}
 
 func TestEnterRespectsFilteredField(t *testing.T) {
 	hq, hw := "q", "w"
@@ -13,7 +29,7 @@ func TestEnterRespectsFilteredField(t *testing.T) {
 		{Text: "beta", X: 6, Y: 0, Hint: &hw},
 	}
 	// Cursor sits on beta, but the typed prefix "q" filters beta out.
-	v := &View{matches: matches, skip: 1}
+	v := newTestView(matches, 1, false)
 	action := v.handleEnter("q")
 	if action == nil || *action != HintEvent {
 		t.Fatalf("action = %v, want HintEvent", action)
@@ -30,7 +46,7 @@ func TestNavigationStaysInFilteredField(t *testing.T) {
 		{Text: "beta", Hint: &hw},
 		{Text: "gamma", Hint: &hq},
 	}
-	v := &View{matches: matches, skip: 0}
+	v := newTestView(matches, 0, false)
 	v.Next("q") // skips beta (w), lands on gamma (q)
 	if v.skip != 2 {
 		t.Fatalf("Next skip = %d, want 2", v.skip)
@@ -47,10 +63,10 @@ func TestTypingClampsSkipToVisible(t *testing.T) {
 		{Text: "alpha", Hint: &hqa},
 		{Text: "beta", Hint: &hwb},
 	}
-	v := &View{matches: matches, skip: 1, multi: true}
-	typedHint, hasUppercase := "", false
+	v := newTestView(matches, 1, true)
+	typedHint := ""
 	// Partial prefix "q" filters to alpha; the cursor on beta must clamp to it.
-	v.handleRuneKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone), &typedHint, &hasUppercase, "wb")
+	v.handleRuneKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone), &typedHint, "wb")
 	if typedHint != "q" {
 		t.Fatalf("typedHint = %q, want q", typedHint)
 	}
@@ -62,7 +78,7 @@ func TestTypingClampsSkipToVisible(t *testing.T) {
 func TestEnterNoActiveDoesNothing(t *testing.T) {
 	hq := "q"
 	matches := []Match{{Text: "alpha", Hint: &hq}}
-	v := &View{matches: matches, skip: 0, multi: true}
+	v := newTestView(matches, 0, true)
 	// Prefix "z" matches nothing; Enter must not select a hidden match.
 	if action := v.handleEnter("z"); action != nil {
 		t.Fatalf("action = %v, want nil", action)

@@ -131,7 +131,7 @@ func TestViewHyperlinkKeepsVisibleLabel(t *testing.T) {
 	matches[0].Hint = nil
 	screen := simulationScreen(t, 20, 1)
 	r := newRenderer(state, matches, ViewColors{hintForeground: GetColor("yellow"), hintBackground: GetColor("black")}, false, "left")
-	r.render(screen, nil, nil, "")
+	r.render(screen, nil, nil, "", "")
 	for x, want := range []rune("docs") {
 		main, _, _, _ := screen.GetContent(x, 0)
 		if main != want {
@@ -147,11 +147,10 @@ func TestViewHyperlinkKeepsVisibleLabel(t *testing.T) {
 func TestViewSelectionPreservesFileLocation(t *testing.T) {
 	state := mustNewState(t, "main.go:12:4", "abcd", nil)
 	matches := state.Matches(false, 0)
-	view := &View{matches: matches}
+	view := newTestView(matches, 0, false)
 	typedHint := ""
-	hasUppercase := false
 	longestHint := "a"
-	view.handleRuneKey(tcell.NewEventKey(tcell.KeyRune, 'A', tcell.ModNone), &typedHint, &hasUppercase, longestHint)
+	view.handleRuneKey(tcell.NewEventKey(tcell.KeyRune, 'A', tcell.ModNone), &typedHint, longestHint)
 	if len(view.chosen) != 1 || view.chosen[0].Location == nil {
 		t.Fatalf("chosen = %#v", view.chosen)
 	}
@@ -165,7 +164,7 @@ func TestViewConcealsHiddenText(t *testing.T) {
 	state := mustNewState(t, "\x1b[8msecret\x1b[0m", "abcd", nil)
 	screen := simulationScreen(t, 8, 1)
 	r := newRenderer(state, nil, ViewColors{}, false, "")
-	r.render(screen, nil, nil, "")
+	r.render(screen, nil, nil, "", "")
 	for x := 0; x < len("secret"); x++ {
 		main, _, _, _ := screen.GetContent(x, 0)
 		if main != ' ' {
@@ -178,7 +177,7 @@ func TestViewRestoresANSIColor(t *testing.T) {
 	state := mustNewState(t, "\x1b[31mred\x1b[0m", "abcd", nil)
 	screen := simulationScreen(t, 8, 1)
 	r := newRenderer(state, nil, ViewColors{}, false, "")
-	r.render(screen, nil, nil, "")
+	r.render(screen, nil, nil, "", "")
 	_, _, style, _ := screen.GetContent(0, 0)
 	foreground, _, _ := style.Decompose()
 	if foreground != tcell.PaletteColor(1) {
@@ -192,9 +191,9 @@ func TestRendererReusesBaseAcrossFrames(t *testing.T) {
 	screen := simulationScreen(t, 40, 2)
 	r := newRenderer(state, matches, ViewColors{}, false, "left")
 
-	r.render(screen, nil, nil, "")
+	r.render(screen, nil, nil, "", "")
 	base := r.base
-	r.render(screen, nil, nil, "a")
+	r.render(screen, nil, nil, "a", "")
 	if r.base != base {
 		t.Fatalf("base rebuilt on same-size frame; want cached")
 	}
