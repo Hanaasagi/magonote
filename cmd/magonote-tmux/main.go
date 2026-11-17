@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Hanaasagi/magonote/internal/action"
 	"github.com/Hanaasagi/magonote/internal/clipboard"
 	"github.com/Hanaasagi/magonote/internal/logger"
 	"github.com/Hanaasagi/magonote/internal/tmux"
@@ -55,10 +57,14 @@ func (p *PaneInfo) HasScrollData() bool {
 // Config holds all configuration for magonote execution
 type Config struct {
 	Dir           string
+	ConfigPath    string
 	Command       string
 	UpcaseCommand string
 	MultiCommand  string
 	OSC52         bool
+
+	commandSet bool
+	upcaseSet  bool
 }
 
 // Magonote orchestrates the complete tmux-magonote workflow
@@ -71,6 +77,7 @@ type Magonote struct {
 	magonotePaneID string
 	client         *tmux.Client
 	facts          clipboard.Facts
+	registry       *action.Registry
 }
 
 // New creates a new Magonote instance with the given configuration
@@ -78,10 +85,36 @@ func New(config Config) *Magonote {
 	sinceEpoch := time.Now().Unix()
 	signal := fmt.Sprintf("%s-finished-%d", appName, sinceEpoch)
 
+	path := config.ConfigPath
+	switch path {
+	case "NONE":
+		path = ""
+	case "":
+		path = action.DefaultConfigPath()
+	}
+	registry, err := action.LoadRegistry(path)
+	if err != nil {
+		slog.Warn("Failed to load action groups; using defaults", "error", err)
+		registry = action.NewRegistry(action.DefaultGroups()...)
+	}
+	// Legacy flags override the copy/open default commands when explicitly set.
+	if config.commandSet {
+		registry.Default().Default = action.Command{Type: action.Run, Template: config.Command}
+	}
+	if config.upcaseSet {
+		if g, ok := registry.ByName("open"); ok {
+			// An explicit legacy override applies to every kind, not just the
+			// fallback, so uppercase selections honor --upcase-command.
+			g.Commands = map[string]action.Command{}
+			g.Default = action.Command{Type: action.Run, Template: config.UpcaseCommand}
+		}
+	}
+
 	return &Magonote{
-		config: config,
-		signal: signal,
-		client: tmux.NewClient(),
+		config:   config,
+		signal:   signal,
+		client:   tmux.NewClient(),
+		registry: registry,
 	}
 }
 
@@ -258,7 +291,7 @@ func (m *Magonote) createMagonoteWindow() error {
 	// Build the command that will keep the pane alive after magonote completes
 	captureCmd := m.buildCaptureCommand()
 	command := fmt.Sprintf(
-		"%s | %s/magonote -f '%%U:%%H' -t %s %s; tmux wait-for -S %s; sleep infinity",
+		"%s | %s/magonote -f json -t %s %s; tmux wait-for -S %s; sleep infinity",
 		captureCmd,
 		m.config.Dir,
 		tmpFile,
@@ -279,6 +312,12 @@ func (m *Magonote) createMagonoteWindow() error {
 }
 
 // buildMagonoteArgs extracts and formats magonote arguments from tmux options
+// shellQuote single-quotes a value for safe inclusion in the shell command that
+// launches the core, escaping any embedded single quotes.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
 func (m *Magonote) buildMagonoteArgs() ([]string, error) {
 	output, err := m.tmuxCommand("show", "-g")
 	if err != nil {
@@ -287,6 +326,9 @@ func (m *Magonote) buildMagonoteArgs() ([]string, error) {
 
 	pattern := regexp.MustCompile(`^@magonote-([\w\-0-9]+)\s+"?([^"]+)"?$`)
 	var args []string
+	if m.config.ConfigPath != "" {
+		args = append(args, "--config", shellQuote(m.config.ConfigPath))
+	}
 
 	for _, line := range strings.Split(output, "\n") {
 		matches := pattern.FindStringSubmatch(line)
@@ -323,7 +365,7 @@ func (m *Magonote) isBooleanParam(name string) bool {
 // isStringParam checks if the parameter is a string type
 func (m *Magonote) isStringParam(name string) bool {
 	stringParams := []string{
-		"alphabet", "position", "fg-color", "bg-color", "hint-bg-color",
+		"config", "alphabet", "position", "fg-color", "bg-color", "hint-bg-color",
 		"hint-fg-color", "select-fg-color", "select-bg-color", "multi-fg-color", "multi-bg-color",
 	}
 	for _, param := range stringParams {
@@ -408,6 +450,37 @@ func (m *Magonote) processUserSelection() error {
 	return m.executeSelectionCommand(result)
 }
 
+// selection is a parsed core output line: group:kind:text.
+type selection struct {
+	Group  string `json:"group"`
+	Kind   string `json:"kind"`
+	Text   string `json:"text"`
+	Path   string `json:"path"`
+	Line   int    `json:"line"`
+	Column int    `json:"column"`
+}
+
+// parseSelection decodes the %G:%K:%H protocol, tolerating the legacy %U:%H form.
+func parseSelection(item string) (selection, bool) {
+	var sel selection
+	if err := json.Unmarshal([]byte(item), &sel); err == nil && sel.Text != "" {
+		return sel, true
+	}
+	parts := strings.SplitN(item, ":", 3)
+	switch len(parts) {
+	case 3:
+		return selection{Group: parts[0], Kind: parts[1], Text: parts[2]}, true
+	case 2:
+		group := "copy"
+		if parts[0] == "true" {
+			group = "open"
+		}
+		return selection{Group: group, Text: parts[1]}, true
+	default:
+		return selection{}, false
+	}
+}
+
 // executeSelectionCommand executes the appropriate command based on the user's selection
 func (m *Magonote) executeSelectionCommand(result string) error {
 	items := strings.Split(result, "\n")
@@ -415,51 +488,65 @@ func (m *Magonote) executeSelectionCommand(result string) error {
 	if len(items) > 1 {
 		return m.handleMultipleSelection(items)
 	}
-
 	if len(items) == 0 || items[0] == "" {
 		return nil
 	}
-
 	return m.handleSingleSelection(items[0])
 }
 
-// handleMultipleSelection processes multiple selected items
-func (m *Magonote) handleMultipleSelection(items []string) error {
-	var textParts []string
-	for _, item := range items {
-		if parts := strings.SplitN(item, ":", 2); len(parts) > 1 {
-			textParts = append(textParts, parts[1])
-		}
-	}
-
-	text := strings.Join(textParts, " ")
-
-	if m.config.OSC52 {
-		m.syncClipboard(text)
-	}
-
-	return m.executeFinalCommand(strings.TrimRight(text, " "), m.config.MultiCommand)
-}
-
-// handleSingleSelection processes a single selected item
+// handleSingleSelection resolves the group+kind to a command and executes it.
 func (m *Magonote) handleSingleSelection(item string) error {
-	parts := strings.SplitN(item, ":", 2)
-	if len(parts) != 2 {
+	sel, ok := parseSelection(item)
+	if !ok {
 		return nil
 	}
+	if m.config.OSC52 {
+		m.syncClipboard(sel.Text)
+	}
+	return m.executeSelection(sel)
+}
 
-	upcase, text := parts[0], parts[1]
+// executeSelection renders and runs the command for a selection's group/kind.
+func (m *Magonote) executeSelection(sel selection) error {
+	group, ok := m.registry.ByName(sel.Group)
+	if !ok {
+		group = m.registry.Default()
+	}
+	cmd := group.CommandFor(sel.Kind)
+	rendered, err := action.Render(cmd.Template)
+	if err != nil {
+		return fmt.Errorf("render action command: %w", err)
+	}
+	if cmd.Type == action.Keys {
+		rendered = action.KeysCommand(rendered)
+	}
+	path := sel.Path
+	if path == "" {
+		path = sel.Text
+	}
+	path = action.ExpandPath(path)
+	vars := action.Vars{Text: sel.Text, Kind: sel.Kind, Pane: m.activePaneInfo.ID, Path: path, Line: sel.Line, Column: sel.Column}
+	return m.executeFinalCommand(vars, rendered)
+}
 
+// handleMultipleSelection joins selections and runs the multi (copy) command.
+func (m *Magonote) handleMultipleSelection(items []string) error {
+	var texts []string
+	for _, item := range items {
+		if sel, ok := parseSelection(item); ok {
+			texts = append(texts, sel.Text)
+		}
+	}
+	text := strings.Join(texts, " ")
 	if m.config.OSC52 {
 		m.syncClipboard(text)
 	}
-
-	command := m.config.Command
-	if upcase == "true" {
-		command = m.config.UpcaseCommand
+	rendered, err := action.Render(m.config.MultiCommand)
+	if err != nil {
+		return fmt.Errorf("render multi command: %w", err)
 	}
-
-	return m.executeFinalCommand(strings.TrimRight(text, " "), command)
+	vars := action.Vars{Text: text, Pane: m.activePaneInfo.ID}
+	return m.executeFinalCommand(vars, rendered)
 }
 
 // syncClipboard copies the selected text to the tmux buffer and (via tmux -w)
@@ -479,10 +566,10 @@ func (m *Magonote) syncClipboard(text string) {
 }
 
 // executeFinalCommand executes the final command with the selected text
-func (m *Magonote) executeFinalCommand(text, command string) error {
-	finalCommand := strings.ReplaceAll(command, "{}", "${magonote}")
-	slog.Info("Executing final command", "text", text, "command", finalCommand)
-	cmd := exec.Command("bash", "-c", "magonote=\"$1\"; eval \"$2\"", "--", text, finalCommand)
+func (m *Magonote) executeFinalCommand(vars action.Vars, renderedCommand string) error {
+	slog.Info("Executing final command", "text", vars.Text, "command", renderedCommand)
+	cmd := exec.Command("bash", "-c", action.BindScript, "--",
+		vars.Text, vars.Kind, vars.Pane, strconv.Itoa(vars.Line), strconv.Itoa(vars.Column), vars.Path, renderedCommand)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -564,11 +651,13 @@ func parseCommandLineArgs() Config {
 		Use:   "magonote-tmux",
 		Short: "Tmux integration for magonote",
 		Run: func(cmd *cobra.Command, args []string) {
-			// Command execution is handled in main
+			config.commandSet = cmd.Flags().Changed("command")
+			config.upcaseSet = cmd.Flags().Changed("upcase-command")
 		},
 	}
 
 	rootCmd.Flags().StringVar(&config.Dir, "dir", "", "Directory where to execute magonote")
+	rootCmd.Flags().StringVar(&config.ConfigPath, "config", "", "Config file path for action groups (default: XDG config dir)")
 	rootCmd.Flags().StringVar(&config.Command, "command",
 		"tmux set-buffer -- \"{}\" && tmux display-message \"Copied {}\"",
 		"Command to execute after choosing a hint")

@@ -103,11 +103,11 @@ func newRenderer(state *State, matches []Match, theme ViewColors, contrast bool,
 }
 
 // render composes and flushes one frame. selected may be nil.
-func (r *renderer) render(s tcell.Screen, selected *Match, chosen []ChosenMatch, typedHint string) {
+func (r *renderer) render(s tcell.Screen, selected *Match, chosen []ChosenMatch, typedHint, status string) {
 	width, height := s.Size()
 	r.ensureBase(width, height)
 	r.compose(selected, chosen, typedHint)
-	r.flush(s)
+	r.flush(s, status)
 }
 
 // ensureBase builds the static screen replica once per screen size.
@@ -195,12 +195,26 @@ func chosenContains(chosen []ChosenMatch, text string) bool {
 
 // flush is the output adapter: project the frame onto the screen and present it.
 // tcell's Show diffs cells, so only changed cells reach the terminal.
-func (r *renderer) flush(s tcell.Screen) {
+func (r *renderer) flush(s tcell.Screen, status string) {
 	s.Clear()
 	r.frame.WriteToScreen(s)
+	if status != "" {
+		_, h := s.Size()
+		r.drawStatus(s, 0, h-1, "["+status+"]")
+	}
 	s.Show()
 	if IsDebugMode() {
 		writeSnapshot(r.frame.String())
+	}
+}
+
+// drawStatus overlays the pending group name at the bottom-left so the user
+// knows what a completed hint will do.
+func (r *renderer) drawStatus(s tcell.Screen, x, y int, text string) {
+	style := tcell.StyleDefault.Reverse(true)
+	for _, c := range text {
+		s.SetContent(x, y, c, nil, style)
+		x++
 	}
 }
 

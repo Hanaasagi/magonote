@@ -5,7 +5,9 @@
 # Sets the alphabet used for generating hints
 alphabet = "qwerty"
 
-# Output format for the picked hint (%H = hint text, %U = uppercase flag)
+# Output format for the picked hint. Placeholders:
+#   %H text  %G group  %K kind  %P path  %L line  %C column  %U uppercase flag
+# Use "json" for the structured protocol the tmux adapter consumes.
 format = "%H"
 
 # Hint position: "left", "right", "off_left", or "off_right"
@@ -94,3 +96,48 @@ enabled = true
 exclude_prompt = true
 # Additional prompt regexes; each must contain a named `cmd` capture group.
 prompt_patterns = []
+
+# ---------------------------------------------------------------------------
+# Action groups
+# ---------------------------------------------------------------------------
+# A group binds a prefix key to kind-specific commands. A bare hint (no prefix)
+# triggers the default group (key = ""), which copies. Press a group key, then a
+# hint, to run that group's command for the selected entity's kind. Uppercase
+# hints are a backward-compatible alias for the "open" group.
+#
+# Command values:
+#   - a plain string is a background shell command (Run)
+#   - { keys = "..." } sends keystrokes to the active pane (Keys); use <CR> for
+#     Enter, plus <Esc>, <Tab>, <C-c>, etc.
+#
+# Template variables: {{.Text}} {{.Kind}} {{.Pane}} {{.Path}} {{.Line}}
+#   {{.Column}} {{.LineArg}} ("+N " when a line number is known).
+#   {{.TextSh}} / {{.PathSh}} are shell-escaped for safe use in pane commands.
+#
+# Group keys are reserved: they are excluded from the hint alphabet.
+# The built-in defaults are platform-aware (e.g. `open` on macOS, `xdg-open`
+# elsewhere); the entries below illustrate how to override or extend them.
+
+[groups.copy]
+key = ""
+default = 'tmux set-buffer -- "{{.Text}}"'
+
+[groups.open]
+key = "o"
+url      = 'xdg-open "{{.Text}}"'           # macOS: 'open "{{.Text}}"'
+email    = 'xdg-open "mailto:{{.Text}}"'
+path     = { keys = '${EDITOR:-vi} {{.LineArg}}{{.PathSh}}<CR>' }
+filename = { keys = '${EDITOR:-vi} {{.LineArg}}{{.PathSh}}<CR>' }
+sha      = { keys = 'git show {{.TextSh}}<CR>' }
+branch   = { keys = 'git checkout {{.TextSh}}<CR>' }
+default  = 'tmux set-buffer -- "{{.Text}}"'  # kinds without an open action
+
+[groups.insert]
+key = "i"
+default = { keys = '{{.Text}}' }
+
+# Example custom group: press 'l' then a hint to tail logs.
+# [groups.logs]
+# key = "l"
+# "k8s.pod"          = { keys = 'kubectl logs {{.TextSh}}<CR>' }
+# "docker.container" = { keys = 'docker logs {{.TextSh}}<CR>' }

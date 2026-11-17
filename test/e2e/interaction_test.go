@@ -365,3 +365,63 @@ func TestDetectCLIBasic(t *testing.T) {
 		t.Errorf("detect CLI should output entity text; got %q", stdout.String())
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Action groups — prefix key selects the group, bare hint copies
+// ---------------------------------------------------------------------------
+
+func TestInteractionCopyGroupProtocol(t *testing.T) {
+	f := newFramework(t)
+	tc := framework.TestCase{
+		Name:           "Bare hint copies (protocol)",
+		Input:          "visit https://example.com/test",
+		Args:           []string{"-f", "%G:%K:%H"},
+		Keys:           "a",
+		ExpectedOutput: "copy:url:https://example.com/test",
+	}
+	if result := f.RunTest(tc); !result.Passed {
+		t.Errorf("failed: %s", result.Error)
+	}
+}
+
+func TestInteractionOpenGroupPrefix(t *testing.T) {
+	f := newFramework(t)
+	tc := framework.TestCase{
+		Name:           "Open group prefix o",
+		Input:          "visit https://example.com/test",
+		Args:           []string{"-f", "%G:%K:%H"},
+		Keys:           "oa",
+		ExpectedOutput: "open:url:https://example.com/test",
+	}
+	if result := f.RunTest(tc); !result.Passed {
+		t.Errorf("failed: %s", result.Error)
+	}
+}
+
+func TestInteractionInsertGroupPrefix(t *testing.T) {
+	f := newFramework(t)
+	tc := framework.TestCase{
+		Name:           "Insert group prefix i",
+		Input:          "visit https://example.com/test",
+		Args:           []string{"-f", "%G:%K:%H"},
+		Keys:           "ia",
+		ExpectedOutput: "insert:url:https://example.com/test",
+	}
+	if result := f.RunTest(tc); !result.Passed {
+		t.Errorf("failed: %s", result.Error)
+	}
+}
+
+func TestInteractionUppercaseOpenAlias(t *testing.T) {
+	f := newFramework(t)
+	tc := framework.TestCase{
+		Name:           "Uppercase hint is open alias",
+		Input:          "visit https://example.com/test",
+		Args:           []string{"-f", "%G:%K:%H"},
+		Keys:           "A",
+		ExpectedOutput: "open:url:https://example.com/test",
+	}
+	if result := f.RunTest(tc); !result.Passed {
+		t.Errorf("failed: %s", result.Error)
+	}
+}

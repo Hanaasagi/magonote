@@ -35,33 +35,3 @@ func abs[T int | int8 | int16 | int32 | int64 | float32 | float64](x T) T {
 // 	}
 // 	return false
 // }
-
-// isLikelyFilePath checks if the given text looks like a file path.
-func isLikelyFilePath(text string) bool {
-	if len(text) < 2 {
-		return false
-	}
-
-	// Skip URLs and other protocols
-	protocols := []string{"http://", "https://", "ftp://", "ssh://"}
-	for _, protocol := range protocols {
-		if strings.HasPrefix(text, protocol) {
-			return false
-		}
-	}
-
-	// Check for path separators
-	if strings.ContainsAny(text, "/\\") {
-		return true
-	}
-
-	// Check for file extension
-	if strings.Contains(text, ".") {
-		parts := strings.Split(text, ".")
-		if len(parts) > 1 && len(parts[len(parts)-1]) <= 10 {
-			return true
-		}
-	}
-
-	return false
-}

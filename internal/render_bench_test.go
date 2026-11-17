@@ -59,12 +59,12 @@ func BenchmarkRenderFrame(b *testing.B) {
 	matches := state.Matches(false, 0)
 	screen := simulationScreenB(b, 120, 5)
 	r := newRenderer(state, matches, ViewColors{}, false, "left")
-	r.render(screen, nil, nil, "")
+	r.render(screen, nil, nil, "", "")
 
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		r.render(screen, nil, nil, "a")
+		r.render(screen, nil, nil, "a", "")
 	}
 }
 
